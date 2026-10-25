@@ -32,18 +32,66 @@ describe('@kylat/compiler - Golden Master & Regression Guard', () => {
     );
   });
 
-  it('uji sabotase: memastikan tes gagal jika output dirusak sengaja', () => {
-    // Kriteria Claude: pembuktian bahwa tes golden bukan tautologi
-    const validOutput = 'el_span_5.textContent = "test";';
-    const sabotagedOutput = 'el_div_1.textContent = "sabotase";';
+  it('uji sabotase permanen: membuktikan mutasi terkendali pada output kompilasi wajib memicu AssertionError terhadap golden file', async () => {
+    const counterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.php');
+    const counterBladePath = path.resolve(__dirname, '../../../examples/counter-app/counter.blade.php');
+    const expectedJsPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.expected.js');
 
-    assert.throws(() => {
-      assert.equal(
-        sabotagedOutput,
-        validOutput,
-        'Tes wajib mendeteksi perubahan sekecil apa pun pada kode'
-      );
-    });
+    const phpSource = fs.readFileSync(counterPhpPath, 'utf-8');
+    const bladeSource = fs.readFileSync(counterBladePath, 'utf-8');
+    const expectedJs = fs.readFileSync(expectedJsPath, 'utf-8');
+
+    const result = await compile(phpSource, 'Counter.php', { template: bladeSource });
+    assert.equal(result.success, true);
+
+    const stripBanner = (str) => str.replace(/^\/\*\*[\s\S]*?\*\/\s*/, '').trim().replace(/\r\n/g, '\n');
+    const expectedCode = stripBanner(expectedJs);
+    const validActualCode = stripBanner(result.code);
+
+    // Baseline: kode aktual yang valid harus 100% sama dengan golden file
+    assert.equal(validActualCode, expectedCode, 'Baseline kompilasi harus valid');
+
+    // SABOTASE 1: Mengembalikan bug bindText (memindah binding teks dari el_span_5 ke kontainer el_div_1)
+    const sabotagedBindText = validActualCode.replace('bindText(el_span_5', 'bindText(el_div_1');
+    assert.notEqual(sabotagedBindText, validActualCode, 'Sabotase 1 harus mengubah kode');
+    assert.throws(
+      () => {
+        assert.equal(sabotagedBindText, expectedCode);
+      },
+      (err) => {
+        assert.ok(err instanceof assert.AssertionError, 'Wajib melempar AssertionError');
+        return true;
+      },
+      'Sabotase bindText salah elemen WAJIB menggagalkan pengujian golden'
+    );
+
+    // SABOTASE 2: Menghapus Idempotency-Key per operasi dari pemanggilan aksi
+    const sabotagedIdemp = validActualCode.replace('{ idempotencyKey: current_idemp_syncToServer }', '{}');
+    assert.notEqual(sabotagedIdemp, validActualCode, 'Sabotase 2 harus mengubah kode');
+    assert.throws(
+      () => {
+        assert.equal(sabotagedIdemp, expectedCode);
+      },
+      (err) => {
+        assert.ok(err instanceof assert.AssertionError, 'Wajib melempar AssertionError');
+        return true;
+      },
+      'Sabotase penghapusan Idempotency-Key WAJIB menggagalkan pengujian golden'
+    );
+
+    // SABOTASE 3: Menghapus atribut aria-live untuk pengumuman error
+    const sabotagedAriaLive = validActualCode.replace('el_live_error_9.setAttribute("aria-live", "polite");\n  ', '');
+    assert.notEqual(sabotagedAriaLive, validActualCode, 'Sabotase 3 harus mengubah kode');
+    assert.throws(
+      () => {
+        assert.equal(sabotagedAriaLive, expectedCode);
+      },
+      (err) => {
+        assert.ok(err instanceof assert.AssertionError, 'Wajib melempar AssertionError');
+        return true;
+      },
+      'Sabotase penghapusan aria-live WAJIB menggagalkan pengujian golden'
+    );
   });
 
   it('meng-escape karakter petik tunggal, backslash, dan newline di template dengan JSON.stringify', async () => {
