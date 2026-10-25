@@ -6,7 +6,9 @@ Toolchain frontend: komponen ditulis dengan subset PHP bergaya Livewire, dikompi
 
 ## Sumber kebenaran
 
-Spesifikasi masih hidup di Google Drive, folder `Kylat` → `01 Aktif (v1.1)`. Repo ini belum memuat salinannya; migrasi dokumen ke `docs/` belum diputuskan.
+Alasan dan riwayat keputusan masih hidup di Google Drive, folder `Kylat` → `01 Aktif (v1.1)`. Repo ini belum memuat salinannya.
+
+**Yang mengikat implementasi adalah `spec/`**, bukan dokumen Drive. Urutan prioritas antar berkas spec ada di [`spec/README.md`](spec/README.md).
 
 | Dokumen | Isi | Artefak spec terkait |
 |---|---|---|
@@ -58,6 +60,6 @@ Sengaja tidak dibuat karena keputusannya masih terbuka, atau karena isinya belum
 
 - `LICENSE` — lisensi `[TERBUKA]`, tenggat sebelum rilis 1.0.
 - `CONTRIBUTING.md`, `SECURITY.md` — menunggu kebijakan versi dan pelaporan.
-- `spec/template.md` — sudah ditulis, masih di Drive, belum dipindahkan.
-- `spec/php-subset.md`, `spec/ir.md`, `spec/errors.md` — belum ditulis; untuk sementara isinya ada di Dokumen 2.
+- `spec/template.md` — sudah ditulis, masih di Drive dan masih privat, belum dipindahkan.
+- `spec/ir.md`, `spec/errors.md` — belum ditulis; untuk sementara isinya ada di Dokumen 2.
 - Seluruh isi `packages/` — belum ada baris kode.
