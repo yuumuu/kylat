@@ -42,6 +42,7 @@ interface QueuedCall {
   resolve: (value: unknown) => void;
   reject: (reason: unknown) => void;
   idempotencyKey?: string;
+  retriesRemaining?: number;
 }
 
 export class RpcBatcher {
@@ -89,7 +90,7 @@ export class RpcBatcher {
   public call<T = unknown>(
     action: string,
     args: Record<string, unknown> = {},
-    options?: { idempotencyKey?: string }
+    options?: { idempotencyKey?: string; maxRetries?: number }
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       this.callCounter++;
@@ -100,6 +101,7 @@ export class RpcBatcher {
         resolve: resolve as (value: unknown) => void,
         reject,
         idempotencyKey: options?.idempotencyKey,
+        retriesRemaining: options?.maxRetries ?? (options?.idempotencyKey ? 2 : 0),
       });
 
       if (!this.isFlushScheduled) {
@@ -154,21 +156,38 @@ export class RpcBatcher {
           body: JSON.stringify(requestPayload),
         });
 
-        // Tangani Problem Details HTTP level (RFC 9457)
+        // Tangani Problem Details HTTP level (RFC 9457) dan kegagalan status HTTP
         if (!response.ok) {
+          const isTransient = response.status >= 500 && response.status <= 599;
           const contentType = response.headers.get('content-type') || '';
+          let err: KylatRpcError;
+
           if (contentType.includes('application/problem+json') || contentType.includes('application/json')) {
             const problem = (await response.json()) as ProblemDetails;
-            const err = new KylatRpcError(problem.detail || problem.title || `Server returned ${response.status}`, {
+            err = new KylatRpcError(problem.detail || problem.title || `Server returned ${response.status}`, {
               code: `HTTP_${response.status}`,
               problemDetails: problem,
             });
-            batchChunk.forEach((q) => q.reject(err));
           } else {
-            const err = new KylatRpcError(`Server error HTTP ${response.status}`, {
+            err = new KylatRpcError(`Server error HTTP ${response.status}`, {
               code: `HTTP_${response.status}`,
             });
-            batchChunk.forEach((q) => q.reject(err));
+          }
+
+          // Lakukan retry otomatis jika error transient dan memiliki sisa kuota retry
+          for (const q of batchChunk) {
+            if (isTransient && q.idempotencyKey && (q.retriesRemaining ?? 0) > 0) {
+              q.retriesRemaining = (q.retriesRemaining ?? 1) - 1;
+              setTimeout(() => {
+                this.queue.push(q);
+                if (!this.isFlushScheduled) {
+                  this.isFlushScheduled = true;
+                  queueMicrotask(() => this.flush());
+                }
+              }, 25);
+            } else {
+              q.reject(err);
+            }
           }
           continue;
         }
@@ -197,7 +216,20 @@ export class RpcBatcher {
         }
       } catch (networkError) {
         const error = networkError instanceof Error ? networkError : new Error(String(networkError));
-        batchChunk.forEach((q) => q.reject(error));
+        for (const q of batchChunk) {
+          if (q.idempotencyKey && (q.retriesRemaining ?? 0) > 0) {
+            q.retriesRemaining = (q.retriesRemaining ?? 1) - 1;
+            setTimeout(() => {
+              this.queue.push(q);
+              if (!this.isFlushScheduled) {
+                this.isFlushScheduled = true;
+                queueMicrotask(() => this.flush());
+              }
+            }, 25);
+          } else {
+            q.reject(error);
+          }
+        }
       }
     }
   }

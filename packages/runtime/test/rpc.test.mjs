@@ -178,11 +178,12 @@ describe('@kylat/runtime - Batch RPC Dispatcher', () => {
     );
   });
 
-  it('mengirim Idempotency-Key pada header HTTP dan per-call payload serta mendukung retry dengan key yang sama', async () => {
+  it('melakukan auto-retry otomatis pada error 503 transient saat memiliki Idempotency-Key', async () => {
     const capturedRequests = [];
-    let shouldFailFirst = true;
+    let attempts = 0;
 
     const mockFetch = async (url, options) => {
+      attempts++;
       const body = JSON.parse(options.body);
       capturedRequests.push({
         url,
@@ -190,8 +191,7 @@ describe('@kylat/runtime - Batch RPC Dispatcher', () => {
         body,
       });
 
-      if (shouldFailFirst) {
-        shouldFailFirst = false;
+      if (attempts === 1) {
         return {
           ok: false,
           status: 503,
@@ -217,10 +217,35 @@ describe('@kylat/runtime - Batch RPC Dispatcher', () => {
     const batcher = new RpcBatcher({ fetchFn: mockFetch });
     const idempKey = 'idemp_test_retry_123';
 
-    // Panggilan 1: Gagal (503)
+    // Panggilan dengan idempotencyKey: otomatis auto-retry saat 503 dan sukses di attempt ke-2
+    const result = await batcher.call('CounterActions::saveCount', { count: 10 }, { idempotencyKey: idempKey });
+    assert.deepEqual(result, { saved: true, key: idempKey });
+
+    // Verifikasi terjadi 2 request otomatis dengan key yang SAMA
+    assert.equal(capturedRequests.length, 2);
+    assert.equal(capturedRequests[0].headers['Idempotency-Key'], idempKey);
+    assert.equal(capturedRequests[1].headers['Idempotency-Key'], idempKey);
+    assert.equal(capturedRequests[0].body.calls[0].idempotencyKey, idempKey);
+    assert.equal(capturedRequests[1].body.calls[0].idempotencyKey, idempKey);
+  });
+
+  it('tidak melakukan auto-retry untuk panggilan tanpa Idempotency-Key saat terjadi error 503', async () => {
+    let attempts = 0;
+    const mockFetch = async () => {
+      attempts++;
+      return {
+        ok: false,
+        status: 503,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ message: 'Service Temporarily Unavailable' }),
+      };
+    };
+
+    const batcher = new RpcBatcher({ fetchFn: mockFetch });
+
     await assert.rejects(
       async () => {
-        await batcher.call('CounterActions::saveCount', { count: 10 }, { idempotencyKey: idempKey });
+        await batcher.call('CounterActions::readOnlyAction', { x: 1 });
       },
       (err) => {
         assert(err instanceof KylatRpcError);
@@ -229,18 +254,7 @@ describe('@kylat/runtime - Batch RPC Dispatcher', () => {
       }
     );
 
-    // Verifikasi request 1 memuat idempotencyKey
-    assert.equal(capturedRequests.length, 1);
-    assert.equal(capturedRequests[0].headers['Idempotency-Key'], idempKey);
-    assert.equal(capturedRequests[0].body.calls[0].idempotencyKey, idempKey);
-
-    // Panggilan 2: Retry dengan key yang SAMA persis
-    const res = await batcher.call('CounterActions::saveCount', { count: 10 }, { idempotencyKey: idempKey });
-    assert.deepEqual(res, { saved: true, key: idempKey });
-
-    // Verifikasi request 2 memuat idempotencyKey yang sama
-    assert.equal(capturedRequests.length, 2);
-    assert.equal(capturedRequests[1].headers['Idempotency-Key'], idempKey);
-    assert.equal(capturedRequests[1].body.calls[0].idempotencyKey, idempKey);
+    // Tanpa idempotency key, hanya dipanggil 1 kali tanpa auto-retry
+    assert.equal(attempts, 1);
   });
 });
