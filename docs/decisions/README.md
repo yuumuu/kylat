@@ -17,7 +17,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 | **KEP-03** | **Toolchain**: Compiler dan CLI berjalan di atas ekosistem Node (TypeScript). Parser PHP di frontend tidak boleh membutuhkan runtime PHP terpasang. | **PUTUSAN** | — | Reviewer teknis |
 | **KEP-04** | **Pemisahan Komponen & Aksi**: Komponen hanya mendeklarasikan aksi server; implementasi logika bisnis dan otorisasi hidup di kelas Action server. | **PUTUSAN** | — | Reviewer teknis |
 | **KEP-05** | **Runtime Reaktif**: Tidak menulis runtime sinyal sendiri; menggunakan lapisan tipis di atas pustaka signals pihak ketiga yang teruji. | **PUTUSAN** | — | Reviewer teknis |
-| **KEP-06** | **Pilihan Parser PHP**: Penentuan mesin parser PHP di toolchain FE (kandidat tree-sitter-php JS atau Rust/WASM). Diputuskan lewat spike S1. | `[TERBUKA]` | Akhir fase 0 | Reviewer teknis |
+| **KEP-06** | **Pilihan Parser PHP**: Ditetapkan menggunakan `web-tree-sitter` (WASM) + `tree-sitter-php.wasm`. Lolos evaluasi Spike S1 (dukungan PHP 8 penuh, zero-PHP dependency, browser-ready). | **PUTUSAN** | — | Reviewer teknis |
 | **KEP-07** | **Pilihan Inti Signals**: Evaluasi pustaka signals (alien-signals vs @solidjs/signals) berdasarkan benchmark ukuran dan performa. Diputuskan lewat spike S2. | `[TERBUKA]` | Akhir fase 1 | Reviewer teknis |
 | **KEP-08** | **Sintaks Deklarasi Aksi**: Penentuan antara pendekatan interface PHP vs atribut kustom. Diputuskan lewat spike S3. | `[TERBUKA]` | Akhir fase 0 | Pemilik proyek |
 | **KEP-09** | **Distribusi Binary CLI**: Keputusan apakah CLI didistribusikan sebagai binary tunggal mandiri atau paket npm murni. | `[TERBUKA]` | Akhir fase 0 | Pemilik proyek |
