@@ -24,7 +24,7 @@ Aturan turunannya:
 | `php-subset.md` | Subset PHP v0: tipe, operator (termasuk `.`), kontrol alur, allowlist, semantik PHP vs JS | Draf, diport dari Dokumen 2 §2–§5 + D2/D3/D5 |
 | `compiler-rules.md` | Aturan build: KIL-102 sampai KIL-401, termasuk KIL-211 (siklus) dan KIL-212 (`#[Child]`) | Draf, dipindahkan dari Dokumen 4 §8 + E-01 + renumber |
 | `template.md` | Grammar templat, tiga kelas atribut, `<x-nama>` + `#[Child]`, serialisasi `data-props`, `bind:`, `on:`, `#[OnMount]`, `#[Effect]`, navigasi, KIL-151–160 + KIL-212, hubungan dengan Blade (§10) | Ada — disahkan 25 Okt 2026, direvisi untuk E-02/E-03/E-04 |
-| `ir.md` | Intermediate representation, bebas dari PHP | Belum — `[TERBUKA]`, tenggat akhir fase 2 |
+| `ir.md` | Intermediate representation, bebas dari PHP | Draf — disahkan 25 Okt 2026, spesifikasi typed AST & signals |
 | `errors.md` | Daftar lengkap kode KIL-xxx + pesan + contoh | Ada — disahkan 25 Okt 2026, memuat KIL-101 sampai KIL-401 + tabel renumber |
 | `protocol.schema.json` | Skema kontrak aksi dan endpoint `/_kylat/*` | Ada — disahkan 25 Okt 2026, skema batch RPC + RFC 9457 |
 
