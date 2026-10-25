@@ -1,7 +1,7 @@
 /**
  * @kylat/compiler - codegen.ts
  * Emitter JavaScript reaktif fine-grained signals untuk @kylat/runtime.
- * Menghasilkan konstruksi DOM nyata, sinyal state, transpilasi method, dan binding RPC.
+ * Menghasilkan konstruksi DOM nyata, sinyal state, transpilasi method dari IR AST, dan binding RPC.
  */
 
 import type { ComponentIR } from './ir.js';
@@ -17,7 +17,7 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
   // Inisialisasi props dari argumen props
   for (const p of ir.props) {
     const fallback = p.defaultValue ?? 'undefined';
-    bodyLines.push(`  const prop_${p.name} = props['${p.name}'] !== undefined ? props['${p.name}'] : ${fallback};`);
+    bodyLines.push(`  const prop_${p.name} = props[${JSON.stringify(p.name)}] !== undefined ? props[${JSON.stringify(p.name)}] : ${fallback};`);
   }
 
   // Inisialisasi state lokal
@@ -30,14 +30,19 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
     bodyLines.push(`  const [${s.name}, set_${s.name}] = createSignal(${initialExpr});`);
   }
 
-  // Lacak status pending untuk aksi server
+  // Lacak status pending & error untuk aksi server
   const serverActionPendingSignals = new Map<string, string>();
+  const serverActionErrorSignals = new Map<string, string>();
+
   for (const m of ir.methods) {
     if (m.kind === 'server') {
       usedImports.add('createSignal');
       const pendingSignalName = `is_pending_${m.name}`;
+      const errorSignalName = `error_${m.name}`;
       serverActionPendingSignals.set(m.name, pendingSignalName);
+      serverActionErrorSignals.set(m.name, errorSignalName);
       bodyLines.push(`  const [${pendingSignalName}, set_${pendingSignalName}] = createSignal(false);`);
+      bodyLines.push(`  const [${errorSignalName}, set_${errorSignalName}] = createSignal(null);`);
     }
   }
 
@@ -47,33 +52,58 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
   for (const m of ir.methods) {
     if (m.kind === 'server') {
       usedImports.add('callServerAction');
-      const contract = ir.serverUses[0]?.contractName ?? ir.name;
-      const pendingSignalName = serverActionPendingSignals.get(m.name)!;
+      const serverCall = m.serverCall;
+      const contract = serverCall?.contract ?? (ir.serverUses[0]?.contractName ?? ir.name);
+      const actionMethod = serverCall?.actionMethod ?? m.name;
+      const isMutation = serverCall ? serverCall.isMutation : true;
 
-      // Ambil method aksi yang sebenarnya dipanggil di dalam body (misal: ->server(...)->saveCount(...))
-      const serverCallMatch = m.body.match(/->server\(.*?\)->([a-zA-Z0-9_]+)\((.*?)\)/);
-      const actionMethodName = serverCallMatch && serverCallMatch[1] ? serverCallMatch[1] : m.name;
-      const rawArg = serverCallMatch && serverCallMatch[2] ? serverCallMatch[2].replace('$this->', '').trim() : '';
-      const defaultArgs = rawArg ? `{ ${rawArg}: ${rawArg}() }` : 'args';
+      const pendingSignal = serverActionPendingSignals.get(m.name)!;
+      const errorSignal = serverActionErrorSignals.get(m.name)!;
+
+      const argsObject =
+        serverCall && serverCall.args.length > 0
+          ? `{ ${serverCall.args.map((a) => `${a.name}: ${a.valueExpr}`).join(', ')} }`
+          : 'args';
 
       bodyLines.push(`  async function ${m.name}(args = {}) {`);
-      bodyLines.push(`    set_${pendingSignalName}(true);`);
+      bodyLines.push(`    set_${pendingSignal}(true);`);
+      bodyLines.push(`    set_${errorSignal}(null);`);
       bodyLines.push('    try {');
-      bodyLines.push(`      return await callServerAction('${contract}::${actionMethodName}', ${defaultArgs});`);
+
+      if (isMutation) {
+        bodyLines.push('      const idempotencyKey = "idemp_" + Date.now();');
+        bodyLines.push(
+          `      return await callServerAction(${JSON.stringify(`${contract}::${actionMethod}`)}, ${argsObject}, { idempotencyKey });`
+        );
+      } else {
+        bodyLines.push(
+          `      return await callServerAction(${JSON.stringify(`${contract}::${actionMethod}`)}, ${argsObject});`
+        );
+      }
+
+      bodyLines.push('    } catch (err) {');
+      bodyLines.push(`      set_${errorSignal}(err instanceof Error ? err.message : String(err));`);
+      bodyLines.push('      throw err;');
       bodyLines.push('    } finally {');
-      bodyLines.push(`      set_${pendingSignalName}(false);`);
+      bodyLines.push(`      set_${pendingSignal}(false);`);
       bodyLines.push('    }');
       bodyLines.push('  }');
     } else {
       bodyLines.push(`  function ${m.name}() {`);
 
-      // Transpilasi ekspresi increment / decrement sederhana
-      if (m.body.includes('$this->count++') || m.body.includes('$this->count += 1')) {
-        bodyLines.push('    set_count(count() + 1);');
-      } else if (m.body.includes('$this->count--') || m.body.includes('$this->count -= 1')) {
-        bodyLines.push('    set_count(count() - 1);');
-      } else {
-        bodyLines.push(`    // Method client ${m.name}`);
+      // Transpilasi operasi berbasis AST IR terstruktur (tanpa regex string)
+      if (m.operations && m.operations.length > 0) {
+        for (const op of m.operations) {
+          if (op.type === 'mutate_state') {
+            if (op.operator === '+=') {
+              bodyLines.push(`    set_${op.target}(${op.target}() + ${op.operand});`);
+            } else if (op.operator === '-=') {
+              bodyLines.push(`    set_${op.target}(${op.target}() - ${op.operand});`);
+            } else {
+              bodyLines.push(`    set_${op.target}(${op.operand});`);
+            }
+          }
+        }
       }
 
       bodyLines.push('  }');
@@ -90,23 +120,24 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
     function emitElement(el: ParsedElement, parentVar: string | null): string {
       elemCounter++;
       const elVar = `el_${el.tag.replace(/[^a-zA-Z0-9]/g, '_')}_${elemCounter}`;
-      bodyLines.push(`  const ${elVar} = document.createElement('${el.tag}');`);
+      bodyLines.push(`  const ${elVar} = document.createElement(${JSON.stringify(el.tag)});`);
 
       for (const [attrName, attrVal] of Object.entries(el.attributes)) {
-        bodyLines.push(`  ${elVar}.setAttribute('${attrName}', '${attrVal}');`);
+        bodyLines.push(`  ${elVar}.setAttribute(${JSON.stringify(attrName)}, ${JSON.stringify(attrVal)});`);
       }
 
       for (const ev of el.events) {
         usedImports.add('on');
         const cleanHandler = ev.handlerCall.replace(/\(\)$/, '').trim();
-        bodyLines.push(`  on(${elVar}, '${ev.event}', () => ${cleanHandler}());`);
+        bodyLines.push(`  on(${elVar}, ${JSON.stringify(ev.event)}, () => ${cleanHandler}());`);
 
-        // Jika event memicu aksi server, ikat aria-busy dan data-pending
+        // Jika event memicu aksi server, ikat aria-busy, data-pending, dan disabled (cegah double click)
         const pendingSignal = serverActionPendingSignals.get(cleanHandler);
         if (pendingSignal) {
           usedImports.add('bindAttr');
-          bodyLines.push(`  bindAttr(${elVar}, 'aria-busy', () => ${pendingSignal}() ? 'true' : null);`);
-          bodyLines.push(`  bindAttr(${elVar}, 'data-pending', () => ${pendingSignal}() ? '' : null);`);
+          bodyLines.push(`  bindAttr(${elVar}, "aria-busy", () => ${pendingSignal}() ? "true" : null);`);
+          bodyLines.push(`  bindAttr(${elVar}, "data-pending", () => ${pendingSignal}() ? "" : null);`);
+          bodyLines.push(`  bindAttr(${elVar}, "disabled", () => ${pendingSignal}() ? "disabled" : null);`);
         }
       }
 
@@ -114,7 +145,7 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
         usedImports.add('bindText');
         bodyLines.push(`  bindText(${elVar}, () => ${el.expressionBinding}());`);
       } else if (el.textContent) {
-        bodyLines.push(`  ${elVar}.textContent = '${el.textContent}';`);
+        bodyLines.push(`  ${elVar}.textContent = ${JSON.stringify(el.textContent)};`);
       }
 
       for (const child of el.children) {
@@ -130,16 +161,16 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
 
     if (parsedElements.length > 0 && parsedElements[0]) {
       const rootVar = emitElement(parsedElements[0], null);
-      bodyLines.push(`  ${rootVar}.setAttribute('data-kylat-component', '${ir.name}');`);
+      bodyLines.push(`  ${rootVar}.setAttribute("data-kylat-component", ${JSON.stringify(ir.name)});`);
       bodyLines.push(`  return ${rootVar};`);
     } else {
-      bodyLines.push("  const root = document.createElement('div');");
-      bodyLines.push(`  root.setAttribute('data-kylat-component', '${ir.name}');`);
+      bodyLines.push('  const root = document.createElement("div");');
+      bodyLines.push(`  root.setAttribute("data-kylat-component", ${JSON.stringify(ir.name)});`);
       bodyLines.push('  return root;');
     }
   } else {
-    bodyLines.push("  const root = document.createElement('div');");
-    bodyLines.push(`  root.setAttribute('data-kylat-component', '${ir.name}');`);
+    bodyLines.push('  const root = document.createElement("div");');
+    bodyLines.push(`  root.setAttribute("data-kylat-component", ${JSON.stringify(ir.name)});`);
     bodyLines.push('  return root;');
   }
 

@@ -14,6 +14,8 @@ export * from './ir.js';
 export * from './parser.js';
 export * from './analyzer.js';
 export * from './codegen.js';
+export * from './template-parser.js';
+export * from './case-converter.js';
 
 export interface CompileOptions extends ParserOptions {
   sourceMap?: boolean;

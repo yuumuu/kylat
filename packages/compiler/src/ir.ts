@@ -23,12 +23,25 @@ export interface ComputedDefinition {
   dependencies: string[];
 }
 
+export type ClientOperation =
+  | { type: 'mutate_state'; target: string; operator: '+=' | '-=' | '='; operand: string }
+  | { type: 'call_method'; method: string; args: string[] };
+
+export interface ServerCallDefinition {
+  contract: string;
+  actionMethod: string;
+  args: Array<{ name: string; valueExpr: string }>;
+  isMutation: boolean;
+}
+
 export interface MethodDefinition {
   name: string;
   params: Array<{ name: string; type: string }>;
   returnType: string;
   kind: 'client' | 'server';
   body: string;
+  operations?: ClientOperation[];
+  serverCall?: ServerCallDefinition;
 }
 
 export interface ChildComponentDefinition {

@@ -184,47 +184,47 @@ export function analyzePhpComponent(
       );
     }
 
-    // KIL-205: Cek visibility (public / protected / private)
+    // KIL-131: Cek visibility (public / protected / private)
     const hasVisibility = p.children.some((c) =>
       c.type === 'visibility_modifier' || c.text === 'public' || c.text === 'protected' || c.text === 'private'
     );
     if (!hasVisibility) {
       diagnostics.push(
         createDiagnostic(
-          'KIL-205',
+          'KIL-131',
           filename,
           p.startPosition.row + 1,
           p.startPosition.column + 1,
-          ERROR_MESSAGES.KIL_205,
+          ERROR_MESSAGES.KIL_131,
           'Tambahkan kata kunci public, protected, atau private.'
         )
       );
     }
 
-    // KIL-203: Cek tipe data properti
+    // KIL-131: Cek tipe data properti
     const typeNode = p.childForFieldName('type') || p.children.find((c) => c.type === 'primitive_type' || c.type === 'named_type');
     if (!typeNode) {
       diagnostics.push(
         createDiagnostic(
-          'KIL-203',
+          'KIL-131',
           filename,
           p.startPosition.row + 1,
           p.startPosition.column + 1,
-          ERROR_MESSAGES.KIL_203,
+          ERROR_MESSAGES.KIL_131,
           'Berikan tipe data eksplisit (misal: public int $count = 0;).'
         )
       );
     } else {
       const typeText = typeNode.text;
-      // KIL-204: Dilarang callable / Closure
+      // KIL-110: Dilarang callable / Closure
       if (typeText.toLowerCase() === 'callable' || typeText.toLowerCase() === 'closure') {
         diagnostics.push(
           createDiagnostic(
-            'KIL-204',
+            'KIL-110',
             filename,
             p.startPosition.row + 1,
             p.startPosition.column + 1,
-            ERROR_MESSAGES.KIL_204,
+            ERROR_MESSAGES.KIL_110.replace('{tipe}', typeText),
             'Gunakan tipe data skalar, array, atau objek yang dapat diserialisasi JSON.'
           )
         );
@@ -291,6 +291,109 @@ export function analyzePhpComponent(
 
     const bodyNode = m.childForFieldName('body');
     const bodyText = bodyNode ? bodyNode.text : '{}';
+    const operations: import('./ir.js').ClientOperation[] = [];
+    let serverCall: import('./ir.js').ServerCallDefinition | undefined;
+
+    if (bodyNode && kind === 'client') {
+      // Traversal AST statements di dalam compound_statement
+      for (const stmt of bodyNode.children) {
+        if (stmt.type === '{' || stmt.type === '}' || stmt.type === 'comment') continue;
+
+        if (stmt.type === 'expression_statement') {
+          const expr = stmt.children[0];
+          if (!expr) continue;
+
+          // 1. $this->count += 1 atau $this->count -= 1
+          if (expr.type === 'augmented_assignment_expression') {
+            const lhs = expr.childForFieldName('left')?.text || '';
+            const op = expr.children.find((c) => c.text === '+=' || c.text === '-=')?.text as '+=' | '-=' | undefined;
+            const rhs = expr.childForFieldName('right')?.text || '1';
+
+            const propMatch = lhs.match(/^\$this->([a-zA-Z0-9_]+)$/);
+            if (propMatch && propMatch[1] && op) {
+              operations.push({
+                type: 'mutate_state',
+                target: propMatch[1],
+                operator: op,
+                operand: rhs,
+              });
+              continue;
+            }
+          }
+
+          // 2. $this->count++ atau $this->count--
+          if (expr.type === 'update_expression') {
+            const arg = expr.childForFieldName('argument')?.text || '';
+            const op = expr.children.find((c) => c.text === '++' || c.text === '--')?.text;
+            const propMatch = arg.match(/^\$this->([a-zA-Z0-9_]+)$/);
+            if (propMatch && propMatch[1] && op) {
+              operations.push({
+                type: 'mutate_state',
+                target: propMatch[1],
+                operator: op === '++' ? '+=' : '-=',
+                operand: '1',
+              });
+              continue;
+            }
+          }
+
+          // Jika statement ekspresi tidak didukung di subset v0: fail fast (KIL-104)
+          diagnostics.push(
+            createDiagnostic(
+              'KIL-104',
+              filename,
+              stmt.startPosition.row + 1,
+              stmt.startPosition.column + 1,
+              `Ekspresi statement '${stmt.text.trim()}' tidak didukung dalam method client di subset v0.`,
+              'Gunakan operasi mutasi state yang didukung ($this->state += 1 atau assignment).'
+            )
+          );
+        } else {
+          // Statement tak dikenal di method client
+          diagnostics.push(
+            createDiagnostic(
+              'KIL-104',
+              filename,
+              stmt.startPosition.row + 1,
+              stmt.startPosition.column + 1,
+              `Pernyataan tipe '${stmt.type}' tidak didukung dalam method client.`,
+              'Pindahkan logika ke aksi server atau sederhanakan.'
+            )
+          );
+        }
+      }
+    } else if (bodyNode && kind === 'server') {
+      // Traversal AST untuk panggilan server action
+      const memberCalls = bodyNode.descendantsOfType('member_call_expression');
+      for (const call of memberCalls) {
+        const callNameNode = call.childForFieldName('name');
+        const callName = callNameNode?.text;
+
+        // Cari panggilan ->saveCount(...) atau method aksi setelah ->server(...)
+        if (callName && callName !== 'server') {
+          const contract = serverUses[0]?.contractName ?? className;
+          const argsList: Array<{ name: string; valueExpr: string }> = [];
+
+          const argsNode = call.childForFieldName('arguments');
+          if (argsNode) {
+            for (const arg of argsNode.children) {
+              if (arg.type === '(' || arg.type === ')' || arg.type === ',') continue;
+              const text = arg.text;
+              const cleanArg = text.replace(/^\$this->/, '').replace(/^\$/, '');
+              argsList.push({ name: cleanArg, valueExpr: `${cleanArg}()` });
+            }
+          }
+
+          serverCall = {
+            contract,
+            actionMethod: callName,
+            args: argsList,
+            isMutation: !callName.startsWith('get') && !callName.startsWith('fetch'),
+          };
+          break;
+        }
+      }
+    }
 
     methodDefinitions.push({
       name: mName,
@@ -298,6 +401,8 @@ export function analyzePhpComponent(
       returnType,
       kind,
       body: bodyText,
+      operations,
+      serverCall,
     });
   }
 
