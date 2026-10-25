@@ -19,7 +19,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 | **KEP-05** | **Runtime Reaktif**: Tidak menulis runtime sinyal sendiri; menggunakan lapisan tipis di atas pustaka signals pihak ketiga yang teruji. | **PUTUSAN** | — | Reviewer teknis |
 | **KEP-06** | **Pilihan Parser PHP**: Ditetapkan menggunakan `web-tree-sitter` (WASM) + `tree-sitter-php.wasm`. Lolos evaluasi Spike S1 (dukungan PHP 8 penuh, zero-PHP dependency, browser-ready). | **PUTUSAN** | — | Reviewer teknis |
 | **KEP-07** | **Pilihan Inti Signals**: Evaluasi pustaka signals (alien-signals vs @solidjs/signals) berdasarkan benchmark ukuran dan performa. Diputuskan lewat spike S2. | `[TERBUKA]` | Akhir fase 1 | Reviewer teknis |
-| **KEP-08** | **Sintaks Deklarasi Aksi**: Penentuan antara pendekatan interface PHP vs atribut kustom. Diputuskan lewat spike S3. | `[TERBUKA]` | Akhir fase 0 | Pemilik proyek |
+| **KEP-08** | **Sintaks Deklarasi Aksi**: Ditetapkan menggunakan interface kontrak PHP (`#[Uses(NamaKontrak::class)]` + `$this->server(...)`). Lolos evaluasi Spike S3 (validasi PHPStan Level 9, ramah pemula, kompatibel Mode A). | **PUTUSAN** | — | Pemilik proyek |
 | **KEP-09** | **Distribusi Binary CLI**: Keputusan apakah CLI didistribusikan sebagai binary tunggal mandiri atau paket npm murni. | `[TERBUKA]` | Akhir fase 0 | Pemilik proyek |
 | **KEP-10** | **Compiler di Browser**: Kebutuhan build WASM compiler untuk playground interaktif di peramban web. | `[TERBUKA]` | Akhir fase 0 | Pemilik proyek |
 | **KEP-11** | **Batas Runtime & Konkurensi**: Nilai batas timeout dan konkurensi worker PHP-FPM. Diputuskan lewat spike S4 dan uji beban nyata. | `[TERBUKA]` | Akhir fase 3 | Reviewer teknis |

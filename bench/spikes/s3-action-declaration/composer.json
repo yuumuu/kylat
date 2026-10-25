@@ -1,0 +1,16 @@
+{
+  "name": "kylat/spike-s3",
+  "description": "Prototipe Spike S3 perbandingan deklarasi aksi server (Interface vs Atribut)",
+  "type": "project",
+  "require": {
+    "php": "^8.2"
+  },
+  "require-dev": {
+    "phpstan/phpstan": "^1.12"
+  },
+  "autoload": {
+    "psr-4": {
+      "Kylat\\SpikeS3\\": "src/"
+    }
+  }
+}
