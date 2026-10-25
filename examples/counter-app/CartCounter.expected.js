@@ -3,13 +3,13 @@
  * Ditinjau dan diverifikasi secara independen sebagai kontrak uji output @kylat/compiler untuk CartCounter.
  */
 
-import { bindText, callServerAction, createSignal } from '@kylat/runtime';
+import { bindAttr, bindText, callServerAction, createSignal, on } from '@kylat/runtime';
 
 export function createCartCounter(props = {}) {
   // 1. Inisialisasi Props & State Sinyal
   const prop_productId = props["productId"] !== undefined ? props["productId"] : undefined;
-  if (prop_productId === undefined) {
-    throw new TypeError("Prop 'productId' wajib disertakan untuk komponen CartCounter.");
+  if (prop_productId === undefined || prop_productId === null) {
+    throw new TypeError("Prop 'productId' wajib disertakan dan tidak boleh null untuk komponen CartCounter.");
   }
   const [qty, set_qty] = createSignal(1);
   const [is_pending_submitOrder, set_is_pending_submitOrder] = createSignal(false);
@@ -42,14 +42,26 @@ export function createCartCounter(props = {}) {
   }
 
   // 3. Konstruksi DOM Element & Binding
-  const root = document.createElement("div");
-  const el_live_error_1 = document.createElement("div");
-  el_live_error_1.setAttribute("aria-live", "polite");
-  el_live_error_1.setAttribute("role", "status");
-  bindText(el_live_error_1, () => error_submitOrder() ?? "");
-  root.appendChild(el_live_error_1);
-  root.setAttribute("data-kylat-component", "CartCounter");
-  return root;
+  const el_div_1 = document.createElement("div");
+  el_div_1.setAttribute("class", "cart-box");
+  const el_button_2 = document.createElement("button");
+  on(el_button_2, "click", () => increment());
+  el_button_2.textContent = "+";
+  el_div_1.appendChild(el_button_2);
+  const el_button_3 = document.createElement("button");
+  on(el_button_3, "click", () => submitOrder());
+  bindAttr(el_button_3, "aria-busy", () => is_pending_submitOrder() ? "true" : null);
+  bindAttr(el_button_3, "data-pending", () => is_pending_submitOrder() ? "" : null);
+  bindAttr(el_button_3, "disabled", () => is_pending_submitOrder() ? "disabled" : null);
+  el_button_3.textContent = "Tambah ke Keranjang";
+  el_div_1.appendChild(el_button_3);
+  const el_live_error_4 = document.createElement("div");
+  el_live_error_4.setAttribute("aria-live", "polite");
+  el_live_error_4.setAttribute("role", "status");
+  bindText(el_live_error_4, () => error_submitOrder() ?? "");
+  el_div_1.appendChild(el_live_error_4);
+  el_div_1.setAttribute("data-kylat-component", "CartCounter");
+  return el_div_1;
 }
 
 export default createCartCounter;

@@ -19,8 +19,8 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
     const fallback = p.defaultValue ?? 'undefined';
     bodyLines.push(`  const prop_${p.name} = props[${JSON.stringify(p.name)}] !== undefined ? props[${JSON.stringify(p.name)}] : ${fallback};`);
     if (p.isRequired) {
-      bodyLines.push(`  if (prop_${p.name} === undefined) {`);
-      bodyLines.push(`    throw new TypeError("Prop '${p.name}' wajib disertakan untuk komponen ${ir.name}.");`);
+      bodyLines.push(`  if (prop_${p.name} === undefined || prop_${p.name} === null) {`);
+      bodyLines.push(`    throw new TypeError("Prop '${p.name}' wajib disertakan dan tidak boleh null untuk komponen ${ir.name}.");`);
       bodyLines.push('  }');
     }
   }

@@ -177,13 +177,15 @@ final class EscapeTest extends Component
     assert.equal(actualCode, expectedCode, 'Output kompilasi harus identik persis dengan kode Counter.expected.js');
   });
 
-  it('menghasilkan output yang identik dengan CartCounter.expected.js (Human-Authored Golden File)', async () => {
+  it('menghasilkan output yang identik dengan CartCounter.expected.js (Human-Authored Golden File dengan Template & Button Attributes)', async () => {
     const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.php');
+    const cartCounterBladePath = path.resolve(__dirname, '../../../examples/counter-app/cart-counter.blade.php');
     const expectedJsPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.expected.js');
 
     const phpSource = fs.readFileSync(cartCounterPhpPath, 'utf-8');
+    const bladeSource = fs.readFileSync(cartCounterBladePath, 'utf-8');
     const expectedJs = fs.readFileSync(expectedJsPath, 'utf-8');
-    const result = await compile(phpSource, 'CartCounter.php');
+    const result = await compile(phpSource, 'CartCounter.php', { template: bladeSource });
     assert.equal(result.success, true);
 
     const stripBanner = (str) => str.replace(/^\/\*\*[\s\S]*?\*\/\s*/, '').trim().replace(/\r\n/g, '\n');
@@ -194,19 +196,20 @@ final class EscapeTest extends Component
     assert.equal(actualCode, expectedCode, 'Output kompilasi CartCounter harus identik persis dengan kode CartCounter.expected.js');
   });
 
-  it('memastikan prop wajib tanpa default melempar TypeError saat diinisialisasi tanpa props', async () => {
+  it('memastikan prop wajib tanpa default melempar TypeError saat diinisialisasi tanpa props atau bernilai null', async () => {
     const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.php');
     const phpSource = fs.readFileSync(cartCounterPhpPath, 'utf-8');
     const result = await compile(phpSource, 'CartCounter.php');
     assert.equal(result.success, true);
 
     // Evaluasi fungsi createCartCounter dari output kode
-    // Ganti import runtime dengan mock sederhana dan bersihkan export keyword
     const mockModuleCode = result.code
       .replace(/import\s*\{[^}]*\}\s*from\s*['"]@kylat\/runtime['"];?/, `
         const createSignal = (v) => [() => v, () => {}];
         const callServerAction = async () => {};
         const bindText = () => {};
+        const on = () => {};
+        const bindAttr = () => {};
         const document = { createElement: () => ({ setAttribute: () => {}, appendChild: () => {} }) };
       `)
       .replace(/export\s+function/g, 'function')
@@ -240,8 +243,22 @@ final class EscapeTest extends Component
       'Inisialisasi dengan props kosong wajib melempar TypeError'
     );
 
-    // 3. Kasus props valid { productId: "prod_123" } -> berhasil tanpa error
+    // 3. Kasus server mengirim null untuk prop non-nullable -> wajib melempar TypeError
+    assert.throws(
+      () => {
+        fn({ productId: null });
+      },
+      (err) => {
+        assert.ok(err instanceof TypeError);
+        assert.ok(err.message.includes("tidak boleh null"));
+        return true;
+      },
+      'Prop bernilai null untuk tipe string non-nullable wajib melempar TypeError'
+    );
+
+    // 4. Kasus props valid { productId: "prod_123" } -> berhasil tanpa error
     const instance = fn({ productId: 'prod_123' });
-    assert.ok(instance, 'Komponen berhasil diinisialisasi ketika prop wajib diberikan');
+    assert.ok(instance, 'Komponen berhasil diinisialisasi ketika prop valid diberikan');
   });
 });
+
