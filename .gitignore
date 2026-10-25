@@ -1,0 +1,38 @@
+# Dependensi
+node_modules/
+vendor/
+.pnp.*
+.yarn/*
+
+# Build
+dist/
+build/
+*.tsbuildinfo
+
+# Test dan cakupan
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# Artefak benchmark lokal
+bench/baselines/_local/
+bench/tmp/
+
+# Rahasia dan konfigurasi lokal
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Editor dan OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Log
+*.log
+npm-debug.log*

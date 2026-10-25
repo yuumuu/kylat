@@ -1,0 +1,63 @@
+# Kylat
+
+Toolchain frontend: komponen ditulis dengan subset PHP bergaya Livewire, dikompilasi menjadi JavaScript dengan reaktivitas fine-grained (signals) yang berjalan di browser. Server hanya dipanggil untuk hal yang memang membutuhkan server — data, penyimpanan, otorisasi — melalui protokol RPC netral bahasa. Frontend bisa di-host statis di CDN dan berbicara dengan backend mana pun yang mengimplementasikan kontrak.
+
+**Status: fase 0 belum dimulai.** Repo ini masih kerangka. Belum ada kode yang dapat dijalankan, dan belum ada satu pun keputusan `[TERBUKA]` yang ditutup oleh scaffold ini.
+
+## Sumber kebenaran
+
+Spesifikasi masih hidup di Google Drive, folder `Kylat` → `01 Aktif (v1.1)`. Repo ini belum memuat salinannya; migrasi dokumen ke `docs/` belum diputuskan.
+
+| Dokumen | Isi | Artefak spec terkait |
+|---|---|---|
+| Kylat 1 | Visi, ruang lingkup, mode distribusi, prinsip P1–P12 | — |
+| Kylat 2 | Subset PHP v0, semantik, IR, format error | `spec/php-subset.md`, `spec/ir.md`, `spec/errors.md` |
+| Kylat 3 | Protokol, keamanan, autentikasi, batas runtime | `spec/protocol.schema.json` |
+| Kylat 4 | Arsitektur, runtime, struktur repo, aksesibilitas | — |
+| Kylat 5 | Adopsi, CLI, migrasi dari Livewire 4 | — |
+| Kylat 6 | Roadmap, register keputusan, gerbang | — |
+| `template.md` | Grammar templat dan direktif | `spec/template.md` |
+
+## Struktur
+
+```
+spec/                 spesifikasi yang mengikat implementasi
+packages/
+  compiler/           parse, analyze, ir, codegen, diagnostics
+  runtime/            signals, DOM, list, scheduler, RPC client
+  protocol/           skema dan test konformansi
+  adapter-laravel/    kontrak aksi, endpoint, Blade directive, policy
+  cli/                create, dev, build, check, doctor, sync-contract
+bench/                scenarios, baselines, scripts
+examples/             contoh yang harus selalu berjalan
+docs/                 tutorial, guide, reference, decisions
+```
+
+Aturan: setiap package punya README. Impor lintas package hanya lewat API publik. Lint mencegah dependensi sirkular. Modul di bawah sekitar 300 baris.
+
+## Invarian
+
+Yang tidak boleh dilanggar di seluruh repo, dari dokumen 3 §9:
+
+1. Tanpa `eval`, `new Function`, `unserialize`, atau refleksi dinamis atas input.
+2. Server selalu otoritas; client tidak pernah dipercaya.
+3. Setiap aksi server punya otorisasi eksplisit, validasi skema, batas, dan idempotency untuk mutasi.
+4. Default deny.
+5. Tidak ada rahasia di client; hanya variabel `PUBLIC_` yang di-embed.
+6. Respons terautentikasi atau personal tidak pernah di-cache bersama.
+7. DOM hanya ditulis lewat API aman; HTML mentah hanya lewat Trusted Types.
+8. Dependensi runtime minimum, di-pin, tanpa install script.
+9. Konfigurasi aman secara default; `kylat doctor` gagal di CI bila tidak aman.
+10. Setiap temuan keamanan menghasilkan satu uji regresi.
+
+Selain itu: tidak ada klaim performa tanpa harness benchmark yang bisa diulang.
+
+## Belum ada di repo ini
+
+Sengaja tidak dibuat karena keputusannya masih terbuka, atau karena isinya belum tersedia:
+
+- `LICENSE` — lisensi `[TERBUKA]`, tenggat sebelum rilis 1.0.
+- `CONTRIBUTING.md`, `SECURITY.md` — menunggu kebijakan versi dan pelaporan.
+- `spec/template.md` — sudah ditulis, masih di Drive, belum dipindahkan.
+- `spec/php-subset.md`, `spec/ir.md`, `spec/errors.md` — belum ditulis; untuk sementara isinya ada di Dokumen 2.
+- Seluruh isi `packages/` — belum ada baris kode.
