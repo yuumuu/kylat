@@ -38,7 +38,8 @@ final class CartCounter extends Component
     const result = await compile(validComponent, 'CartCounter.php');
 
     assert.equal(result.success, true);
-    assert.ok(result.code.includes("import { createSignal, createComputed"));
+    assert.ok(result.code.includes("from '@kylat/runtime'"));
+    assert.ok(result.code.includes("createSignal"));
     assert.ok(result.code.includes("export function createCartCounter(props = {})"));
     assert.ok(result.code.includes("const [qty, set_qty] = createSignal(1);"));
     assert.ok(result.code.includes("callServerAction('CartActions::add'"));

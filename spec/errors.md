@@ -154,6 +154,39 @@ final class Cart extends Component
 
 ---
 
+#### KIL-104
+- **Nama**: Fitur sintaks PHP di luar subset v0
+- **Klasifikasi**: Aturan Bahasa & Subset PHP
+- **Pemicu**: Penggunaan fitur sintaks bahasa PHP yang dilarang di v0, seperti ekspresi `match`, generator `yield`, pernyataan `goto`, atau evaluasi dinamis `eval()`.
+- **Pesan**: `Fitur sintaks PHP '{fitur}' tidak didukung di subset Kylat v0`
+- **Rujukan**: [`spec/php-subset.md` §1](file:///c:/Users/haidaryuum/source/kylat/spec/php-subset.md)
+
+##### Contoh Salah
+```php
+#[Client]
+public function statusLabel(int $status): string
+{
+    return match($status) {
+        1 => 'Aktif',
+        default => 'Nonaktif',
+    };
+}
+```
+
+##### Contoh Benar
+```php
+#[Client]
+public function statusLabel(int $status): string
+{
+    if ($status === 1) {
+        return 'Aktif';
+    }
+    return 'Nonaktif';
+}
+```
+
+---
+
 #### KIL-110
 - **Nama**: Pemanggilan fungsi atau instansiasi kelas di luar allowlist
 - **Klasifikasi**: Aturan Bahasa / Keamanan

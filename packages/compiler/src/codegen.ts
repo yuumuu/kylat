@@ -8,67 +8,80 @@ import type { ComponentIR } from './ir.js';
 import { parseTemplate, type ParsedElement } from './template-parser.js';
 
 export function generateJavaScript(ir: ComponentIR, templateSource?: string): string {
-  const lines: string[] = [];
+  const bodyLines: string[] = [];
+  const usedImports = new Set<string>();
 
-  lines.push('/**');
-  lines.push(` * Komponen Kylat yang dikompilasi: ${ir.name}`);
-  lines.push(' * Dihasilkan secara otomatis oleh @kylat/compiler');
-  lines.push(' */');
-  lines.push('');
-  lines.push("import { createSignal, createComputed, bindText, bindAttr, bindInput, on, callServerAction } from '@kylat/runtime';");
-  lines.push('');
-
-  lines.push(`export function create${ir.name}(props = {}) {`);
-  lines.push('  // 1. Inisialisasi Props & State Sinyal');
+  bodyLines.push(`export function create${ir.name}(props = {}) {`);
+  bodyLines.push('  // 1. Inisialisasi Props & State Sinyal');
 
   // Inisialisasi props dari argumen props
   for (const p of ir.props) {
     const fallback = p.defaultValue ?? 'undefined';
-    lines.push(`  const prop_${p.name} = props['${p.name}'] !== undefined ? props['${p.name}'] : ${fallback};`);
+    bodyLines.push(`  const prop_${p.name} = props['${p.name}'] !== undefined ? props['${p.name}'] : ${fallback};`);
   }
 
-  // Inisialisasi state lokal: jika nama cocok dengan prop_initialX, gunakan prop sebagai initial value
+  // Inisialisasi state lokal
   for (const s of ir.state) {
+    usedImports.add('createSignal');
     const matchingProp = ir.props.find(
       (p) => p.name.toLowerCase() === `initial${s.name.toLowerCase()}` || p.name === s.name
     );
-    const initialExpr = matchingProp ? `prop_${matchingProp.name} ?? ${s.initialValue}` : s.initialValue;
-    lines.push(`  const [${s.name}, set_${s.name}] = createSignal(${initialExpr});`);
+    const initialExpr = matchingProp ? `prop_${matchingProp.name}` : s.initialValue;
+    bodyLines.push(`  const [${s.name}, set_${s.name}] = createSignal(${initialExpr});`);
   }
 
-  lines.push('');
-  lines.push('  // 2. Definisi Aksi & Method');
+  // Lacak status pending untuk aksi server
+  const serverActionPendingSignals = new Map<string, string>();
+  for (const m of ir.methods) {
+    if (m.kind === 'server') {
+      usedImports.add('createSignal');
+      const pendingSignalName = `is_pending_${m.name}`;
+      serverActionPendingSignals.set(m.name, pendingSignalName);
+      bodyLines.push(`  const [${pendingSignalName}, set_${pendingSignalName}] = createSignal(false);`);
+    }
+  }
+
+  bodyLines.push('');
+  bodyLines.push('  // 2. Definisi Aksi & Method');
 
   for (const m of ir.methods) {
     if (m.kind === 'server') {
+      usedImports.add('callServerAction');
       const contract = ir.serverUses[0]?.contractName ?? ir.name;
+      const pendingSignalName = serverActionPendingSignals.get(m.name)!;
+
       // Ambil method aksi yang sebenarnya dipanggil di dalam body (misal: ->server(...)->saveCount(...))
       const serverCallMatch = m.body.match(/->server\(.*?\)->([a-zA-Z0-9_]+)\((.*?)\)/);
       const actionMethodName = serverCallMatch && serverCallMatch[1] ? serverCallMatch[1] : m.name;
       const rawArg = serverCallMatch && serverCallMatch[2] ? serverCallMatch[2].replace('$this->', '').trim() : '';
       const defaultArgs = rawArg ? `{ ${rawArg}: ${rawArg}() }` : 'args';
 
-      lines.push(`  async function ${m.name}(args = {}) {`);
-      lines.push(`    return await callServerAction('${contract}::${actionMethodName}', ${defaultArgs});`);
-      lines.push('  }');
+      bodyLines.push(`  async function ${m.name}(args = {}) {`);
+      bodyLines.push(`    set_${pendingSignalName}(true);`);
+      bodyLines.push('    try {');
+      bodyLines.push(`      return await callServerAction('${contract}::${actionMethodName}', ${defaultArgs});`);
+      bodyLines.push('    } finally {');
+      bodyLines.push(`      set_${pendingSignalName}(false);`);
+      bodyLines.push('    }');
+      bodyLines.push('  }');
     } else {
-      lines.push(`  function ${m.name}() {`);
+      bodyLines.push(`  function ${m.name}() {`);
 
       // Transpilasi ekspresi increment / decrement sederhana
       if (m.body.includes('$this->count++') || m.body.includes('$this->count += 1')) {
-        lines.push('    set_count(count() + 1);');
+        bodyLines.push('    set_count(count() + 1);');
       } else if (m.body.includes('$this->count--') || m.body.includes('$this->count -= 1')) {
-        lines.push('    set_count(count() - 1);');
+        bodyLines.push('    set_count(count() - 1);');
       } else {
-        lines.push(`    // Method client ${m.name}`);
+        bodyLines.push(`    // Method client ${m.name}`);
       }
 
-      lines.push('  }');
+      bodyLines.push('  }');
     }
   }
 
-  lines.push('');
-  lines.push('  // 3. Konstruksi DOM Element & Binding');
+  bodyLines.push('');
+  bodyLines.push('  // 3. Konstruksi DOM Element & Binding');
 
   if (templateSource && templateSource.trim().length > 0) {
     const parsedElements = parseTemplate(templateSource);
@@ -77,22 +90,31 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
     function emitElement(el: ParsedElement, parentVar: string | null): string {
       elemCounter++;
       const elVar = `el_${el.tag.replace(/[^a-zA-Z0-9]/g, '_')}_${elemCounter}`;
-      lines.push(`  const ${elVar} = document.createElement('${el.tag}');`);
+      bodyLines.push(`  const ${elVar} = document.createElement('${el.tag}');`);
 
       for (const [attrName, attrVal] of Object.entries(el.attributes)) {
-        lines.push(`  ${elVar}.setAttribute('${attrName}', '${attrVal}');`);
+        bodyLines.push(`  ${elVar}.setAttribute('${attrName}', '${attrVal}');`);
       }
 
       for (const ev of el.events) {
-        // Hapus kurung di handler call jika ada (on:click="increment()")
+        usedImports.add('on');
         const cleanHandler = ev.handlerCall.replace(/\(\)$/, '').trim();
-        lines.push(`  on(${elVar}, '${ev.event}', () => ${cleanHandler}());`);
+        bodyLines.push(`  on(${elVar}, '${ev.event}', () => ${cleanHandler}());`);
+
+        // Jika event memicu aksi server, ikat aria-busy dan data-pending
+        const pendingSignal = serverActionPendingSignals.get(cleanHandler);
+        if (pendingSignal) {
+          usedImports.add('bindAttr');
+          bodyLines.push(`  bindAttr(${elVar}, 'aria-busy', () => ${pendingSignal}() ? 'true' : null);`);
+          bodyLines.push(`  bindAttr(${elVar}, 'data-pending', () => ${pendingSignal}() ? '' : null);`);
+        }
       }
 
       if (el.expressionBinding) {
-        lines.push(`  bindText(${elVar}, () => ${el.expressionBinding}());`);
+        usedImports.add('bindText');
+        bodyLines.push(`  bindText(${elVar}, () => ${el.expressionBinding}());`);
       } else if (el.textContent) {
-        lines.push(`  ${elVar}.textContent = '${el.textContent}';`);
+        bodyLines.push(`  ${elVar}.textContent = '${el.textContent}';`);
       }
 
       for (const child of el.children) {
@@ -100,7 +122,7 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
       }
 
       if (parentVar) {
-        lines.push(`  ${parentVar}.appendChild(${elVar});`);
+        bodyLines.push(`  ${parentVar}.appendChild(${elVar});`);
       }
 
       return elVar;
@@ -108,23 +130,38 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
 
     if (parsedElements.length > 0 && parsedElements[0]) {
       const rootVar = emitElement(parsedElements[0], null);
-      lines.push(`  ${rootVar}.setAttribute('data-kylat-component', '${ir.name}');`);
-      lines.push(`  return ${rootVar};`);
+      bodyLines.push(`  ${rootVar}.setAttribute('data-kylat-component', '${ir.name}');`);
+      bodyLines.push(`  return ${rootVar};`);
     } else {
-      lines.push("  const root = document.createElement('div');");
-      lines.push(`  root.setAttribute('data-kylat-component', '${ir.name}');`);
-      lines.push('  return root;');
+      bodyLines.push("  const root = document.createElement('div');");
+      bodyLines.push(`  root.setAttribute('data-kylat-component', '${ir.name}');`);
+      bodyLines.push('  return root;');
     }
   } else {
-    lines.push("  const root = document.createElement('div');");
-    lines.push(`  root.setAttribute('data-kylat-component', '${ir.name}');`);
-    lines.push('  return root;');
+    bodyLines.push("  const root = document.createElement('div');");
+    bodyLines.push(`  root.setAttribute('data-kylat-component', '${ir.name}');`);
+    bodyLines.push('  return root;');
   }
 
-  lines.push('}');
-  lines.push('');
-  lines.push(`export default create${ir.name};`);
-  lines.push('');
+  bodyLines.push('}');
+  bodyLines.push('');
+  bodyLines.push(`export default create${ir.name};`);
+  bodyLines.push('');
 
-  return lines.join('\n');
+  // Susun header dan baris impor hanya untuk fungsi yang benar-benar digunakan
+  const headerLines: string[] = [
+    '/**',
+    ` * Komponen Kylat yang dikompilasi: ${ir.name}`,
+    ' * Dihasilkan secara otomatis oleh @kylat/compiler',
+    ' */',
+    '',
+  ];
+
+  const sortedImports = Array.from(usedImports).sort();
+  if (sortedImports.length > 0) {
+    headerLines.push(`import { ${sortedImports.join(', ')} } from '@kylat/runtime';`);
+    headerLines.push('');
+  }
+
+  return [...headerLines, ...bodyLines].join('\n');
 }

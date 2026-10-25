@@ -97,6 +97,7 @@ Menggantikan `onMount` dan `effect` di tabel migrasi (dokumen 5, bagian 8).
 - `#[Uses(CartActions::class)]` adalah atribut terpisah untuk **kontrak aksi server**. `#[Uses]` tidak membuka izin merender komponen; `#[Child]` tidak mendeklarasikan kontrak aksi. Pemisahan ini disengaja agar compiler tidak menebak maksud dari jenis kelas dan pesan error tetap spesifik.
 - `<x-...>` adalah penanda compile-time. Tag ini **tidak boleh muncul di DOM hasil**; compiler menggantinya dengan node milik komponen anak.
 - Prop dioper sebagai atribut: `:start="$start"` untuk nilai dinamis, `start="10"` untuk literal string. Prop bertipe non-string wajib memakai kelas ekspresi (`:start="10"`, `:open="false"`), karena atribut biasa selalu menghasilkan `string`.
+- **Konversi Nama Prop**: Nama atribut prop pada tag HTML menggunakan format **kebab-case** dan dipetakan secara deterministik ke **camelCase** pada deklarasi properti `#[Prop]` PHP komponen (`initial-count` → `initialCount`, `max-items` → `maxItems`).
 - `key` pada `<x-nama>` di dalam `@foreach` wajib seperti elemen lain (`<x-product-card key="$item->id" … />`); `key` adalah atribut direktif dan tidak dioper sebagai prop.
 - Prop divalidasi terhadap signature `#[Prop]` saat build.
 - Dua kelas berbeda yang memetakan ke tag yang sama (`ProductCard` dan `Product_Card`) menggagalkan build. Kode galatnya belum dialokasikan.
