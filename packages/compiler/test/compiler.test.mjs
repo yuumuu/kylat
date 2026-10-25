@@ -178,4 +178,80 @@ final class NoVisProp extends Component
     const kil131 = result.diagnostics.find((d) => d.code === 'KIL-131');
     assert.ok(kil131, 'Harus mendeteksi KIL-131 untuk visibilitas hilang');
   });
+
+  it('mendeteksi KIL-104 jika argumen aksi server berupa literal angka atau string', async () => {
+    const code = `<?php
+declare(strict_types=1);
+namespace App\\Components;
+use Kylat\\Component;
+
+final class LiteralArg extends Component
+{
+    #[Server]
+    public function save(): void
+    {
+        $this->server(CounterActions::class)->saveCount(5);
+    }
+}
+`;
+    const result = await compile(code, 'LiteralArg.php');
+    assert.equal(result.success, false);
+    const kil104 = result.diagnostics.find((d) => d.code === 'KIL-104');
+    assert.ok(kil104, 'Harus mendeteksi KIL-104 jika argumen aksi server berupa literal');
+  });
+
+  it('mendeteksi KIL-104 jika argumen aksi server berupa ekspresi biner ($this->count + 1)', async () => {
+    const code = `<?php
+declare(strict_types=1);
+namespace App\\Components;
+use Kylat\\Component;
+
+final class ExprArg extends Component
+{
+    public int $count = 0;
+
+    #[Server]
+    public function save(): void
+    {
+        $this->server(CounterActions::class)->saveCount($this->count + 1);
+    }
+}
+`;
+    const result = await compile(code, 'ExprArg.php');
+    assert.equal(result.success, false);
+    const kil104 = result.diagnostics.find((d) => d.code === 'KIL-104');
+    assert.ok(kil104, 'Harus mendeteksi KIL-104 jika argumen aksi server berupa ekspresi');
+  });
+
+  it('membedakan mutasi (default) vs baca murni lewat atribut eksplisit #[Server(read: true)]', async () => {
+    const code = `<?php
+declare(strict_types=1);
+namespace App\\Components;
+use Kylat\\Component;
+
+#[Uses(DataActions::class)]
+final class ReadMutationTest extends Component
+{
+    public int $itemId = 1;
+
+    #[Server]
+    public function updateItem(): void
+    {
+        $this->server(DataActions::class)->save($this->itemId);
+    }
+
+    #[Server(read: true)]
+    public function fetchItem(): void
+    {
+        $this->server(DataActions::class)->load($this->itemId);
+    }
+}
+`;
+    const result = await compile(code, 'ReadMutationTest.php');
+    assert.equal(result.success, true);
+    // updateItem adalah mutasi: wajib ada idempotencyKey
+    assert.ok(result.code.includes('callServerAction("DataActions::save", { itemId: itemId() }, { idempotencyKey:'));
+    // fetchItem adalah read: true: TIDAK boleh ada idempotencyKey
+    assert.ok(result.code.includes('callServerAction("DataActions::load", { itemId: itemId() });'));
+  });
 });

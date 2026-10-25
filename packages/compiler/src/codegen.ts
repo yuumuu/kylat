@@ -43,6 +43,7 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
       serverActionErrorSignals.set(m.name, errorSignalName);
       bodyLines.push(`  const [${pendingSignalName}, set_${pendingSignalName}] = createSignal(false);`);
       bodyLines.push(`  const [${errorSignalName}, set_${errorSignalName}] = createSignal(null);`);
+      bodyLines.push(`  let current_idemp_${m.name} = null;`);
     }
   }
 
@@ -71,10 +72,12 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
       bodyLines.push('    try {');
 
       if (isMutation) {
-        bodyLines.push('      const idempotencyKey = "idemp_" + Date.now();');
+        bodyLines.push(`      current_idemp_${m.name} ??= "idemp_" + Date.now();`);
         bodyLines.push(
-          `      return await callServerAction(${JSON.stringify(`${contract}::${actionMethod}`)}, ${argsObject}, { idempotencyKey });`
+          `      const res = await callServerAction(${JSON.stringify(`${contract}::${actionMethod}`)}, ${argsObject}, { idempotencyKey: current_idemp_${m.name} });`
         );
+        bodyLines.push(`      current_idemp_${m.name} = null;`);
+        bodyLines.push(`      return res;`);
       } else {
         bodyLines.push(
           `      return await callServerAction(${JSON.stringify(`${contract}::${actionMethod}`)}, ${argsObject});`
@@ -83,7 +86,6 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
 
       bodyLines.push('    } catch (err) {');
       bodyLines.push(`      set_${errorSignal}(err instanceof Error ? err.message : String(err));`);
-      bodyLines.push('      throw err;');
       bodyLines.push('    } finally {');
       bodyLines.push(`      set_${pendingSignal}(false);`);
       bodyLines.push('    }');
@@ -113,9 +115,10 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
   bodyLines.push('');
   bodyLines.push('  // 3. Konstruksi DOM Element & Binding');
 
+  let elemCounter = 0;
+
   if (templateSource && templateSource.trim().length > 0) {
     const parsedElements = parseTemplate(templateSource);
-    let elemCounter = 0;
 
     function emitElement(el: ParsedElement, parentVar: string | null): string {
       elemCounter++;
@@ -161,15 +164,47 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
 
     if (parsedElements.length > 0 && parsedElements[0]) {
       const rootVar = emitElement(parsedElements[0], null);
+      for (const [, errorSignal] of serverActionErrorSignals) {
+        elemCounter++;
+        const errVar = `el_live_error_${elemCounter}`;
+        bodyLines.push(`  const ${errVar} = document.createElement("div");`);
+        bodyLines.push(`  ${errVar}.setAttribute("aria-live", "polite");`);
+        bodyLines.push(`  ${errVar}.setAttribute("role", "status");`);
+        usedImports.add('bindText');
+        bodyLines.push(`  bindText(${errVar}, () => ${errorSignal}() ?? "");`);
+        bodyLines.push(`  ${rootVar}.appendChild(${errVar});`);
+      }
       bodyLines.push(`  ${rootVar}.setAttribute("data-kylat-component", ${JSON.stringify(ir.name)});`);
       bodyLines.push(`  return ${rootVar};`);
     } else {
+      const rootVar = 'root';
       bodyLines.push('  const root = document.createElement("div");');
+      for (const [, errorSignal] of serverActionErrorSignals) {
+        elemCounter++;
+        const errVar = `el_live_error_${elemCounter}`;
+        bodyLines.push(`  const ${errVar} = document.createElement("div");`);
+        bodyLines.push(`  ${errVar}.setAttribute("aria-live", "polite");`);
+        bodyLines.push(`  ${errVar}.setAttribute("role", "status");`);
+        usedImports.add('bindText');
+        bodyLines.push(`  bindText(${errVar}, () => ${errorSignal}() ?? "");`);
+        bodyLines.push(`  ${rootVar}.appendChild(${errVar});`);
+      }
       bodyLines.push(`  root.setAttribute("data-kylat-component", ${JSON.stringify(ir.name)});`);
       bodyLines.push('  return root;');
     }
   } else {
+    const rootVar = 'root';
     bodyLines.push('  const root = document.createElement("div");');
+    for (const [, errorSignal] of serverActionErrorSignals) {
+      elemCounter++;
+      const errVar = `el_live_error_${elemCounter}`;
+      bodyLines.push(`  const ${errVar} = document.createElement("div");`);
+      bodyLines.push(`  ${errVar}.setAttribute("aria-live", "polite");`);
+      bodyLines.push(`  ${errVar}.setAttribute("role", "status");`);
+      usedImports.add('bindText');
+      bodyLines.push(`  bindText(${errVar}, () => ${errorSignal}() ?? "");`);
+      bodyLines.push(`  ${rootVar}.appendChild(${errVar});`);
+    }
     bodyLines.push(`  root.setAttribute("data-kylat-component", ${JSON.stringify(ir.name)});`);
     bodyLines.push('  return root;');
   }

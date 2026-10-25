@@ -164,7 +164,7 @@ export function analyzePhpComponent(
     }
   }
 
-  // 5. Analisis Properti (KIL-103, KIL-203, KIL-204, KIL-205)
+  // 5. Analisis Properti (KIL-103, KIL-110, KIL-131)
   const propDefinitions: PropDefinition[] = [];
   const stateDefinitions: StateDefinition[] = [];
 
@@ -269,7 +269,9 @@ export function analyzePhpComponent(
     const mName = m.childForFieldName('name')?.text || '';
     const returnType = m.childForFieldName('return_type')?.text || 'void';
 
-    const isServer = m.descendantsOfType('attribute_group').some((a) => a.text.includes('Server'));
+    const serverAttrs = m.descendantsOfType('attribute_group').filter((a) => a.text.includes('Server'));
+    const isServer = serverAttrs.length > 0;
+    const isExplicitRead = serverAttrs.some((a) => /read\s*:\s*true/.test(a.text));
     const kind = isServer ? 'server' : 'client';
 
     if (isServer) {
@@ -376,11 +378,39 @@ export function analyzePhpComponent(
 
           const argsNode = call.childForFieldName('arguments');
           if (argsNode) {
-            for (const arg of argsNode.children) {
-              if (arg.type === '(' || arg.type === ')' || arg.type === ',') continue;
-              const text = arg.text;
-              const cleanArg = text.replace(/^\$this->/, '').replace(/^\$/, '');
-              argsList.push({ name: cleanArg, valueExpr: `${cleanArg}()` });
+            for (const rawArg of argsNode.children) {
+              if (rawArg.type === '(' || rawArg.type === ')' || rawArg.type === ',') continue;
+
+              const arg = rawArg.type === 'argument' && rawArg.children.length > 0 ? rawArg.children[0]! : rawArg;
+              const argText = arg.text.trim();
+
+              // 1. $this->propName
+              const propMatch = argText.match(/^\$this->([a-zA-Z0-9_]+)$/);
+              if (propMatch && propMatch[1]) {
+                const prop = propMatch[1];
+                argsList.push({ name: prop, valueExpr: `${prop}()` });
+                continue;
+              }
+
+              // 2. $varName
+              const varMatch = argText.match(/^\$([a-zA-Z0-9_]+)$/);
+              if (varMatch && varMatch[1] && argText !== '$this') {
+                const varName = varMatch[1];
+                argsList.push({ name: varName, valueExpr: `${varName}()` });
+                continue;
+              }
+
+              // 3. Literal atau ekspresi tidak diizinkan di v0 (KIL-104)
+              diagnostics.push(
+                createDiagnostic(
+                  'KIL-104',
+                  filename,
+                  arg.startPosition.row + 1,
+                  arg.startPosition.column + 1,
+                  `Argumen aksi server '${argText}' tidak didukung. Argumen wajib berupa referensi properti ($this->prop) atau variabel.`,
+                  'Simpan nilai atau hasil kalkulasi ke dalam properti komponen sebelum memanggil aksi server.'
+                )
+              );
             }
           }
 
@@ -388,7 +418,7 @@ export function analyzePhpComponent(
             contract,
             actionMethod: callName,
             args: argsList,
-            isMutation: !callName.startsWith('get') && !callName.startsWith('fetch'),
+            isMutation: !isExplicitRead, // Default deny: mutasi secara default KECUALI #[Server(read: true)]
           };
           break;
         }
