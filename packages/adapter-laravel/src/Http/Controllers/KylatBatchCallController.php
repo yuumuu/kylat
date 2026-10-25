@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Kylat\Laravel\Http\Controllers;
 
 use Kylat\Laravel\Actions\ActionRegistry;
+use Kylat\Laravel\Support\IdempotencyStore;
 use ReflectionMethod;
 use ReflectionNamedType;
 use Throwable;
@@ -17,13 +18,6 @@ final class KylatBatchCallController
     public const MAX_BODY_BYTES = 256 * 1024; // 256 KB
     public const MAX_CALLS_PER_BATCH = 20;
     public const MAX_JSON_DEPTH = 16;
-
-    /**
-     * Cache in-memory untuk Idempotency-Key mutasi (TTL 24 jam).
-     * Struktur: [key => ['hash' => string, 'response' => array|null]]
-     * @var array<string, array{hash: string, response: array<string, mixed>|null}>
-     */
-    public static array $idempotencyStore = [];
 
     /**
      * Memproses request batch mentah.
@@ -59,52 +53,58 @@ final class KylatBatchCallController
             $args = isset($call['args']) && is_array($call['args']) ? $call['args'] : [];
             $idempotencyKey = (string) ($call['idempotencyKey'] ?? $call['meta']['idempotencyKey'] ?? $headerIdempKey ?? '');
 
-            // Pengecekan Idempotency-Key & Payload Integrity
+            // Pengecekan Idempotency-Key, Kanonikalisasi JSON, & Anti-Race-Condition
+            $payloadHash = '';
             if ($idempotencyKey !== '') {
-                $payloadHash = hash('sha256', (string) json_encode([
-                    'action' => $action,
-                    'args' => $args,
-                ]));
+                $payloadHash = IdempotencyStore::computeCanonicalHash($action, $args);
+                $lock = IdempotencyStore::acquire($idempotencyKey, $payloadHash);
 
-                if (isset(self::$idempotencyStore[$idempotencyKey])) {
-                    $entry = self::$idempotencyStore[$idempotencyKey];
-
-                    // Deteksi konflik: key yang sama dipakai untuk payload yang berbeda
-                    if ($entry['hash'] !== $payloadHash) {
-                        $results[] = [
-                            'id' => $callId,
-                            'ok' => false,
-                            'error' => [
-                                'type' => 'kylat:idempotency_conflict',
-                                'message' => sprintf(
-                                    "Idempotency-Key '%s' telah digunakan untuk payload yang berbeda.",
-                                    $idempotencyKey
-                                ),
-                            ],
-                        ];
-                        continue;
-                    }
-
-                    // Payload identik dan respons sukses sudah pernah dicache
-                    if ($entry['response'] !== null) {
-                        $cached = $entry['response'];
-                        $cached['id'] = $callId; // Sesuaikan ID panggilan saat ini
-                        $results[] = $cached;
-                        continue;
-                    }
-                } else {
-                    // Catat hash pertama kali key diterima (bahkan sebelum eksekusi)
-                    self::$idempotencyStore[$idempotencyKey] = [
-                        'hash' => $payloadHash,
-                        'response' => null,
+                if ($lock['status'] === 'conflict') {
+                    $results[] = [
+                        'id' => $callId,
+                        'ok' => false,
+                        'error' => [
+                            'type' => 'kylat:idempotency_conflict',
+                            'message' => sprintf(
+                                "Idempotency-Key '%s' telah digunakan untuk payload yang berbeda.",
+                                $idempotencyKey
+                            ),
+                        ],
                     ];
+                    continue;
+                }
+
+                if ($lock['status'] === 'in_progress') {
+                    $results[] = [
+                        'id' => $callId,
+                        'ok' => false,
+                        'error' => [
+                            'type' => 'kylat:in_progress',
+                            'message' => sprintf(
+                                "Operasi dengan Idempotency-Key '%s' sedang diproses di server. Silakan tunggu.",
+                                $idempotencyKey
+                            ),
+                        ],
+                    ];
+                    continue;
+                }
+
+                if ($lock['status'] === 'completed' && isset($lock['response'])) {
+                    $cached = $lock['response'];
+                    $cached['id'] = $callId; // Sesuaikan ID panggilan saat ini
+                    $results[] = $cached;
+                    continue;
                 }
             }
 
             $result = $this->dispatchCall($callId, $action, $args);
 
-            if ($idempotencyKey !== '' && ($result['ok'] ?? false)) {
-                self::$idempotencyStore[$idempotencyKey]['response'] = $result;
+            if ($idempotencyKey !== '') {
+                if ($result['ok'] ?? false) {
+                    IdempotencyStore::complete($idempotencyKey, $payloadHash, $result);
+                } else {
+                    IdempotencyStore::markFailed($idempotencyKey, $payloadHash);
+                }
             }
 
             $results[] = $result;
