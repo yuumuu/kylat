@@ -119,7 +119,10 @@ export class RpcBatcher {
       // Potong batch maksimal 20 calls
       const batchChunk = this.queue.splice(0, PROTOCOL_LIMITS.MAX_CALLS_PER_BATCH);
       const requestPayload: BatchRequest = {
-        calls: batchChunk.map((q) => q.call),
+        calls: batchChunk.map((q) => ({
+          ...q.call,
+          ...(q.idempotencyKey ? { idempotencyKey: q.idempotencyKey } : {}),
+        })),
       };
 
       try {
@@ -138,7 +141,7 @@ export class RpcBatcher {
           headers[PROTOCOL_HEADERS.BUILD_ID] = this.config.buildId;
         }
 
-        // Jika satu call memiliki idempotency key dan batch berukuran 1
+        // Jika satu call memiliki idempotency key dan batch berukuran 1, pasang juga di header HTTP
         const singleCall = batchChunk[0];
         if (batchChunk.length === 1 && singleCall?.idempotencyKey) {
           headers[PROTOCOL_HEADERS.IDEMPOTENCY_KEY] = singleCall.idempotencyKey;

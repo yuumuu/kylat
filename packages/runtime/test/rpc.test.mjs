@@ -177,4 +177,70 @@ describe('@kylat/runtime - Batch RPC Dispatcher', () => {
       }
     );
   });
+
+  it('mengirim Idempotency-Key pada header HTTP dan per-call payload serta mendukung retry dengan key yang sama', async () => {
+    const capturedRequests = [];
+    let shouldFailFirst = true;
+
+    const mockFetch = async (url, options) => {
+      const body = JSON.parse(options.body);
+      capturedRequests.push({
+        url,
+        headers: options.headers,
+        body,
+      });
+
+      if (shouldFailFirst) {
+        shouldFailFirst = false;
+        return {
+          ok: false,
+          status: 503,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          json: async () => ({ message: 'Service Temporarily Unavailable' }),
+        };
+      }
+
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({
+          results: body.calls.map((c) => ({
+            id: c.id,
+            ok: true,
+            data: { saved: true, key: c.idempotencyKey },
+          })),
+        }),
+      };
+    };
+
+    const batcher = new RpcBatcher({ fetchFn: mockFetch });
+    const idempKey = 'idemp_test_retry_123';
+
+    // Panggilan 1: Gagal (503)
+    await assert.rejects(
+      async () => {
+        await batcher.call('CounterActions::saveCount', { count: 10 }, { idempotencyKey: idempKey });
+      },
+      (err) => {
+        assert(err instanceof KylatRpcError);
+        assert.equal(err.code, 'HTTP_503');
+        return true;
+      }
+    );
+
+    // Verifikasi request 1 memuat idempotencyKey
+    assert.equal(capturedRequests.length, 1);
+    assert.equal(capturedRequests[0].headers['Idempotency-Key'], idempKey);
+    assert.equal(capturedRequests[0].body.calls[0].idempotencyKey, idempKey);
+
+    // Panggilan 2: Retry dengan key yang SAMA persis
+    const res = await batcher.call('CounterActions::saveCount', { count: 10 }, { idempotencyKey: idempKey });
+    assert.deepEqual(res, { saved: true, key: idempKey });
+
+    // Verifikasi request 2 memuat idempotencyKey yang sama
+    assert.equal(capturedRequests.length, 2);
+    assert.equal(capturedRequests[1].headers['Idempotency-Key'], idempKey);
+    assert.equal(capturedRequests[1].body.calls[0].idempotencyKey, idempKey);
+  });
 });

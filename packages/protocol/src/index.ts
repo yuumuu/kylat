@@ -7,6 +7,7 @@ export interface Call {
   id: string;
   action: string;
   args: Record<string, unknown>;
+  idempotencyKey?: string;
 }
 
 export interface BatchRequest {
@@ -25,7 +26,8 @@ export type CallErrorType =
   | 'kylat:forbidden'
   | 'kylat:not_found'
   | 'kylat:server_error'
-  | 'kylat:action_error';
+  | 'kylat:action_error'
+  | 'kylat:idempotency_conflict';
 
 export interface CallError {
   type: CallErrorType;
