@@ -13,9 +13,9 @@ Alasan dan riwayat keputusan masih hidup di Google Drive, folder `Kylat` → `01
 | Dokumen | Isi | Artefak spec terkait |
 |---|---|---|
 | Kylat 1 | Visi, ruang lingkup, mode distribusi, prinsip P1–P12 | — |
-| Kylat 2 | Subset PHP v0, semantik, IR, format error | `spec/php-subset.md`, `spec/ir.md`, `spec/errors.md` (path belum diputuskan) |
+| Kylat 2 | Subset PHP v0, semantik, IR, format error | `spec/php-subset.md`, `spec/ir.md`, `spec/errors.md` |
 | Kylat 3 | Protokol, keamanan, autentikasi, batas runtime | `spec/protocol.schema.json` |
-| Kylat 4 | Arsitektur, runtime, struktur repo, aksesibilitas | — |
+| Kylat 4 | Arsitektur, runtime, struktur repo, aksesibilitas | `spec/compiler-rules.md` |
 | Kylat 5 | Adopsi, CLI, migrasi dari Livewire 4 | — |
 | Kylat 6 | Roadmap, register keputusan, gerbang | — |
 | `template.md` | Grammar templat, komposisi `<x-nama>`, tiga kelas atribut, `data-props`, hubungan dengan Blade | `spec/template.md` |
@@ -60,5 +60,6 @@ Sengaja tidak dibuat karena keputusannya masih terbuka, atau karena isinya belum
 
 - `LICENSE` — lisensi `[TERBUKA]`, tenggat sebelum rilis 1.0.
 - `CONTRIBUTING.md`, `SECURITY.md` — menunggu kebijakan versi dan pelaporan.
-- `spec/ir.md`, `spec/errors.md` — belum ditulis; untuk sementara isinya ada di Dokumen 2.
+- `spec/ir.md` — belum ditulis; untuk sementara isinya ada di Dokumen 2.
+- `spec/errors.md` — sudah disusun di `spec/errors.md`.
 - Seluruh isi `packages/` — belum ada baris kode.

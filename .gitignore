@@ -3,6 +3,7 @@ node_modules/
 vendor/
 .pnp.*
 .yarn/*
+temp/
 
 # Build
 dist/
