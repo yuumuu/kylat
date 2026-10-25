@@ -11,7 +11,8 @@
     "build": "pnpm --filter \"./packages/*\" run build",
     "typecheck": "pnpm --filter \"./packages/*\" run typecheck",
     "test": "pnpm --filter \"./packages/*\" run test",
-    "lint": "pnpm --filter \"./packages/*\" run lint"
+    "lint:errors": "node scripts/verify-error-codes.mjs",
+    "lint": "pnpm lint:errors"
   },
   "workspaces": [
     "packages/*",

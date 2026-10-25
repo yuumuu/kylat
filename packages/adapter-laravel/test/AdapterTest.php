@@ -13,36 +13,37 @@ require_once __DIR__ . '/../src/Component.php';
 require_once __DIR__ . '/../src/Actions/ActionRegistry.php';
 require_once __DIR__ . '/../src/Http/Controllers/KylatBatchCallController.php';
 require_once __DIR__ . '/../src/Blade/KylatDirective.php';
+require_once __DIR__ . '/../../../examples/counter-app/CounterActions.php';
 
+use App\Actions\CounterActions;
 use Kylat\Laravel\Actions\ActionRegistry;
 use Kylat\Laravel\Blade\KylatDirective;
 use Kylat\Laravel\Http\Controllers\KylatBatchCallController;
 use RuntimeException;
 
-// Mock kelas aksi aman untuk pengujian
-final class SecureCartActions
+// Implementasi CounterActions dengan Default-Deny Otorisasi
+final class CounterActionsImpl implements CounterActions
 {
-    public bool $allowAccess = true;
+    public bool $authorized = false; // Default deny!
+    public int $executionCount = 0;
+    public int $lastSavedCount = 0;
 
     public function authorize(): bool
     {
-        return $this->allowAccess;
+        return $this->authorized;
     }
 
-    public function add(string $itemId, int $qty): array
+    public function saveCount(int $count): bool
     {
-        return [
-            'status' => 'added',
-            'itemId' => $itemId,
-            'qty' => $qty,
-            'total' => $qty * 15000,
-        ];
+        $this->executionCount++;
+        $this->lastSavedCount = $count;
+        return true;
     }
 }
 
 function runTests(): void
 {
-    echo "=== PENGUJIAN ADAPTER LARAVEL KYLAT (DENGAN SECURITY AUDIT) ===\n\n";
+    echo "=== PENGUJIAN ADAPTER LARAVEL KYLAT (DENGAN SECURITY AUDIT & IDEMPOTENCY) ===\n\n";
 
     // 1. Uji KylatDirective::renderIsland
     echo "1. Menguji KylatDirective::renderIsland...\n";
@@ -62,55 +63,112 @@ function runTests(): void
         echo "   ✅ Pelanggaran KIL-213 berhasil dicegah: " . $e->getMessage() . "\n";
     }
 
-    // 3. Uji Batch Call Controller & ActionRegistry dengan Otorisasi & Anti-Koersi
-    echo "3. Menguji Keamanan Batch Call (Otorisasi & Strict Types Anti-Koersi)...\n";
-    $cartActions = new SecureCartActions();
-    ActionRegistry::register('SecureCartActions', $cartActions);
+    // 3. Uji CounterActions (Default-Deny, Anti-Koersi, Non-Existent, Magic Methods)
+    echo "3. Menguji CounterActions Sisi Server (Security Contracts)...\n";
+    $counterActions = new CounterActionsImpl();
+    ActionRegistry::register('CounterActions', $counterActions);
 
     $controller = new KylatBatchCallController();
 
-    // Call 1: Valid
-    // Call 2: Gagal koersi (qty diberi string "3" padahal int)
-    // Call 3: Ditolak otorisasi (allowAccess = false)
-    $payload = [
+    // 3a. Default-Deny Otorisasi (authorized = false)
+    $authRes = $controller->handle([
         'calls' => [
             [
-                'id' => 'c1',
-                'action' => 'SecureCartActions::add',
-                'args' => ['itemId' => 'book_01', 'qty' => 3],
-            ],
-            [
-                'id' => 'c2_coercion',
-                'action' => 'SecureCartActions::add',
-                'args' => ['itemId' => 'book_01', 'qty' => "3"], // String bukan int!
-            ],
-        ],
-    ];
-
-    $response = $controller->handle($payload);
-    $res1 = $response['results'][0];
-    assert($res1['id'] === 'c1' && $res1['ok'] === true, "c1 harus sukses");
-    assert($res1['data']['total'] === 45000, "c1 total harus 45000");
-
-    $res2 = $response['results'][1];
-    assert($res2['id'] === 'c2_coercion' && $res2['ok'] === false, "c2 harus ditolak karena string '3' ke int");
-    assert($res2['error']['type'] === 'kylat:validation', "c2 error type harus kylat:validation");
-    echo "   ✅ Strict types tanpa koersi berhasil menolak string ke integer.\n";
-
-    // Uji Otorisasi Deny
-    $cartActions->allowAccess = false;
-    $authDenyResponse = $controller->handle([
-        'calls' => [
-            [
-                'id' => 'c3_unauthorized',
-                'action' => 'SecureCartActions::add',
-                'args' => ['itemId' => 'book_01', 'qty' => 1],
+                'id' => 'c_auth',
+                'action' => 'CounterActions::saveCount',
+                'args' => ['count' => 10],
             ],
         ],
     ]);
-    $res3 = $authDenyResponse['results'][0];
-    assert($res3['ok'] === false && $res3['error']['type'] === 'kylat:unauthorized', "Harus ditolak dengan kylat:unauthorized");
-    echo "   ✅ Default-deny otorisasi berhasil menolak aksi tanpa izin.\n";
+    assert($authRes['results'][0]['ok'] === false, "Default deny harus menolak aksi tanpa izin");
+    assert($authRes['results'][0]['error']['type'] === 'kylat:unauthorized', "Error type harus kylat:unauthorized");
+    echo "   ✅ CounterActions default-deny otorisasi berhasil diverifikasi.\n";
+
+    // Izinkan untuk pengujian fungsional berikutnya
+    $counterActions->authorized = true;
+
+    // 3b. Anti-Koersi Strict Types (String "5" untuk parameter int $count)
+    $coerceRes = $controller->handle([
+        'calls' => [
+            [
+                'id' => 'c_coerce',
+                'action' => 'CounterActions::saveCount',
+                'args' => ['count' => '5'], // String bukan integer!
+            ],
+        ],
+    ]);
+    assert($coerceRes['results'][0]['ok'] === false, "String '5' harus ditolak untuk parameter int");
+    assert($coerceRes['results'][0]['error']['type'] === 'kylat:validation', "Error type harus kylat:validation");
+    echo "   ✅ Parameter string '5' untuk int berhasil ditolak dengan kylat:validation.\n";
+
+    // 3c. Method tidak ada di kontrak
+    $missingRes = $controller->handle([
+        'calls' => [
+            [
+                'id' => 'c_missing',
+                'action' => 'CounterActions::unknownMethod',
+                'args' => [],
+            ],
+        ],
+    ]);
+    assert($missingRes['results'][0]['ok'] === false, "Method tidak ada harus ditolak");
+    assert($missingRes['results'][0]['error']['type'] === 'kylat:not_found', "Error type harus kylat:not_found");
+    echo "   ✅ Method di luar kontrak berhasil ditolak dengan kylat:not_found.\n";
+
+    // 3d. Magic Method ditolak keras
+    $magicRes = $controller->handle([
+        'calls' => [
+            [
+                'id' => 'c_magic',
+                'action' => 'CounterActions::__destruct',
+                'args' => [],
+            ],
+        ],
+    ]);
+    assert($magicRes['results'][0]['ok'] === false, "Magic method wajib ditolak");
+    assert($magicRes['results'][0]['error']['type'] === 'kylat:forbidden', "Error type harus kylat:forbidden");
+    echo "   ✅ Magic method berhasil dicegah dengan kylat:forbidden.\n";
+
+    // 4. Uji Idempotency-Key untuk Mutasi saveCount
+    echo "4. Menguji Idempotency-Key untuk Mutasi (Dua Klik Cegah Duplikasi)...\n";
+    $idempKey = "idemp_test_" . uniqid();
+    $counterActions->executionCount = 0;
+
+    // Klik 1: Panggilan pertama dengan Idempotency-Key
+    $call1 = $controller->handle([
+        'calls' => [
+            [
+                'id' => 'click_1',
+                'action' => 'CounterActions::saveCount',
+                'args' => ['count' => 7],
+                'idempotencyKey' => $idempKey,
+            ],
+        ],
+    ]);
+
+    assert($call1['results'][0]['ok'] === true, "Panggilan pertama harus berhasil");
+    assert($counterActions->executionCount === 1, "Handler fisik harus dieksekusi 1 kali");
+    assert($counterActions->lastSavedCount === 7, "Nilai count tersimpan harus 7");
+
+    // Klik 2: Panggilan ganda dengan Idempotency-Key yang SAMA
+    $call2 = $controller->handle([
+        'calls' => [
+            [
+                'id' => 'click_2',
+                'action' => 'CounterActions::saveCount',
+                'args' => ['count' => 7],
+                'idempotencyKey' => $idempKey,
+            ],
+        ],
+    ]);
+
+    assert($call2['results'][0]['ok'] === true, "Panggilan kedua harus mengembalikan response sukses identik");
+    assert($call2['results'][0]['id'] === 'click_2', "ID panggilan disesuaikan");
+    assert(
+        $counterActions->executionCount === 1,
+        "MUTASI DICEGAH: Handler fisik TIDAK BOLEH dieksekusi 2 kali untuk key yang sama!"
+    );
+    echo "   ✅ Idempotency-Key terverifikasi: 2 panggilan dengan key sama hanya mengeksekusi handler 1 kali di server.\n";
 
     echo "\n🎉 SEMUA PENGUJIAN ADAPTER LARAVEL SUKSES 100%!\n";
 }

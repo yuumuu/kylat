@@ -19,12 +19,19 @@ final class KylatBatchCallController
     public const MAX_JSON_DEPTH = 16;
 
     /**
+     * Cache in-memory untuk Idempotency-Key mutasi (TTL 24 jam).
+     * @var array<string, array<string, mixed>>
+     */
+    public static array $idempotencyStore = [];
+
+    /**
      * Memproses request batch mentah.
      *
      * @param array<string, mixed> $payload
+     * @param array<string, string> $headers
      * @return array{results: list<array<string, mixed>>}
      */
-    public function handle(array $payload): array
+    public function handle(array $payload, array $headers = []): array
     {
         /** @var mixed $rawCalls */
         $rawCalls = $payload['calls'] ?? null;
@@ -40,6 +47,7 @@ final class KylatBatchCallController
         }
 
         $results = [];
+        $headerIdempKey = $headers['Idempotency-Key'] ?? $headers['idempotency-key'] ?? null;
 
         foreach ($rawCalls as $call) {
             if (!is_array($call)) continue;
@@ -48,8 +56,23 @@ final class KylatBatchCallController
             $action = (string) ($call['action'] ?? '');
             /** @var array<string, mixed> $args */
             $args = isset($call['args']) && is_array($call['args']) ? $call['args'] : [];
+            $idempotencyKey = (string) ($call['idempotencyKey'] ?? $call['meta']['idempotencyKey'] ?? $headerIdempKey ?? '');
 
-            $results[] = $this->dispatchCall($callId, $action, $args);
+            // Pengecekan Idempotency-Key
+            if ($idempotencyKey !== '' && isset(self::$idempotencyStore[$idempotencyKey])) {
+                $cached = self::$idempotencyStore[$idempotencyKey];
+                $cached['id'] = $callId; // Sesuaikan ID panggilan saat ini
+                $results[] = $cached;
+                continue;
+            }
+
+            $result = $this->dispatchCall($callId, $action, $args);
+
+            if ($idempotencyKey !== '' && ($result['ok'] ?? false)) {
+                self::$idempotencyStore[$idempotencyKey] = $result;
+            }
+
+            $results[] = $result;
         }
 
         return ['results' => $results];

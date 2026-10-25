@@ -1,0 +1,129 @@
+#!/usr/bin/env node
+
+/**
+ * scripts/verify-error-codes.mjs
+ * Skrip verifikasi CI untuk menjamin konsistensi kode error KIL-xxx antara compiler dan spec/errors.md.
+ * Menguji kepatuhan kontrak P3: setiap kode galat wajib terdaftar di spec/errors.md dan memiliki contoh pemicu.
+ */
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const rootDir = path.resolve(__dirname, '..');
+
+const errorsSpecPath = path.join(rootDir, 'spec', 'errors.md');
+const compilerSrcDir = path.join(rootDir, 'packages', 'compiler', 'src');
+
+console.log('=== AUDIT KONSISTENSI KODE ERROR KIL-XXX (CI LINT) ===\n');
+
+// 1. Baca spec/errors.md
+if (!fs.existsSync(errorsSpecPath)) {
+  console.error(`❌ GAGAL: Berkas ${errorsSpecPath} tidak ditemukan!`);
+  process.exit(1);
+}
+
+const specContent = fs.readFileSync(errorsSpecPath, 'utf-8');
+
+// Ekstraksi kode galat dari heading #### KIL-xxx
+const specCodes = new Map();
+const specCodeRegex = /####\s+(KIL-\d{3})/g;
+let match;
+
+while ((match = specCodeRegex.exec(specContent)) !== null) {
+  const code = match[1];
+  const startIndex = match.index;
+  // Cari batas section berikutnya
+  const nextHeading = specContent.indexOf('#### KIL-', startIndex + 10);
+  const sectionText =
+    nextHeading === -1
+      ? specContent.slice(startIndex)
+      : specContent.slice(startIndex, nextHeading);
+
+  const hasContohSalah = sectionText.includes('Contoh Salah');
+  const hasContohBenar = sectionText.includes('Contoh Benar');
+
+  specCodes.set(code, {
+    hasContohSalah,
+    hasContohBenar,
+  });
+}
+
+console.log(`Ditemukan ${specCodes.size} kode galat terdaftar di spec/errors.md.`);
+
+// 2. Scan semua kode KIL-xxx di packages/compiler/src
+function scanDir(dir) {
+  let files = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files = files.concat(scanDir(fullPath));
+    } else if (entry.name.endsWith('.ts')) {
+      files.push(fullPath);
+    }
+  }
+  return files;
+}
+
+const srcFiles = scanDir(compilerSrcDir);
+const compilerCodes = new Map();
+
+const codeUsageRegex = /KIL[-_](\d{3})/g;
+
+for (const file of srcFiles) {
+  const content = fs.readFileSync(file, 'utf-8');
+  let m;
+  while ((m = codeUsageRegex.exec(content)) !== null) {
+    const rawCode = `KIL-${m[1]}`;
+    if (!compilerCodes.has(rawCode)) {
+      compilerCodes.set(rawCode, new Set());
+    }
+    compilerCodes.get(rawCode).add(path.relative(rootDir, file));
+  }
+}
+
+console.log(`Ditemukan ${compilerCodes.size} kode galat aktif dipakai di @kylat/compiler.\n`);
+
+let hasFailure = false;
+
+// 3. Verifikasi: Setiap kode di compiler wajib terdaftar di spec/errors.md
+console.log('1. Memverifikasi pemakaian kode compiler terhadap spec/errors.md:');
+for (const [code, files] of compilerCodes.entries()) {
+  if (!specCodes.has(code)) {
+    console.error(`   ❌ [TIDAK TERDAFTAR] ${code} digunakan di [${Array.from(files).join(', ')}] tetapi TIDAK ADA di spec/errors.md!`);
+    hasFailure = true;
+  } else {
+    console.log(`   ✅ ${code}: terdaftar resmi (dipakai di ${Array.from(files).join(', ')})`);
+  }
+}
+
+// 4. Verifikasi: Setiap kode di spec wajib punya contoh salah & contoh benar
+console.log('\n2. Memverifikasi kelengkapan contoh pemicu di spec/errors.md:');
+for (const [code, meta] of specCodes.entries()) {
+  if (!meta.hasContohSalah || !meta.hasContohBenar) {
+    console.error(`   ❌ [CONTOH TIDAK LENGKAP] ${code} tidak memiliki 'Contoh Salah' atau 'Contoh Benar' di spec/errors.md!`);
+    hasFailure = true;
+  }
+}
+if (!hasFailure) {
+  console.log('   ✅ Semua kode di spec/errors.md memiliki contoh salah dan contoh benar.');
+}
+
+// 5. Verifikasi: KIL-201 hanya punya satu definisi stabil
+const kil201Occurrences = specContent.match(/####\s+KIL-201/g) || [];
+if (kil201Occurrences.length !== 1) {
+  console.error(`   ❌ KIL-201 didefinisikan sebanyak ${kil201Occurrences.length} kali di spec/errors.md!`);
+  hasFailure = true;
+} else {
+  console.log('   ✅ KIL-201 terkonfirmasi memiliki 1 definisi tunggal dan stabil.');
+}
+
+console.log('\n-------------------------------------------------------------');
+if (hasFailure) {
+  console.error('❌ HASIL AUDIT: GAGAL! Ada inkonsistensi kode galat.');
+  process.exit(1);
+} else {
+  console.log('🎉 HASIL AUDIT: LULUS 100%! Semua kode galat compiler konsisten dengan spesifikasi.');
+  process.exit(0);
+}

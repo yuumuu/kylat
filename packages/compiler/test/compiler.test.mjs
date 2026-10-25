@@ -42,7 +42,7 @@ final class CartCounter extends Component
     assert.ok(result.code.includes("createSignal"));
     assert.ok(result.code.includes("export function createCartCounter(props = {})"));
     assert.ok(result.code.includes("const [qty, set_qty] = createSignal(1);"));
-    assert.ok(result.code.includes("callServerAction('CartActions::add'"));
+    assert.ok(result.code.includes('callServerAction("CartActions::add"'));
     assert.equal(result.ir?.name, 'CartCounter');
     assert.equal(result.ir?.props.length, 1);
     assert.equal(result.ir?.props[0].name, 'productId');
@@ -128,7 +128,7 @@ class NonFinalComponent extends Component
     assert.ok(kil201, 'Harus mendeteksi KIL-201');
   });
 
-  it('mendeteksi KIL-203 jika properti tidak bertipe', async () => {
+  it('mendeteksi KIL-131 jika properti tidak bertipe', async () => {
     const code = `<?php
 
 declare(strict_types=1);
@@ -141,11 +141,11 @@ final class UntypedProp extends Component
 
     const result = await compile(code, 'UntypedProp.php');
     assert.equal(result.success, false);
-    const kil203 = result.diagnostics.find((d) => d.code === 'KIL-203');
-    assert.ok(kil203, 'Harus mendeteksi KIL-203');
+    const kil131 = result.diagnostics.find((d) => d.code === 'KIL-131');
+    assert.ok(kil131, 'Harus mendeteksi KIL-131 untuk tipe data hilang');
   });
 
-  it('mendeteksi KIL-204 jika properti bertipe callable', async () => {
+  it('mendeteksi KIL-110 jika properti bertipe callable', async () => {
     const code = `<?php
 
 declare(strict_types=1);
@@ -158,11 +158,11 @@ final class CallableProp extends Component
 
     const result = await compile(code, 'CallableProp.php');
     assert.equal(result.success, false);
-    const kil204 = result.diagnostics.find((d) => d.code === 'KIL-204');
-    assert.ok(kil204, 'Harus mendeteksi KIL-204');
+    const kil110 = result.diagnostics.find((d) => d.code === 'KIL-110');
+    assert.ok(kil110, 'Harus mendeteksi KIL-110 untuk tipe callable di luar allowlist');
   });
 
-  it('mendeteksi KIL-205 jika properti tidak memiliki visibility eksplisit', async () => {
+  it('mendeteksi KIL-131 jika properti tidak memiliki visibility eksplisit', async () => {
     const code = `<?php
 
 declare(strict_types=1);
@@ -175,7 +175,7 @@ final class NoVisProp extends Component
 
     const result = await compile(code, 'NoVisProp.php');
     assert.equal(result.success, false);
-    const kil205 = result.diagnostics.find((d) => d.code === 'KIL-205');
-    assert.ok(kil205, 'Harus mendeteksi KIL-205');
+    const kil131 = result.diagnostics.find((d) => d.code === 'KIL-131');
+    assert.ok(kil131, 'Harus mendeteksi KIL-131 untuk visibilitas hilang');
   });
 });
