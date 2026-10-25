@@ -1,0 +1,20 @@
+{
+  "name": "@kylat/protocol",
+  "version": "0.0.1",
+  "description": "Kontrak wire protokol RPC netral-bahasa antara client dan backend Kylat",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schema.json": "../../spec/protocol.schema.json"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test"
+  }
+}

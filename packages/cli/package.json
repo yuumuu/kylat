@@ -1,0 +1,26 @@
+{
+  "name": "@kylat/cli",
+  "version": "0.0.1",
+  "description": "Perkakas CLI pengembang untuk proyek Kylat",
+  "type": "module",
+  "bin": {
+    "kylat": "./bin/kylat.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@kylat/compiler": "workspace:*",
+    "@kylat/protocol": "workspace:*"
+  }
+}

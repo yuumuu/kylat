@@ -1,0 +1,22 @@
+{
+  "name": "@kylat/compiler",
+  "version": "0.0.1",
+  "description": "Compiler komponen subset PHP Kylat ke JavaScript signals",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@kylat/protocol": "workspace:*"
+  }
+}

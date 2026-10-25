@@ -1,0 +1,32 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  packages/cli:
+    dependencies:
+      '@kylat/compiler':
+        specifier: workspace:*
+        version: link:../compiler
+      '@kylat/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/compiler:
+    dependencies:
+      '@kylat/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/protocol: {}
+
+  packages/runtime:
+    dependencies:
+      '@kylat/protocol':
+        specifier: workspace:*
+        version: link:../protocol

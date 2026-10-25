@@ -1,0 +1,21 @@
+{
+  "name": "kylat",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Toolchain frontend subset PHP bergaya Livewire yang dikompilasi ke JavaScript reaktivitas sinyal",
+  "packageManager": "pnpm@11.17.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "pnpm --filter \"./packages/*\" run build",
+    "typecheck": "pnpm --filter \"./packages/*\" run typecheck",
+    "test": "pnpm --filter \"./packages/*\" run test",
+    "lint": "pnpm --filter \"./packages/*\" run lint"
+  },
+  "workspaces": [
+    "packages/*",
+    "bench",
+    "examples/*"
+  ]
+}
