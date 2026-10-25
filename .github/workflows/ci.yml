@@ -30,6 +30,9 @@ jobs:
           ini-values: zend.assertions=1, assert.exception=1
           coverage: none
 
+      - name: Verify PHP Patch Version (Threat Model F1 - PHP2Shell Mitigation)
+        run: php -r "version_compare(PHP_VERSION, '8.2.20', '>=') || (fwrite(STDERR, 'PHP ' . PHP_VERSION . ' is vulnerable to PHP2Shell/CVE-2024-4577.\n') && exit(1));"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d # v3
         with:
