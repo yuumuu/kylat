@@ -1,4 +1,7 @@
 packages:
   - 'packages/*'
   - 'bench'
+  - 'bench/spikes/*'
   - 'examples/*'
+allowBuilds:
+  esbuild: set this to true or false

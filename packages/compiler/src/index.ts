@@ -20,7 +20,7 @@ export interface CompileResult {
   success: boolean;
 }
 
-export function compile(source: string, filename: string): CompileResult {
+export function compile(_source: string, _filename: string): CompileResult {
   // Stub awal compiler pipeline
   return {
     code: '',

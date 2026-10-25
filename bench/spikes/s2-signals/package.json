@@ -1,0 +1,11 @@
+{
+  "name": "kylat-spike-s2",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "alien-signals": "^3.2.1",
+    "@solidjs/signals": "^2.0.0-rc.0",
+    "solid-js": "^1.9.17"
+  }
+}

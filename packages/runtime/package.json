@@ -17,6 +17,7 @@
     "test": "node --test"
   },
   "dependencies": {
-    "@kylat/protocol": "workspace:*"
+    "@kylat/protocol": "workspace:*",
+    "alien-signals": "^3.2.1"
   }
 }
