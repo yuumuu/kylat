@@ -60,7 +60,15 @@ Aturan yang mengikat:
 
 Argumen pada `on:` harus ekspresi dari subset. Argumen tidak boleh berupa nilai mentah dari DOM tanpa tipe.
 
-Indikator proses tidak perlu ditulis. Saat aksi `#[Server]` berjalan, compiler menambahkan `aria-busy="true"` dan atribut `data-pending` di elemen pemicu.
+Indikator proses tidak perlu ditulis. Saat aksi `#[Server]` berjalan, compiler menambahkan `aria-busy="true"`, atribut `data-pending`, dan atribut `disabled="disabled"` pada elemen tombol pemicu untuk mencegah pengiriman mutasi ganda selama permintaan berlangsung.
+
+### Semantik `bindAttr`
+
+Runtime mengeksekusi semantik `bindAttr` deterministik tanpa virtual DOM:
+- **Nilai string/number**: Atribut ditetapkan ke elemen DOM (`setAttribute(name, String(val))`).
+- **Nilai `true`**: Atribut boolean ditetapkan sebagai atribut kosong (`setAttribute(name, '')`).
+- **Nilai `null` / `undefined`**: Atribut dihapus seluruhnya dari elemen DOM (`removeAttribute(name)`).
+- **Nilai `false`**: Atribut boolean dihapus seluruhnya dari elemen DOM (`removeAttribute(name)`).
 
 ### Pemetaan galat server ke `error`
 
