@@ -10,7 +10,7 @@ use ReflectionNamedType;
 use Throwable;
 
 /**
- * Controller penanganan batch RPC POST /_kylat/call sesuai spec/protocol.schema.json.
+ * Controller penanganan batch RPC POST /_kylat/call sesuai spec/protocol.schema.json & spec/threat-model.md.
  */
 final class KylatBatchCallController
 {
@@ -19,7 +19,7 @@ final class KylatBatchCallController
     public const MAX_JSON_DEPTH = 16;
 
     /**
-     * Memproses request batch mentah (mendukung array request maupun integrasi Illuminate\Http\Request).
+     * Memproses request batch mentah.
      *
      * @param array<string, mixed> $payload
      * @return array{results: list<array<string, mixed>>}
@@ -56,7 +56,7 @@ final class KylatBatchCallController
     }
 
     /**
-     * Mengeksekusi satu aksi server individual.
+     * Mengeksekusi satu aksi server individual dengan otorisasi & strict types tanpa koersi.
      *
      * @param array<string, mixed> $args
      * @return array<string, mixed>
@@ -76,6 +76,18 @@ final class KylatBatchCallController
             }
 
             [$contract, $method] = explode('::', $action, 2);
+
+            // Mencegah pemanggilan magic method
+            if (str_starts_with($method, '__')) {
+                return [
+                    'id' => $id,
+                    'ok' => false,
+                    'error' => [
+                        'type' => 'kylat:forbidden',
+                        'message' => "Pemanggilan magic method dilarang.",
+                    ],
+                ];
+            }
 
             $instance = ActionRegistry::resolve($contract);
             if ($instance === null) {
@@ -100,14 +112,78 @@ final class KylatBatchCallController
                 ];
             }
 
-            // Bind argumen secara reflektif
+            // 1. Pengecekan Otorisasi (Default Deny)
+            if (method_exists($instance, 'authorize')) {
+                $isAuthorized = (bool) $instance->authorize();
+                if (!$isAuthorized) {
+                    return [
+                        'id' => $id,
+                        'ok' => false,
+                        'error' => [
+                            'type' => 'kylat:unauthorized',
+                            'message' => sprintf("Otorisasi ditolak untuk aksi '%s'.", $action),
+                        ],
+                    ];
+                }
+            }
+
+            // 2. Bind & Validasi Strict Types Tanpa Koersi
             $refMethod = new ReflectionMethod($instance, $method);
+            if (!$refMethod->isPublic()) {
+                return [
+                    'id' => $id,
+                    'ok' => false,
+                    'error' => [
+                        'type' => 'kylat:forbidden',
+                        'message' => sprintf("Method '%s' harus bersifat public.", $method),
+                    ],
+                ];
+            }
+
             $invokedArgs = [];
 
             foreach ($refMethod->getParameters() as $param) {
                 $paramName = $param->getName();
                 if (array_key_exists($paramName, $args)) {
-                    $invokedArgs[] = $args[$paramName];
+                    $val = $args[$paramName];
+
+                    // Pemeriksaan tipe ketat (tanpa koersi)
+                    $type = $param->getType();
+                    if ($type instanceof ReflectionNamedType) {
+                        $expectedType = $type->getName();
+                        if ($expectedType === 'int' && !is_int($val)) {
+                            return [
+                                'id' => $id,
+                                'ok' => false,
+                                'error' => [
+                                    'type' => 'kylat:validation',
+                                    'message' => sprintf("Parameter '$%s' harus bertipe integer murni tanpa koersi.", $paramName),
+                                ],
+                            ];
+                        }
+                        if ($expectedType === 'string' && !is_string($val)) {
+                            return [
+                                'id' => $id,
+                                'ok' => false,
+                                'error' => [
+                                    'type' => 'kylat:validation',
+                                    'message' => sprintf("Parameter '$%s' harus bertipe string murni.", $paramName),
+                                ],
+                            ];
+                        }
+                        if ($expectedType === 'bool' && !is_bool($val)) {
+                            return [
+                                'id' => $id,
+                                'ok' => false,
+                                'error' => [
+                                    'type' => 'kylat:validation',
+                                    'message' => sprintf("Parameter '$%s' harus bertipe boolean murni.", $paramName),
+                                ],
+                            ];
+                        }
+                    }
+
+                    $invokedArgs[] = $val;
                 } elseif ($param->isDefaultValueAvailable()) {
                     $invokedArgs[] = $param->getDefaultValue();
                 } else {

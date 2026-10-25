@@ -682,6 +682,26 @@ final class Cart extends Component {}
 
 ---
 
+#### KIL-213
+- **Nama**: Serialisasi `data-props` melebihi batas 16 KB
+- **Klasifikasi**: Serialisasi Wadah Island
+- **Pemicu**: Payload JSON serialisasi props awal pada wadah island (`data-props="..."`) melebihi batas 16.384 bytes (16 KB).
+- **Pesan**: `Ukuran data-props untuk komponen '{nama}' ({ukuran} bytes) melebihi batas maksimum 16 KB (KIL-213)`
+- **Rujukan**: [`spec/template.md` §11](file:///c:/Users/haidaryuum/source/kylat/spec/template.md), [`spec/protocol.schema.json`](file:///c:/Users/haidaryuum/source/kylat/spec/protocol.schema.json)
+
+##### Contoh Salah
+```html
+<div data-island="UserTable" data-props="{payload_25kb_berisi_seluruh_tabel}"></div>
+```
+
+##### Contoh Benar
+Gunakan paginasi atau panggil data via aksi server RPC bertahap:
+```html
+<div data-island="UserTable" data-props='{"page":1,"perPage":20}'></div>
+```
+
+---
+
 ### Rentang 3xx: Keamanan, Kontrak & Protokol RPC
 
 #### KIL-310

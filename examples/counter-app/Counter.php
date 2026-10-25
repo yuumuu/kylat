@@ -22,13 +22,13 @@ final class Counter extends Component
     #[Client]
     public function increment(): void
     {
-        $this->count++;
+        $this->count += 1;
     }
 
     #[Client]
     public function decrement(): void
     {
-        $this->count--;
+        $this->count -= 1;
     }
 
     #[Server]

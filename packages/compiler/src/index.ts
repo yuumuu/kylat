@@ -17,6 +17,7 @@ export * from './codegen.js';
 
 export interface CompileOptions extends ParserOptions {
   sourceMap?: boolean;
+  template?: string;
 }
 
 export interface CompileResult {
@@ -49,7 +50,7 @@ export async function compile(
     };
   }
 
-  const code = generateJavaScript(ir);
+  const code = generateJavaScript(ir, options?.template);
 
   return {
     code,

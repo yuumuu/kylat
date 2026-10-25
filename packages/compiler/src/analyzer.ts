@@ -1,6 +1,6 @@
 /**
  * @kylat/compiler - analyzer.ts
- * Penganalisis semantik AST PHP subset v0 dan validator aturan KIL-101 .. KIL-311.
+ * Penganalisis semantik AST PHP subset v0 dan validator aturan sesuai spec/errors.md.
  */
 
 import type Parser from 'web-tree-sitter';
@@ -26,28 +26,28 @@ export function analyzePhpComponent(
   const diagnostics: Diagnostic[] = [];
   const root = tree.rootNode;
 
-  // 1. KIL-101: Periksa declare(strict_types=1)
+  // 1. KIL-102: Periksa declare(strict_types=1) sesuai spec/errors.md
   const declareNodes = root.descendantsOfType('declare_statement');
   const hasStrictTypes = declareNodes.some((d) => d.text.includes('strict_types=1') || d.text.includes('strict_types = 1'));
   if (!hasStrictTypes) {
     diagnostics.push(
       createDiagnostic(
-        'KIL-101',
+        'KIL-102',
         filename,
         1,
         1,
-        ERROR_MESSAGES.KIL_101,
-        'Tambahkan "declare(strict_types=1);" tepat di bawah tag <?php di baris pertama.'
+        ERROR_MESSAGES.KIL_102,
+        'Tambahkan "declare(strict_types=1);" tepat di bawah tag <?php di awal berkas.'
       )
     );
   }
 
-  // 2. KIL-102: Cek sintaks terlarang (eval, match, yield, goto)
+  // 2. KIL-104: Cek sintaks terlarang (eval, match, yield, goto)
   const illegalMatchNodes = root.descendantsOfType('match_expression');
   for (const node of illegalMatchNodes) {
     diagnostics.push(
       createDiagnostic(
-        'KIL-102',
+        'KIL-104',
         filename,
         node.startPosition.row + 1,
         node.startPosition.column + 1,
@@ -61,7 +61,7 @@ export function analyzePhpComponent(
   for (const node of illegalYieldNodes) {
     diagnostics.push(
       createDiagnostic(
-        'KIL-102',
+        'KIL-104',
         filename,
         node.startPosition.row + 1,
         node.startPosition.column + 1,
@@ -75,7 +75,7 @@ export function analyzePhpComponent(
   for (const node of illegalGotoNodes) {
     diagnostics.push(
       createDiagnostic(
-        'KIL-102',
+        'KIL-104',
         filename,
         node.startPosition.row + 1,
         node.startPosition.column + 1,
@@ -93,7 +93,7 @@ export function analyzePhpComponent(
         filename,
         node.startPosition.row + 1,
         node.startPosition.column + 1,
-        'Pernyataan global dilarang di dalam komponen Kylat.',
+        ERROR_MESSAGES.KIL_103,
         'Gunakan dependency injection atau props untuk meneruskan data.'
       )
     );
@@ -123,16 +123,16 @@ export function analyzePhpComponent(
   const classNameNode = classNode.childForFieldName('name');
   const className = classNameNode ? classNameNode.text : 'UnknownComponent';
 
-  // KIL-202: Cek apakah final
+  // KIL-201: Class komponen wajib final
   const isFinal = classNode.children.some((c) => c.type === 'final_modifier');
   if (!isFinal) {
     diagnostics.push(
       createDiagnostic(
-        'KIL-202',
+        'KIL-201',
         filename,
         classNode.startPosition.row + 1,
         classNode.startPosition.column + 1,
-        ERROR_MESSAGES.KIL_202,
+        ERROR_MESSAGES.KIL_201,
         `Ubah deklarasi menjadi: final class ${className} extends Component`
       )
     );
@@ -164,7 +164,7 @@ export function analyzePhpComponent(
     }
   }
 
-  // 5. Analisis Properti (KIL-203, KIL-204, KIL-205)
+  // 5. Analisis Properti (KIL-103, KIL-203, KIL-204, KIL-205)
   const propDefinitions: PropDefinition[] = [];
   const stateDefinitions: StateDefinition[] = [];
 
@@ -178,7 +178,7 @@ export function analyzePhpComponent(
           filename,
           p.startPosition.row + 1,
           p.startPosition.column + 1,
-          'Properti static dilarang di dalam komponen Kylat.',
+          ERROR_MESSAGES.KIL_103,
           'Gunakan properti instance biasa (public string $name).'
         )
       );

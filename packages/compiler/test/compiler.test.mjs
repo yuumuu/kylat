@@ -41,7 +41,7 @@ final class CartCounter extends Component
     assert.ok(result.code.includes("import { createSignal, createComputed"));
     assert.ok(result.code.includes("export function createCartCounter(props = {})"));
     assert.ok(result.code.includes("const [qty, set_qty] = createSignal(1);"));
-    assert.ok(result.code.includes("callServerAction('CartActions::submitOrder', args)"));
+    assert.ok(result.code.includes("callServerAction('CartActions::add'"));
     assert.equal(result.ir?.name, 'CartCounter');
     assert.equal(result.ir?.props.length, 1);
     assert.equal(result.ir?.props[0].name, 'productId');
@@ -49,7 +49,7 @@ final class CartCounter extends Component
     assert.equal(result.ir?.state[0].name, 'qty');
   });
 
-  it('mendeteksi KIL-101 jika declare(strict_types=1) tidak ada', async () => {
+  it('mendeteksi KIL-102 jika declare(strict_types=1) tidak ada', async () => {
     const code = `<?php
 
 namespace App\\Components;
@@ -62,12 +62,12 @@ final class NoStrict extends Component
 
     const result = await compile(code, 'NoStrict.php');
     assert.equal(result.success, false);
-    const kil101 = result.diagnostics.find((d) => d.code === 'KIL-101');
-    assert.ok(kil101, 'Harus mendeteksi KIL-101');
-    assert.equal(kil101.docUrl, 'https://kylat.dev/docs/errors/kil-101');
+    const kil102 = result.diagnostics.find((d) => d.code === 'KIL-102');
+    assert.ok(kil102, 'Harus mendeteksi KIL-102');
+    assert.equal(kil102.docUrl, 'https://kylat.dev/docs/errors/kil-102');
   });
 
-  it('mendeteksi KIL-102 jika menggunakan ekspresi match', async () => {
+  it('mendeteksi KIL-104 jika menggunakan ekspresi match', async () => {
     const code = `<?php
 
 declare(strict_types=1);
@@ -86,8 +86,8 @@ final class MatchTest extends Component
 
     const result = await compile(code, 'MatchTest.php');
     assert.equal(result.success, false);
-    const kil102 = result.diagnostics.find((d) => d.code === 'KIL-102');
-    assert.ok(kil102, 'Harus mendeteksi KIL-102');
+    const kil104 = result.diagnostics.find((d) => d.code === 'KIL-104');
+    assert.ok(kil104, 'Harus mendeteksi KIL-104');
   });
 
   it('mendeteksi KIL-103 jika menggunakan global statement', async () => {
@@ -110,7 +110,7 @@ final class GlobalTest extends Component
     assert.ok(kil103, 'Harus mendeteksi KIL-103');
   });
 
-  it('mendeteksi KIL-202 jika class tidak final', async () => {
+  it('mendeteksi KIL-201 jika class tidak final', async () => {
     const code = `<?php
 
 declare(strict_types=1);
@@ -123,8 +123,8 @@ class NonFinalComponent extends Component
 
     const result = await compile(code, 'NonFinalComponent.php');
     assert.equal(result.success, false);
-    const kil202 = result.diagnostics.find((d) => d.code === 'KIL-202');
-    assert.ok(kil202, 'Harus mendeteksi KIL-202');
+    const kil201 = result.diagnostics.find((d) => d.code === 'KIL-201');
+    assert.ok(kil201, 'Harus mendeteksi KIL-201');
   });
 
   it('mendeteksi KIL-203 jika properti tidak bertipe', async () => {
