@@ -8,15 +8,23 @@ on:
 
 jobs:
   verify:
-    name: Verify & Test
+    name: Verify Toolchain (Node ${{ matrix.node-version }} + PHP ${{ matrix.php-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [20.x, 22.x]
+        php-version: ['8.2', '8.3']
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php-version }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: mbstring, json, tokenizer
+          coverage: none
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -32,8 +40,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile || pnpm install
 
+      - name: Build Packages
+        run: pnpm build
+
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Run Tests
+      - name: Lint Error Codes & Semantic Verification
+        run: pnpm lint:errors
+
+      - name: Run Node.js Tests (Compiler & Runtime)
         run: pnpm test
+
+      - name: Run PHP Tests (Adapter Laravel & Security Audits)
+        run: php packages/adapter-laravel/test/AdapterTest.php
