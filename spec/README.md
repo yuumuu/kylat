@@ -27,6 +27,7 @@ Aturan turunannya:
 | `ir.md` | Intermediate representation, bebas dari PHP | Draf — disahkan 25 Okt 2026, spesifikasi typed AST & signals |
 | `errors.md` | Daftar lengkap kode KIL-xxx + pesan + contoh | Ada — disahkan 25 Okt 2026, memuat KIL-101 sampai KIL-401 + tabel renumber |
 | `protocol.schema.json` | Skema kontrak aksi dan endpoint `/_kylat/*` | Ada — disahkan 25 Okt 2026, skema batch RPC + RFC 9457 |
+| `threat-model.md` | Model ancaman, mitigasi katalog A1–D3, matriks uji | Ada — disahkan 25 Okt 2026, kontrol OWASP & CSP |
 
 ## Path `errors.md`: `spec/errors.md`
 
