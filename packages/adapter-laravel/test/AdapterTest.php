@@ -170,6 +170,66 @@ function runTests(): void
     );
     echo "   ✅ Idempotency-Key terverifikasi: 2 panggilan dengan key sama hanya mengeksekusi handler 1 kali di server.\n";
 
+    // 5. Uji Konflik Idempotency: Key yang sama dipakai ulang dengan payload berbeda (KIL-A4)
+    echo "5. Menguji Konflik Idempotency-Key dengan Payload Berbeda (kylat:idempotency_conflict)...\n";
+    $conflictCall = $controller->handle([
+        'calls' => [
+            [
+                'id' => 'click_conflict',
+                'action' => 'CounterActions::saveCount',
+                'args' => ['count' => 999], // Nilai berbeda dari panggilan sebelumnya (7)
+                'idempotencyKey' => $idempKey,
+            ],
+        ],
+    ]);
+    assert($conflictCall['results'][0]['ok'] === false, "Key sama dengan payload berbeda harus ditolak");
+    assert(
+        $conflictCall['results'][0]['error']['type'] === 'kylat:idempotency_conflict',
+        "Error type harus 'kylat:idempotency_conflict'"
+    );
+    assert(
+        str_contains($conflictCall['results'][0]['error']['message'], 'payload yang berbeda'),
+        "Pesan error harus menjelaskan konflik payload"
+    );
+    assert($counterActions->lastSavedCount === 7, "Nilai di server tidak boleh berubah saat konflik");
+    echo "   ✅ kylat:idempotency_conflict berhasil dicegah saat payload berbeda dikirim dengan key yang sama.\n";
+
+    // 6. Uji Kasus Claude: Panggilan pertama gagal, lalu user ubah angka dengan key yang sama
+    echo "6. Menguji Kasus Gagal Pertama lalu Retry Payload Berbeda...\n";
+    $failedKey = "idemp_fail_" . uniqid();
+    
+    // Panggilan pertama sengaja dibuat gagal (string bukan integer -> kylat:validation)
+    $failedCall1 = $controller->handle([
+        'calls' => [
+            [
+                'id' => 'call_fail_1',
+                'action' => 'CounterActions::saveCount',
+                'args' => ['count' => 'bukan_angka'],
+                'idempotencyKey' => $failedKey,
+            ],
+        ],
+    ]);
+    assert($failedCall1['results'][0]['ok'] === false, "Panggilan pertama harus gagal validasi");
+    assert($failedCall1['results'][0]['error']['type'] === 'kylat:validation');
+
+    // Pengguna mengubah angka dan klik lagi memakai key yang sama
+    $conflictCall2 = $controller->handle([
+        'calls' => [
+            [
+                'id' => 'call_fail_2',
+                'action' => 'CounterActions::saveCount',
+                'args' => ['count' => 15],
+                'idempotencyKey' => $failedKey,
+            ],
+        ],
+    ]);
+    assert($conflictCall2['results'][0]['ok'] === false, "Key sama dengan payload baru harus ditolak");
+    assert(
+        $conflictCall2['results'][0]['error']['type'] === 'kylat:idempotency_conflict',
+        "Error type harus 'kylat:idempotency_conflict' meskipun request pertama gagal"
+    );
+    echo "   ✅ Key yang sama setelah panggilan gagal tetap menolak payload baru dengan kylat:idempotency_conflict.\n";
+
     echo "\n🎉 SEMUA PENGUJIAN ADAPTER LARAVEL SUKSES 100%!\n";
 }
 
