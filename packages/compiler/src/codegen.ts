@@ -18,6 +18,11 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
   for (const p of ir.props) {
     const fallback = p.defaultValue ?? 'undefined';
     bodyLines.push(`  const prop_${p.name} = props[${JSON.stringify(p.name)}] !== undefined ? props[${JSON.stringify(p.name)}] : ${fallback};`);
+    if (p.isRequired) {
+      bodyLines.push(`  if (prop_${p.name} === undefined) {`);
+      bodyLines.push(`    throw new TypeError("Prop '${p.name}' wajib disertakan untuk komponen ${ir.name}.");`);
+      bodyLines.push('  }');
+    }
   }
 
   // Inisialisasi state lokal
@@ -44,6 +49,7 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
       bodyLines.push(`  const [${pendingSignalName}, set_${pendingSignalName}] = createSignal(false);`);
       bodyLines.push(`  const [${errorSignalName}, set_${errorSignalName}] = createSignal(null);`);
       bodyLines.push(`  let current_idemp_${m.name} = null;`);
+      bodyLines.push(`  let last_args_${m.name} = null;`);
     }
   }
 
@@ -72,11 +78,16 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
       bodyLines.push('    try {');
 
       if (isMutation) {
-        bodyLines.push(`      current_idemp_${m.name} ??= "idemp_" + Date.now();`);
+        bodyLines.push(`      const current_payload_${m.name} = JSON.stringify(${argsObject});`);
+        bodyLines.push(`      if (current_idemp_${m.name} === null || last_args_${m.name} !== current_payload_${m.name}) {`);
+        bodyLines.push(`        current_idemp_${m.name} = "idemp_" + Date.now();`);
+        bodyLines.push(`        last_args_${m.name} = current_payload_${m.name};`);
+        bodyLines.push('      }');
         bodyLines.push(
           `      const res = await callServerAction(${JSON.stringify(`${contract}::${actionMethod}`)}, ${argsObject}, { idempotencyKey: current_idemp_${m.name} });`
         );
         bodyLines.push(`      current_idemp_${m.name} = null;`);
+        bodyLines.push(`      last_args_${m.name} = null;`);
         bodyLines.push(`      return res;`);
       } else {
         bodyLines.push(

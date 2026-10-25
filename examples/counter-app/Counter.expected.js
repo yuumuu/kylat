@@ -12,6 +12,7 @@ export function createCounter(props = {}) {
   const [is_pending_syncToServer, set_is_pending_syncToServer] = createSignal(false);
   const [error_syncToServer, set_error_syncToServer] = createSignal(null);
   let current_idemp_syncToServer = null;
+  let last_args_syncToServer = null;
 
   // 2. Definisi Aksi & Method
   function increment() {
@@ -24,9 +25,14 @@ export function createCounter(props = {}) {
     set_is_pending_syncToServer(true);
     set_error_syncToServer(null);
     try {
-      current_idemp_syncToServer ??= "idemp_" + Date.now();
+      const current_payload_syncToServer = JSON.stringify({ count: count() });
+      if (current_idemp_syncToServer === null || last_args_syncToServer !== current_payload_syncToServer) {
+        current_idemp_syncToServer = "idemp_" + Date.now();
+        last_args_syncToServer = current_payload_syncToServer;
+      }
       const res = await callServerAction("CounterActions::saveCount", { count: count() }, { idempotencyKey: current_idemp_syncToServer });
       current_idemp_syncToServer = null;
+      last_args_syncToServer = null;
       return res;
     } catch (err) {
       set_error_syncToServer(err instanceof Error ? err.message : String(err));

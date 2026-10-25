@@ -176,4 +176,72 @@ final class EscapeTest extends Component
 
     assert.equal(actualCode, expectedCode, 'Output kompilasi harus identik persis dengan kode Counter.expected.js');
   });
+
+  it('menghasilkan output yang identik dengan CartCounter.expected.js (Human-Authored Golden File)', async () => {
+    const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.php');
+    const expectedJsPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.expected.js');
+
+    const phpSource = fs.readFileSync(cartCounterPhpPath, 'utf-8');
+    const expectedJs = fs.readFileSync(expectedJsPath, 'utf-8');
+    const result = await compile(phpSource, 'CartCounter.php');
+    assert.equal(result.success, true);
+
+    const stripBanner = (str) => str.replace(/^\/\*\*[\s\S]*?\*\/\s*/, '').trim().replace(/\r\n/g, '\n');
+
+    const expectedCode = stripBanner(expectedJs);
+    const actualCode = stripBanner(result.code);
+
+    assert.equal(actualCode, expectedCode, 'Output kompilasi CartCounter harus identik persis dengan kode CartCounter.expected.js');
+  });
+
+  it('memastikan prop wajib tanpa default melempar TypeError saat diinisialisasi tanpa props', async () => {
+    const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.php');
+    const phpSource = fs.readFileSync(cartCounterPhpPath, 'utf-8');
+    const result = await compile(phpSource, 'CartCounter.php');
+    assert.equal(result.success, true);
+
+    // Evaluasi fungsi createCartCounter dari output kode
+    // Ganti import runtime dengan mock sederhana dan bersihkan export keyword
+    const mockModuleCode = result.code
+      .replace(/import\s*\{[^}]*\}\s*from\s*['"]@kylat\/runtime['"];?/, `
+        const createSignal = (v) => [() => v, () => {}];
+        const callServerAction = async () => {};
+        const bindText = () => {};
+        const document = { createElement: () => ({ setAttribute: () => {}, appendChild: () => {} }) };
+      `)
+      .replace(/export\s+function/g, 'function')
+      .replace(/export\s+default\s+[^;]+;?/g, '');
+
+    const fn = new Function(`${mockModuleCode}; return createCartCounter;`)();
+
+    // 1. Kasus tanpa argumen props -> wajib melempar TypeError
+    assert.throws(
+      () => {
+        fn();
+      },
+      (err) => {
+        assert.ok(err instanceof TypeError);
+        assert.ok(err.message.includes("Prop 'productId' wajib disertakan"));
+        return true;
+      },
+      'Inisialisasi tanpa props wajib melempar TypeError'
+    );
+
+    // 2. Kasus props kosong {} -> wajib melempar TypeError
+    assert.throws(
+      () => {
+        fn({});
+      },
+      (err) => {
+        assert.ok(err instanceof TypeError);
+        assert.ok(err.message.includes("Prop 'productId' wajib disertakan"));
+        return true;
+      },
+      'Inisialisasi dengan props kosong wajib melempar TypeError'
+    );
+
+    // 3. Kasus props valid { productId: "prod_123" } -> berhasil tanpa error
+    const instance = fn({ productId: 'prod_123' });
+    assert.ok(instance, 'Komponen berhasil diinisialisasi ketika prop wajib diberikan');
+  });
 });
