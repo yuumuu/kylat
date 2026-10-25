@@ -60,6 +60,5 @@ Sengaja tidak dibuat karena keputusannya masih terbuka, atau karena isinya belum
 
 - `LICENSE` — lisensi `[TERBUKA]`, tenggat sebelum rilis 1.0.
 - `CONTRIBUTING.md`, `SECURITY.md` — menunggu kebijakan versi dan pelaporan.
-- `spec/template.md` — sudah ditulis, masih di Drive dan masih privat, belum dipindahkan.
 - `spec/ir.md`, `spec/errors.md` — belum ditulis; untuk sementara isinya ada di Dokumen 2.
 - Seluruh isi `packages/` — belum ada baris kode.
