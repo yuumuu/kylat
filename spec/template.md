@@ -1,7 +1,7 @@
 # spec/template.md — Sintaks templat Kylat v0
 
 Status: disahkan untuk v0 (revisi P0, 25 Oktober 2026). Berlaku untuk bagian HTML di berkas komponen .php.
-Menjawab temuan K-01 (templat dan direktif tidak dispesifikasikan). Direvisi 25 Oktober 2026 untuk E-02, E-03, E-04.
+Menjawab temuan K-01 (templat dan direktif tidak dispesifikasikan). Direvisi 25 Oktober 2026 untuk E-02, E-03, E-04, dan pemisahan `#[Uses]`/`#[Child]`.
 
 ## 1. Prinsip
 
@@ -93,7 +93,8 @@ Menggantikan `onMount` dan `effect` di tabel migrasi (dokumen 5, bagian 8).
 
 - Komponen anak dipakai sebagai tag **`<x-nama>`**.
 - `nama` adalah **kebab-case dari nama kelas**: `Counter` → `x-counter`, `ProductCard` → `x-product-card`.
-- Tag wajib dideklarasikan di komponen induk lewat `#[Uses(ProductCard::class)]`. Tag yang tidak dideklarasikan menghasilkan **KIL-212**.
+- Tag wajib dideklarasikan di komponen induk lewat **`#[Child(ProductCard::class)]`**. Tag yang tidak dideklarasikan menghasilkan **KIL-212**.
+- `#[Uses(CartActions::class)]` adalah atribut terpisah untuk **kontrak aksi server**. `#[Uses]` tidak membuka izin merender komponen; `#[Child]` tidak mendeklarasikan kontrak aksi. Pemisahan ini disengaja agar compiler tidak menebak maksud dari jenis kelas dan pesan error tetap spesifik.
 - `<x-...>` adalah penanda compile-time. Tag ini **tidak boleh muncul di DOM hasil**; compiler menggantinya dengan node milik komponen anak.
 - Prop dioper sebagai atribut: `:start="$start"` untuk nilai dinamis, `start="10"` untuk literal string. Prop bertipe non-string wajib memakai kelas ekspresi (`:start="10"`, `:open="false"`), karena atribut biasa selalu menghasilkan `string`.
 - `key` pada `<x-nama>` di dalam `@foreach` wajib seperti elemen lain (`<x-product-card key="$item->id" … />`); `key` adalah atribut direktif dan tidak dioper sebagai prop.
@@ -105,7 +106,7 @@ Menggantikan `onMount` dan `effect` di tabel migrasi (dokumen 5, bagian 8).
 
 - HTML mentah: `{!! ... !!}` dan sejenisnya (KIL-152).
 - Script dan style inline yang dinamis.
-- Komponen anak tanpa deklarasi `#[Uses]` (KIL-212).
+- Komponen anak tanpa deklarasi `#[Child]` (KIL-212).
 
 ## 8. Kode galat templat
 
@@ -121,7 +122,7 @@ Menggantikan `onMount` dan `effect` di tabel migrasi (dokumen 5, bagian 8).
 | KIL-158 | URL dengan skema tidak diizinkan, termasuk yang lolos lewat interpolasi | Gunakan `https` atau path relatif |
 | KIL-159 | `{{ }}` dipakai di dalam atribut direktif atau atribut dinamis | Tulis ekspresi polos: `bind:value="$query"` |
 | KIL-160 | Interpolasi pada `style` atau atribut `on*` | Pindahkan ke kelas atau atribut dinamis yang diizinkan |
-| KIL-212 | Tag `<x-nama>` tidak dideklarasikan lewat `#[Uses]` | Tambahkan `#[Uses(Nama::class)]` |
+| KIL-212 | Tag `<x-nama>` tidak dideklarasikan lewat `#[Child]` | Tambahkan `#[Child(Nama::class)]` |
 
 ## 9. Keterkaitan
 
@@ -130,7 +131,7 @@ Menggantikan `onMount` dan `effect` di tabel migrasi (dokumen 5, bagian 8).
 - P3 (error bisa dipahami): setiap kode bagian 8 punya contoh perbaikan.
 - P6 (keamanan default aman): bagian 2, 4, dan 6.
 
-Daftar ini menjadi sumber kebenaran untuk pemetaan Livewire di dokumen 5 bagian 8. Setiap perubahan di sini wajib diikuti pembaruan daftar kode galat lengkap dan dokumen 5 bagian 8.
+Daftar ini menjadi sumber kebenaran untuk pemetaan Livewire di dokumen 5 bagian 8. Setiap perubahan di sini wajib diikuti pembaruan `spec/errors.md` dan dokumen 5 bagian 8.
 
 ## 10. Hubungan dengan Blade
 
@@ -152,13 +153,13 @@ Pembagian ini mengikat semua adapter. Adapter Laravel menyediakan `@kylat`; adap
 - Prop divalidasi terhadap signature `#[Prop]` **saat build**, memakai kontrak yang sama dengan `sync-contract`. Ketidakcocokan saat hidrasi adalah galat protokol; island tidak dihidrasi dan galat dicatat.
 - Tes wajib: prop berisi `"`, `<`, `</script>`, `&quot;`, dan karakter Unicode non-ASCII tidak boleh memecah atribut, tidak boleh menghasilkan escape ganda, dan tidak boleh terbaca sebagai markup.
 
-## 11. Yang belum diputuskan
+## 11. Status keputusan
 
 | Butir | Status | Catatan |
 |---|---|---|
+| Pemisahan `#[Uses]` dan `#[Child]` | **PUTUSAN** | `#[Uses(CartActions::class)]` khusus kontrak aksi server; `#[Child(Counter::class)]` membuka tag `<x-counter>`. KIL-212 mengacu ke `#[Child]`. Quick start counter tidak memerlukan `#[Child]` |
 | Event pemicu `bind:value` | `[TERBUKA]` | `input` atau `change` belum ditetapkan; perilaku untuk `<select>` dan `contenteditable` juga |
 | Modifier `on:` | `[TERBUKA]` | `.prevent`, `.stop`, `.once` belum ada; tanpa itu `on:submit` selalu memuat ulang halaman |
 | Urutan `#[OnMount]` / `#[Effect]` terhadap render, dan cleanup | `[TERBUKA]` | Dibutuhkan sebelum runtime fase 1 |
 | Kode galat tabrakan nama tag | `[TERBUKA]` | Belum dialokasikan |
-| Arti ganda `#[Uses]` | `[TERBUKA]` | Dokumen 4 §2 memakai `#[Uses(CartActions::class)]` untuk kontrak aksi; §7 memakai `#[Uses]` untuk komponen anak. Usul: satu atribut, entri divalidasi menurut jenis kelas — subclass `Component` atau kontrak `ServerAction`; entri lain gagal build |
 | Aturan validasi yang dikompilasi ke client | `[TERBUKA]` | Dokumen 3 §8 belum menetapkan subset aturan; tanpa itu validasi instan tidak bisa diuji |

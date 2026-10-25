@@ -14,6 +14,7 @@ Aturan turunannya:
 
 - Spesifikasi yang lebih spesifik menang. Konstruksi yang sah di `php-subset.md` masih bisa ditolak `compiler-rules.md` bila dipakai di dalam komponen — bukan karena bahasanya salah, tetapi karena tempatnya salah.
 - Kode galat mengikuti rentang Dokumen 2 §10: `1xx` bahasa, `2xx` konvensi dan struktur, `3xx` keamanan dan kontrak aksi, `4xx` aksesibilitas dan anggaran ukuran.
+- **Daftar kode galat yang mengikat ada di `spec/errors.md`.** Setiap kode baru wajib terdaftar di sana — dengan pemicu, pesan, contoh salah, dan contoh benar — sebelum dipakai di pesan compiler mana pun. Kode lama yang sudah dipensiunkan (KIL-202, KIL-206, KIL-210) hanya boleh muncul di tabel pemetaan.
 - Bila dua spesifikasi bertentangan tanpa penyelesaian yang jelas, **berhenti dan putuskan** — jangan menebak. Setiap pertentangan yang ditemukan dicatat, bukan diselesaikan diam-diam oleh implementasi.
 
 ## Status artefak
@@ -21,15 +22,17 @@ Aturan turunannya:
 | Berkas | Cakupan | Status |
 |---|---|---|
 | `php-subset.md` | Subset PHP v0: tipe, operator (termasuk `.`), kontrol alur, allowlist, semantik PHP vs JS | Draf, diport dari Dokumen 2 §2–§5 + D2/D3/D5 |
-| `compiler-rules.md` | Aturan build: KIL-201 sampai KIL-401, termasuk KIL-211 (siklus) dan KIL-212 (`#[Uses]`) | Draf, dipindahkan dari Dokumen 4 §8 + E-01 |
-| `template.md` | Grammar templat, tiga kelas atribut, `<x-nama>`, serialisasi `data-props`, `bind:`, `on:`, `#[OnMount]`, `#[Effect]`, navigasi, KIL-151–160 + KIL-212, hubungan dengan Blade (§10) | Ada — disahkan 25 Okt 2026, direvisi untuk E-02/E-03/E-04 |
+| `compiler-rules.md` | Aturan build: KIL-102 sampai KIL-401, termasuk KIL-211 (siklus) dan KIL-212 (`#[Child]`) | Draf, dipindahkan dari Dokumen 4 §8 + E-01 + renumber |
+| `template.md` | Grammar templat, tiga kelas atribut, `<x-nama>` + `#[Child]`, serialisasi `data-props`, `bind:`, `on:`, `#[OnMount]`, `#[Effect]`, navigasi, KIL-151–160 + KIL-212, hubungan dengan Blade (§10) | Ada — disahkan 25 Okt 2026, direvisi untuk E-02/E-03/E-04 |
 | `ir.md` | Intermediate representation, bebas dari PHP | Belum — `[TERBUKA]`, tenggat akhir fase 2 |
-| `errors.md` | Daftar lengkap kode KIL-xxx + pesan + contoh | Belum — `[TERBUKA]`, tenggat akhir fase 2 |
-| `protocol.schema.json` | Skema kontrak aksi dan endpoint `/_kylat/*` | Belum, diturunkan dari Dokumen 3 |
+| `errors.md` | Daftar lengkap kode KIL-xxx + pesan + contoh | Ada — disahkan 25 Okt 2026, memuat KIL-101 sampai KIL-401 + tabel renumber |
+| `protocol.schema.json` | Skema kontrak aksi dan endpoint `/_kylat/*` | Ada — disahkan 25 Okt 2026, skema batch RPC + RFC 9457 |
 
-## Path `errors.md` belum diputuskan
+## Path `errors.md`: `spec/errors.md`
 
-Dokumen 4 §9 menaruh `spec/errors.md` di pohon repo, tetapi Dokumen 2 §9–§10 dan Dokumen 4 §12 merujuk `docs/reference/errors.md`. Setiap pesan error build menautkan ke path ini, jadi harus diputuskan sebelum fase 1 — sebelum pesan error pertama ditulis.
+Kode galat adalah kontrak normatif yang dirujuk compiler, CLI, dan dokumen lain. Karena itu daftar lengkapnya tinggal di `spec/errors.md`, bukan `docs/reference/errors.md`.
+
+`docs/reference/` tetap memuat penjelasan panjang dan tutorial. Semua halaman itu menaut ke `spec/errors.md`, bukan sebaliknya.
 
 ## Yang tidak lagi dipakai sebagai sumber
 

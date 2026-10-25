@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kylat.dev/spec/protocol.schema.json",
+  "title": "KylatWireProtocol",
+  "description": "Spesifikasi kontrak wire RPC netral-bahasa Kylat v0 antara client dan server adapter.",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/$defs/BatchRequest" },
+    { "$ref": "#/$defs/BatchResponse" },
+    { "$ref": "#/$defs/ProblemDetails" }
+  ],
+  "$defs": {
+    "BatchRequest": {
+      "title": "BatchRequest",
+      "description": "Payload body untuk request POST /_kylat/call. Maksimal 20 pemanggilan per batch.",
+      "type": "object",
+      "required": ["calls"],
+      "additionalProperties": false,
+      "properties": {
+        "calls": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "description": "Daftar pemanggilan aksi dalam satu batch.",
+          "items": {
+            "$ref": "#/$defs/Call"
+          }
+        }
+      }
+    },
+
+    "Call": {
+      "title": "Call",
+      "description": "Satu pemanggilan aksi server di dalam batch.",
+      "type": "object",
+      "required": ["id", "action", "args"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "description": "Pengenal unik panggilan dalam satu batch (misal 'c1', 'c2'). Digunakan untuk memetakan hasil."
+        },
+        "action": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_\\\\]+\\.[A-Za-z0-9_]+$",
+          "description": "Nama aksi yang dipanggil, berformat 'Komponen.method' atau 'KontrakAksi.method' (misal 'ProductFilter.addToCart')."
+        },
+        "args": {
+          "type": "object",
+          "description": "Argumen panggilan yang diteruskan ke parameter handler aksi. Maksimal kedalaman 16 tingkat, panjang string per field 10.000 karakter.",
+          "additionalProperties": true
+        }
+      }
+    },
+
+    "BatchResponse": {
+      "title": "BatchResponse",
+      "description": "Payload respons HTTP 200 untuk POST /_kylat/call yang memuat hasil setiap panggilan.",
+      "type": "object",
+      "required": ["results"],
+      "additionalProperties": false,
+      "properties": {
+        "results": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "description": "Daftar hasil eksekusi panggilan yang berkorespondensi dengan id panggilan pada request.",
+          "items": {
+            "$ref": "#/$defs/CallResult"
+          }
+        }
+      }
+    },
+
+    "CallResult": {
+      "title": "CallResult",
+      "description": "Hasil eksekusi satu pemanggilan aksi.",
+      "type": "object",
+      "required": ["id", "ok"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID panggilan yang bersesuaian dari request batch."
+        },
+        "ok": {
+          "type": "boolean",
+          "description": "True jika aksi berhasil dieksekusi, false jika terjadi kegagalan tingkat aksi (validasi, otorisasi spesifik, dll.)."
+        },
+        "data": {
+          "description": "Payload data balikan jika ok: true. Tipe data mengikuti kontrak balikan signature aksi.",
+          "type": ["object", "array", "string", "number", "boolean", "null"]
+        },
+        "error": {
+          "$ref": "#/$defs/CallError",
+          "description": "Objek galat jika ok: false."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "ok": { "const": true } } },
+          "then": { "not": { "required": ["error"] } }
+        },
+        {
+          "if": { "properties": { "ok": { "const": false } } },
+          "then": { "required": ["error"] }
+        }
+      ]
+    },
+
+    "CallError": {
+      "title": "CallError",
+      "description": "Struktur galat pada tingkat pemanggilan aksi (HTTP 200).",
+      "type": "object",
+      "required": ["type", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "kylat:validation",
+            "kylat:unauthorized",
+            "kylat:forbidden",
+            "kylat:not_found",
+            "kylat:server_error",
+            "kylat:action_error"
+          ],
+          "description": "Pengenal tipe galat stabil."
+        },
+        "title": {
+          "type": "string",
+          "description": "Judul singkat kegagalan (misal 'Validasi gagal')."
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Pesan deskripsi kesalahan yang aman ditampilkan ke pengguna."
+        },
+        "errors": {
+          "type": "array",
+          "description": "Daftar galat spesifik per field (wajib ada untuk type 'kylat:validation').",
+          "items": {
+            "$ref": "#/$defs/ValidationError"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "kylat:validation" } } },
+          "then": { "required": ["errors"] }
+        }
+      ]
+    },
+
+    "ValidationError": {
+      "title": "ValidationError",
+      "description": "Detail galat validasi per field menggunakan JSON Pointer RFC 6901.",
+      "type": "object",
+      "required": ["pointer", "code", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "pointer": {
+          "type": "string",
+          "pattern": "^/calls/[0-9]+/args/.+$",
+          "description": "JSON Pointer ke argumen yang gagal validasi (misal '/calls/0/args/qty' atau '/calls/0/args/items/0/qty')."
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]+$",
+          "description": "Kode aturan validasi yang dilanggar (misal 'min', 'required', 'email')."
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Pesan validasi siap tampil."
+        }
+      }
+    },
+
+    "ProblemDetails": {
+      "title": "ProblemDetails",
+      "description": "Format standar galat tingkat request sesuai RFC 9457 (HTTP 4xx/5xx).",
+      "type": "object",
+      "required": ["type", "title", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "URI referensi tipe masalah (misal 'urn:kylat:stale_build', 'urn:kylat:rate_limited', 'urn:kylat:bad_request', 'urn:kylat:unauthorized', 'urn:kylat:csrf_invalid')."
+        },
+        "title": {
+          "type": "string",
+          "description": "Ringkasan singkat masalah."
+        },
+        "status": {
+          "type": "integer",
+          "minimum": 400,
+          "maximum": 599,
+          "description": "Status kode HTTP."
+        },
+        "detail": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Penjelasan rinci spesifik untuk insiden ini."
+        },
+        "instance": {
+          "type": "string",
+          "description": "Pengenal unik korelasi transaksi/log untuk pelacakan debugging server."
+        }
+      }
+    },
+
+    "ProtocolHeaders": {
+      "title": "ProtocolHeaders",
+      "description": "Header HTTP wajib dan opsional pada protokol Kylat.",
+      "type": "object",
+      "properties": {
+        "X-Kylat-Build": {
+          "type": "string",
+          "description": "Hash identifikasi build client. Server membalas HTTP 409 (urn:kylat:stale_build) bila build sudah tidak kompatibel."
+        },
+        "X-CSRF-Token": {
+          "type": "string",
+          "description": "Token anti-CSRF, wajib disertakan pada permintaan mutasi mode cookie."
+        },
+        "Idempotency-Key": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 128,
+          "description": "Kunci idempotensi untuk aksi mutasi, disimpan dengan TTL 24 jam."
+        },
+        "Authorization": {
+          "type": "string",
+          "pattern": "^Bearer\\s+[A-Za-z0-9._~+/-]+=*$",
+          "description": "Token autentikasi Bearer pada mode token."
+        }
+      }
+    }
+  }
+}

@@ -22,7 +22,7 @@ Diturunkan dari Dokumen 2 §2–§5 (revisi P0, 25 Oktober 2026), dengan tiga pe
 
 `str_contains`, `str_starts_with`, `implode`, dan `explode` hanya diizinkan karena terbukti setara untuk UTF-8 valid lewat differential test. `trim`, `strtolower`, dan `strtoupper` sengaja tidak ada: semantiknya berbeda untuk karakter non-ASCII.
 
-> `array_values` ditambahkan sebagai konsekuensi aturan `array_filter` di bagian 4. Tanpa fungsi itu, aturan tersebut tidak bisa dipatuhi. Butuh konfirmasi.
+> `array_values` masuk allowlist sebagai konsekuensi langsung aturan `array_filter` di bagian 4. Tanpa fungsi itu, aturan tersebut tidak bisa dipatuhi. Keputusan 25 Oktober 2026: diterima, tanpa status sementara.
 
 Setiap fungsi punya implementasi JS terdokumentasi dan diuji differential.
 
