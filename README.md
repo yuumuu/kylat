@@ -2,7 +2,7 @@
 
 Toolchain frontend: komponen ditulis dengan subset PHP bergaya Livewire, dikompilasi menjadi JavaScript dengan reaktivitas fine-grained (signals) yang berjalan di browser. Server hanya dipanggil untuk hal yang memang membutuhkan server — data, penyimpanan, otorisasi — melalui protokol RPC netral bahasa. Frontend bisa di-host statis di CDN dan berbicara dengan backend mana pun yang mengimplementasikan kontrak.
 
-**Status: fase 0 belum dimulai.** Repo ini masih kerangka. Belum ada kode yang dapat dijalankan, dan belum ada satu pun keputusan `[TERBUKA]` yang ditutup oleh scaffold ini.
+**Status: Fase 0 (Fondasi) Selesai.** Seluruh spesifikasi normatif (`spec/`) telah lengkap. Spike S1 (Parser PHP via Tree-sitter WASM) dan Spike S3 (Interface kontrak aksi server) telah lolos dan ditutup. Siap memasuki Fase 1 (Runtime).
 
 ## Sumber kebenaran
 
