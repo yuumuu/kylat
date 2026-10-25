@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     name: Verify Toolchain (Node ${{ matrix.node-version }} + PHP ${{ matrix.php-version }})
@@ -17,28 +20,29 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup PHP ${{ matrix.php-version }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
         with:
           php-version: ${{ matrix.php-version }}
           extensions: mbstring, json, tokenizer
+          ini-values: zend.assertions=1, assert.exception=1
           coverage: none
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d # v3
         with:
           version: 9
 
       - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile || pnpm install
+      - name: Install dependencies (Strict Lockfile)
+        run: pnpm install --frozen-lockfile
 
       - name: Build Packages
         run: pnpm build
@@ -46,11 +50,11 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Lint Error Codes & Semantic Verification
-        run: pnpm lint:errors
+      - name: Full Lint & Semantic Error Verification
+        run: pnpm lint
 
       - name: Run Node.js Tests (Compiler & Runtime)
         run: pnpm test
 
       - name: Run PHP Tests (Adapter Laravel & Security Audits)
-        run: php packages/adapter-laravel/test/AdapterTest.php
+        run: php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/AdapterTest.php
