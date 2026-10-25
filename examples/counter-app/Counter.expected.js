@@ -11,6 +11,7 @@ export function createCounter(props = {}) {
   const [count, set_count] = createSignal(prop_initialCount);
   const [is_pending_syncToServer, set_is_pending_syncToServer] = createSignal(false);
   const [error_syncToServer, set_error_syncToServer] = createSignal(null);
+  let current_idemp_syncToServer = null;
 
   // 2. Definisi Aksi & Method
   function increment() {
@@ -23,11 +24,12 @@ export function createCounter(props = {}) {
     set_is_pending_syncToServer(true);
     set_error_syncToServer(null);
     try {
-      const idempotencyKey = "idemp_" + Date.now();
-      return await callServerAction("CounterActions::saveCount", { count: count() }, { idempotencyKey });
+      current_idemp_syncToServer ??= "idemp_" + Date.now();
+      const res = await callServerAction("CounterActions::saveCount", { count: count() }, { idempotencyKey: current_idemp_syncToServer });
+      current_idemp_syncToServer = null;
+      return res;
     } catch (err) {
       set_error_syncToServer(err instanceof Error ? err.message : String(err));
-      throw err;
     } finally {
       set_is_pending_syncToServer(false);
     }
@@ -67,6 +69,11 @@ export function createCounter(props = {}) {
   el_button_8.textContent = "Simpan ke Server (RPC)";
   el_div_7.appendChild(el_button_8);
   el_div_1.appendChild(el_div_7);
+  const el_live_error_9 = document.createElement("div");
+  el_live_error_9.setAttribute("aria-live", "polite");
+  el_live_error_9.setAttribute("role", "status");
+  bindText(el_live_error_9, () => error_syncToServer() ?? "");
+  el_div_1.appendChild(el_live_error_9);
   el_div_1.setAttribute("data-kylat-component", "Counter");
   return el_div_1;
 }
