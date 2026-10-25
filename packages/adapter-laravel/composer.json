@@ -10,5 +10,8 @@
     "psr-4": {
       "Kylat\\Laravel\\": "src/"
     }
+  },
+  "scripts": {
+    "test": "php test/AdapterTest.php"
   }
 }

@@ -32,7 +32,7 @@ export async function runBuildCommand(inputPath: string = 'resources/views/compo
       const full = path.join(dir, item);
       if (fs.statSync(full).isDirectory()) {
         collect(full);
-      } else if (full.endsWith('.php')) {
+      } else if (full.endsWith('.php') && !full.endsWith('.blade.php')) {
         phpFiles.push(full);
       }
     }
