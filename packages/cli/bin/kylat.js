@@ -2,4 +2,7 @@
 
 import { runCli } from '../dist/index.js';
 
-runCli(process.argv.slice(2));
+runCli(process.argv.slice(2)).catch((err) => {
+  console.error('[Kylat CLI Error]:', err);
+  process.exit(1);
+});

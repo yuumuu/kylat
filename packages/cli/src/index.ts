@@ -3,36 +3,52 @@
  * Logika CLI Kylat.
  */
 
-export function runCli(args: string[]): void {
+import { runCheckCommand } from './commands/check.js';
+import { runBuildCommand } from './commands/build.js';
+import { runDoctorCommand } from './commands/doctor.js';
+
+export async function runCli(args: string[]): Promise<void> {
   const command = args[0] || 'help';
 
   switch (command) {
-    case 'build':
-      console.log('Kylat build: mengompilasi komponen...');
+    case 'check': {
+      const target = args[1] || '.';
+      const code = await runCheckCommand(target);
+      process.exitCode = code;
       break;
-    case 'dev':
-      console.log('Kylat dev server berjalan...');
+    }
+
+    case 'build': {
+      const input = args[1] && !args[1].startsWith('--') ? args[1] : undefined;
+      const outDirIndex = args.indexOf('--out-dir');
+      const outDir = outDirIndex !== -1 && args[outDirIndex + 1] ? args[outDirIndex + 1] : undefined;
+      const code = await runBuildCommand(input, { outDir });
+      process.exitCode = code;
       break;
-    case 'check':
-      console.log('Kylat check: memeriksa komponen...');
+    }
+
+    case 'doctor': {
+      const code = runDoctorCommand();
+      process.exitCode = code;
       break;
-    case 'doctor':
-      console.log('Kylat doctor: memeriksa konfigurasi proyek...');
-      break;
+    }
+
+    case 'help':
+    case '--help':
+    case '-h':
     default:
-      console.log(`Kylat CLI v0.0.1
+      console.log(`⚡ Kylat CLI v0.0.1
+Frontend subset PHP yang dikompilasi ke JavaScript reaktivitas sinyal.
+
 Penggunaan: kylat <perintah> [opsi]
 
 Perintah:
-  create           Buat proyek Kylat baru
-  dev              Jalankan dev server dengan HMR
-  build            Kompilasi komponen untuk produksi
-  check            Periksa aturan bahasa dan templat (KIL-xxx)
-  doctor           Audit kesehatan konfigurasi dan keamanan
-  sync-contract    Sinkronisasi kontrak RPC aksi server
-  make:component   Buat boilerplate komponen baru
-  make:action      Buat boilerplate kelas aksi server
-  migrate:livewire Analisis dan panduan migrasi dari Livewire 4
+  check [path]                  Periksa aturan bahasa dan template (KIL-101..KIL-311)
+  build [input] [--out-dir dir] Kompilasi komponen PHP ke modul JavaScript
+  doctor                        Audit kesehatan konfigurasi lingkungan (Node, PHP, Composer)
+  dev                           Jalankan dev server dengan HMR (segera)
+  make:component [nama]         Buat boilerplate komponen baru (segera)
+  make:action [nama]            Buat boilerplate kelas aksi server (segera)
 `);
       break;
   }
