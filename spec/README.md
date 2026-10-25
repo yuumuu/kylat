@@ -20,9 +20,9 @@ Aturan turunannya:
 
 | Berkas | Cakupan | Status |
 |---|---|---|
-| `php-subset.md` | Subset PHP v0: tipe, operator, kontrol alur, allowlist, semantik PHP vs JS | Draf, diport dari Dokumen 2 §2–§5 + D2/D3/D5 |
-| `compiler-rules.md` | Aturan build: KIL-201 sampai KIL-401 | Draf, dipindahkan dari Dokumen 4 §8 |
-| `template.md` | Grammar templat, `bind:`, `on:`, `#[OnMount]`, `#[Effect]`, navigasi, KIL-151–158, hubungan dengan Blade (§10) | Ada — disahkan 25 Okt 2026 |
+| `php-subset.md` | Subset PHP v0: tipe, operator (termasuk `.`), kontrol alur, allowlist, semantik PHP vs JS | Draf, diport dari Dokumen 2 §2–§5 + D2/D3/D5 |
+| `compiler-rules.md` | Aturan build: KIL-201 sampai KIL-401, termasuk KIL-211 (siklus) dan KIL-212 (`#[Uses]`) | Draf, dipindahkan dari Dokumen 4 §8 + E-01 |
+| `template.md` | Grammar templat, tiga kelas atribut, `<x-nama>`, serialisasi `data-props`, `bind:`, `on:`, `#[OnMount]`, `#[Effect]`, navigasi, KIL-151–160 + KIL-212, hubungan dengan Blade (§10) | Ada — disahkan 25 Okt 2026, direvisi untuk E-02/E-03/E-04 |
 | `ir.md` | Intermediate representation, bebas dari PHP | Belum — `[TERBUKA]`, tenggat akhir fase 2 |
 | `errors.md` | Daftar lengkap kode KIL-xxx + pesan + contoh | Belum — `[TERBUKA]`, tenggat akhir fase 2 |
 | `protocol.schema.json` | Skema kontrak aksi dan endpoint `/_kylat/*` | Belum, diturunkan dari Dokumen 3 |

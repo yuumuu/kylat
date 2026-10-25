@@ -13,7 +13,9 @@ Diturunkan dari Dokumen 2 §2–§5 (revisi P0, 25 Oktober 2026), dengan tiga pe
 ## 2. Yang didukung di `#[Client]` (v0)
 
 - **Tipe:** `int`, `float`, `string`, `bool`, `null`, `list<T>`, `array<string, T>`, enum sederhana, readonly value object.
-- **Operator:** aritmetika, logika, perbandingan strict (`===`, `!==`, `<`, `>`, `<=`, `>=`), null coalescing, ternary.
+- **Operator:** aritmetika, logika, perbandingan strict (`===`, `!==`, `<`, `>`, `<=`, `>=`), penggabungan string (`.`), null coalescing, ternary.
+
+  > `.` adalah penggabungan string, bukan penjumlahan. Di JavaScript operatornya menjadi `+`, tetapi `+` antara string dan angka di JS melakukan koersi yang tidak ada di PHP — karena itu `+` **tidak** boleh dipakai untuk menggabungkan string, dan `1 + "2"` di PHP (`3`) tetap dihitung sebagai aritmetika. Kedua bahasa hanya sepakat bila kedua operand bertipe sama. Compiler wajib menolak `.` bila salah satu operand bukan `string` (KIL-131). Operator ini dibutuhkan oleh atribut dinamis `:href="'/produk/' . $id"` di `template.md` §4.
 - **Kontrol alur:** `if`/`else`, `match`, `foreach`, `for`, `return` dini.
 - **Closure dan arrow function.**
 - **Fungsi bawaan (allowlist):** `count`, `str_contains`, `str_starts_with`, `mb_strlen`, `mb_substr`, `mb_strtolower`, `mb_strtoupper`, `array_map`, `array_filter`, `array_slice`, `array_values`, `usort`, `implode`, `explode`.

@@ -13,12 +13,12 @@ Alasan dan riwayat keputusan masih hidup di Google Drive, folder `Kylat` → `01
 | Dokumen | Isi | Artefak spec terkait |
 |---|---|---|
 | Kylat 1 | Visi, ruang lingkup, mode distribusi, prinsip P1–P12 | — |
-| Kylat 2 | Subset PHP v0, semantik, IR, format error | `spec/php-subset.md`, `spec/ir.md`, `spec/errors.md` |
+| Kylat 2 | Subset PHP v0, semantik, IR, format error | `spec/php-subset.md`, `spec/ir.md`, `spec/errors.md` (path belum diputuskan) |
 | Kylat 3 | Protokol, keamanan, autentikasi, batas runtime | `spec/protocol.schema.json` |
 | Kylat 4 | Arsitektur, runtime, struktur repo, aksesibilitas | — |
 | Kylat 5 | Adopsi, CLI, migrasi dari Livewire 4 | — |
 | Kylat 6 | Roadmap, register keputusan, gerbang | — |
-| `template.md` | Grammar templat dan direktif | `spec/template.md` |
+| `template.md` | Grammar templat, komposisi `<x-nama>`, tiga kelas atribut, `data-props`, hubungan dengan Blade | `spec/template.md` |
 
 ## Struktur
 
@@ -28,8 +28,8 @@ packages/
   compiler/           parse, analyze, ir, codegen, diagnostics
   runtime/            signals, DOM, list, scheduler, RPC client
   protocol/           skema dan test konformansi
-  adapter-laravel/    kontrak aksi, endpoint, Blade directive, policy
-  cli/                create, dev, build, check, doctor, sync-contract
+  adapter-laravel/    kontrak aksi, endpoint, direktif @kylat, policy
+  cli/                create, dev, build, check, doctor, sync-contract, make:component, make:action, migrate:livewire
 bench/                scenarios, baselines, scripts
 examples/             contoh yang harus selalu berjalan
 docs/                 tutorial, guide, reference, decisions

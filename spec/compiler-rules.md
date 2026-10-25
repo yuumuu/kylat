@@ -14,6 +14,7 @@ Setiap aturan wajib punya: kode stabil, lokasi di PHP, penjelasan satu kalimat, 
 | KIL-206 | Tanpa `static`, `global`, atau singleton di komponen | Bahasa |
 | KIL-210 | Nama aksi unik per kontrak | Kontrak |
 | KIL-211 | Tidak ada dependensi sirkular antar komponen | Struktur |
+| KIL-212 | Tag `<x-nama>` wajib dideklarasikan lewat `#[Uses(Nama::class)]` di komponen induk | Struktur |
 | KIL-310 | Aksi dengan parameter ID wajib punya `authorize` | Keamanan |
 | KIL-401 | Anggaran ukuran chunk per komponen (usulan 8 KB gzip) | Anggaran |
 
@@ -28,6 +29,10 @@ Rentang sah: `1xx` bahasa, `2xx` konvensi dan struktur, `3xx` keamanan dan kontr
 **KIL-202.** `strict_types` bukan preferensi gaya: tanpa itu, semantik koersi PHP diam-diam masuk ke kode yang akan dikompilasi ke JS, dan differential test tidak punya jawaban tunggal.
 
 **KIL-206.** Yang dilarang adalah **static property**, **variabel global**, dan **singleton** — keadaan yang hidup lebih lama dari satu komponen. Enum case dan konstanta kelas bukan static property dan tidak terkena aturan ini. Perbedaan ini perlu ditulis eksplisit agar analyzer tidak menolak enum yang sah (audit D6).
+
+**KIL-211.** Siklus dependensi adalah masalah **graf**, bukan masalah sintaks: `A` memakai `B`, `B` memakai `A`, dan tidak ada urutan build yang sah. Kode ini dulu dipakai juga untuk "komponen anak tanpa `#[Uses]`" di `template.md` §7 — dua kegagalan yang tidak berhubungan, dan pesan errornya tidak bisa benar untuk keduanya. Sejak E-01, arti itu pindah ke KIL-212.
+
+**KIL-212.** Kewajiban deklarasi `#[Uses]` bersifat **struktur**, karena yang diperiksa adalah daftar dependensi komponen, bukan bentuk templat. Kode ini tetap muncul di `template.md` §8 karena lokasi pelanggarannya adalah tag `<x-nama>` di templat — nomor kode menyatakan jenis masalah, bukan berkas tempat pesan dicetak. Aturan tag: kebab-case dari nama kelas, dua kelas yang memetakan ke tag sama menggagalkan build, dan `<x-...>` tidak boleh muncul di DOM hasil.
 
 **KIL-310.** Saat ini hanya berlaku untuk aksi yang punya parameter ID. Dokumen 3 §9.3 mewajibkan otorisasi eksplisit untuk **setiap** aksi. Selisih ini belum diputuskan (audit S-07); jangan perluas tanpa keputusan, karena memperluas berarti aksi yang sekarang lolos akan gagal di CI.
 
