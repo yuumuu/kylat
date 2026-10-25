@@ -51,7 +51,36 @@ final class KylatBatchCallController
             $action = (string) ($call['action'] ?? '');
             /** @var array<string, mixed> $args */
             $args = isset($call['args']) && is_array($call['args']) ? $call['args'] : [];
-            $idempotencyKey = (string) ($call['idempotencyKey'] ?? $call['meta']['idempotencyKey'] ?? $headerIdempKey ?? '');
+            // Jalur resmi: hanya terima dari call.idempotencyKey atau HTTP Header (jalur meta.* ditolak)
+            $idempotencyKey = (string) ($call['idempotencyKey'] ?? $headerIdempKey ?? '');
+
+            if (!str_contains($action, '::')) {
+                $results[] = [
+                    'id' => $callId,
+                    'ok' => false,
+                    'error' => [
+                        'type' => 'kylat:action_error',
+                        'message' => sprintf("Format aksi '%s' tidak valid. Gunakan format 'ContractClass::method'.", $action),
+                    ],
+                ];
+                continue;
+            }
+
+            [$contract, $method] = explode('::', $action, 2);
+
+            // Invarian Keamanan Dokumen 3 §4: Mutasi WAJIB menyertakan Idempotency-Key
+            $isMutation = $this->isMutationAction($contract, $method);
+            if ($isMutation && $idempotencyKey === '') {
+                $results[] = [
+                    'id' => $callId,
+                    'ok' => false,
+                    'error' => [
+                        'type' => 'kylat:validation',
+                        'message' => sprintf("Aksi mutasi '%s' wajib menyertakan Idempotency-Key pada header HTTP atau payload call.", $action),
+                    ],
+                ];
+                continue;
+            }
 
             // Pengecekan Idempotency-Key, Kanonikalisasi JSON, & Anti-Race-Condition
             $payloadHash = '';
@@ -97,17 +126,24 @@ final class KylatBatchCallController
                 }
             }
 
-            $result = $this->dispatchCall($callId, $action, $args);
+            try {
+                $result = $this->dispatchCall($callId, $action, $args);
 
-            if ($idempotencyKey !== '') {
-                if ($result['ok'] ?? false) {
-                    IdempotencyStore::complete($idempotencyKey, $payloadHash, $result);
-                } else {
-                    IdempotencyStore::markFailed($idempotencyKey, $payloadHash);
+                if ($idempotencyKey !== '') {
+                    if ($result['ok'] ?? false) {
+                        IdempotencyStore::complete($idempotencyKey, $payloadHash, $result);
+                    } else {
+                        IdempotencyStore::markFailed($idempotencyKey, $payloadHash);
+                    }
                 }
-            }
 
-            $results[] = $result;
+                $results[] = $result;
+            } catch (\Throwable $e) {
+                if ($idempotencyKey !== '') {
+                    IdempotencyStore::release($idempotencyKey);
+                }
+                throw $e;
+            }
         }
 
         return ['results' => $results];
@@ -274,4 +310,32 @@ final class KylatBatchCallController
             ];
         }
     }
+
+    /**
+     * Memeriksa apakah aksi server merupakan mutasi (default) atau baca murni (#[Server(read: true)]).
+     */
+    private function isMutationAction(string $contract, string $method): bool
+    {
+        $instance = ActionRegistry::resolve($contract);
+        if ($instance === null || !method_exists($instance, $method)) {
+            return true; // Default adalah mutasi (default-deny)
+        }
+
+        $refMethod = new ReflectionMethod($instance, $method);
+        foreach ($refMethod->getAttributes() as $attr) {
+            $attrName = $attr->getName();
+            if (str_ends_with($attrName, 'Server')) {
+                $args = $attr->getArguments();
+                if (isset($args['read']) && $args['read'] === true) {
+                    return false;
+                }
+                if (isset($args[0]) && $args[0] === true) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
 }
+

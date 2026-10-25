@@ -90,6 +90,7 @@ function runTests(): void
                 'id' => 'c_auth',
                 'action' => 'CounterActions::saveCount',
                 'args' => ['count' => 10],
+                'idempotencyKey' => 'idemp_auth_guard',
             ],
         ],
     ]);
@@ -107,6 +108,7 @@ function runTests(): void
                 'id' => 'c_coerce',
                 'action' => 'CounterActions::saveCount',
                 'args' => ['count' => '5'], // String bukan integer!
+                'idempotencyKey' => 'idemp_coerce_guard',
             ],
         ],
     ]);
@@ -121,6 +123,7 @@ function runTests(): void
                 'id' => 'c_missing',
                 'action' => 'CounterActions::unknownMethod',
                 'args' => [],
+                'idempotencyKey' => 'idemp_missing_guard',
             ],
         ],
     ]);
@@ -135,12 +138,29 @@ function runTests(): void
                 'id' => 'c_magic',
                 'action' => 'CounterActions::__destruct',
                 'args' => [],
+                'idempotencyKey' => 'idemp_magic_guard',
             ],
         ],
     ]);
     assertTrue($magicRes['results'][0]['ok'] === false, "Magic method wajib ditolak");
     assertTrue($magicRes['results'][0]['error']['type'] === 'kylat:forbidden', "Error type harus kylat:forbidden");
     echo "   ✅ Magic method berhasil dicegah dengan kylat:forbidden.\n";
+
+    // 3e. Invarian Dokumen 3 §4: Mutasi tanpa Idempotency-Key WAJIB DITOLAK
+    $noKeyRes = $controller->handle([
+        'calls' => [
+            [
+                'id' => 'c_no_key',
+                'action' => 'CounterActions::saveCount',
+                'args' => ['count' => 10],
+                // TIDAK ADA idempotencyKey!
+            ],
+        ],
+    ]);
+    assertTrue($noKeyRes['results'][0]['ok'] === false, "Mutasi tanpa idempotency key wajib ditolak");
+    assertTrue($noKeyRes['results'][0]['error']['type'] === 'kylat:validation', "Error type harus kylat:validation");
+    assertTrue(str_contains($noKeyRes['results'][0]['error']['message'], 'wajib menyertakan Idempotency-Key'), "Pesan error harus mewajibkan Idempotency-Key");
+    echo "   ✅ Invarian Dokumen 3 §4 terkonfirmasi: mutasi tanpa Idempotency-Key ditolak server.\n";
 
     // 4. Uji Idempotency-Key untuk Mutasi saveCount
     echo "4. Menguji Idempotency-Key untuk Mutasi (Dua Klik Cegah Duplikasi)...\n";

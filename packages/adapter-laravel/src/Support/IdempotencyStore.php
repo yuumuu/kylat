@@ -11,6 +11,7 @@ namespace Kylat\Laravel\Support;
 class IdempotencyStore
 {
     public const DEFAULT_TTL_SECONDS = 86400; // 24 Jam (Threat Model §3 A4)
+    public const IN_PROGRESS_LEASE_SECONDS = 30; // Lease pendek 30 detik untuk mencegah hang in_progress
 
     /**
      * Store in-memory untuk testing dan fallback standalone.
@@ -72,20 +73,33 @@ class IdempotencyStore
     }
 
     /**
-     * Mencoba mengunci / memeriksa Idempotency-Key sebelum aksi dieksekusi.
+     * Mencoba mengunci / memeriksa Idempotency-Key sebelum aksi dieksekusi secara atomik.
+     * Menggunakan lease pendek 30 detik untuk status 'in_progress' agar tidak mengunci pengguna selama 24 jam jika crash.
      *
      * @return array{
      *   status: 'acquired'|'conflict'|'in_progress'|'completed',
      *   response?: array<string, mixed>
      * }
      */
-    public static function acquire(string $key, string $payloadHash, int $ttl = self::DEFAULT_TTL_SECONDS): array
+    public static function acquire(string $key, string $payloadHash): array
     {
         $cacheKey = "kylat:idemp:{$key}";
         $now = time();
 
-        // 1. Integrasi Laravel Cache jika tersedia
+        // 1. Integrasi Laravel Cache dengan Atomic Lock (Cache::add set-if-absent)
         if (class_exists('Illuminate\\Support\\Facades\\Cache') && self::$customDriver === null) {
+            // Coba peroleh lock secara atomik
+            $locked = \Illuminate\Support\Facades\Cache::add($cacheKey, [
+                'status' => 'in_progress',
+                'hash' => $payloadHash,
+                'response' => null,
+            ], self::IN_PROGRESS_LEASE_SECONDS);
+
+            if ($locked) {
+                return ['status' => 'acquired'];
+            }
+
+            // Jika lock gagal diperoleh, berarti kunci sudah ada di cache
             /** @var mixed $record */
             $record = \Illuminate\Support\Facades\Cache::get($cacheKey);
             if (is_array($record)) {
@@ -98,23 +112,25 @@ class IdempotencyStore
                 if ($record['status'] === 'completed') {
                     return ['status' => 'completed', 'response' => $record['response']];
                 }
-                // Jika status === 'failed', diizinkan retry dengan payload sama -> set ke in_progress
+                if ($record['status'] === 'failed') {
+                    // Retry setelah kegagalan sebelumnya: ambil alih kunci kembali dengan lease 30 detik
+                    \Illuminate\Support\Facades\Cache::put($cacheKey, [
+                        'status' => 'in_progress',
+                        'hash' => $payloadHash,
+                        'response' => null,
+                    ], self::IN_PROGRESS_LEASE_SECONDS);
+                    return ['status' => 'acquired'];
+                }
             }
 
-            \Illuminate\Support\Facades\Cache::put($cacheKey, [
-                'status' => 'in_progress',
-                'hash' => $payloadHash,
-                'response' => null,
-            ], $ttl);
-
-            return ['status' => 'acquired'];
+            return ['status' => 'in_progress'];
         }
 
-        // 2. Driver Fallback (In-Memory dengan TTL & Atomic Guard)
+        // 2. Driver Fallback (In-Memory dengan Lease Pendek & TTL)
         if (isset(self::$memoryStore[$key])) {
             $entry = self::$memoryStore[$key];
 
-            // Cek masa berlaku TTL
+            // Cek masa berlaku TTL / Lease
             if ($entry['expires_at'] < $now) {
                 unset(self::$memoryStore[$key]);
             } else {
@@ -131,12 +147,12 @@ class IdempotencyStore
             }
         }
 
-        // Kunci pertama kali (atau retry pasca-kegagalan): tandai sebagai in_progress
+        // Kunci pertama kali (atau retry pasca-kegagalan): tandai sebagai in_progress dengan lease 30 detik
         self::$memoryStore[$key] = [
             'status' => 'in_progress',
             'hash' => $payloadHash,
             'response' => null,
-            'expires_at' => $now + $ttl,
+            'expires_at' => $now + self::IN_PROGRESS_LEASE_SECONDS,
         ];
 
         return ['status' => 'acquired'];
