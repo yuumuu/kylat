@@ -47,13 +47,19 @@
           "type": "string",
           "minLength": 3,
           "maxLength": 128,
-          "pattern": "^[A-Za-z0-9_\\\\]+\\.[A-Za-z0-9_]+$",
-          "description": "Nama aksi yang dipanggil, berformat 'Komponen.method' atau 'KontrakAksi.method' (misal 'ProductFilter.addToCart')."
+          "pattern": "^[A-Za-z0-9_\\\\]+(::|\\.)[A-Za-z0-9_]+$",
+          "description": "Nama aksi yang dipanggil, berformat 'Komponen.method' atau 'KontrakAksi::method' (misal 'CounterActions::saveCount')."
         },
         "args": {
           "type": "object",
           "description": "Argumen panggilan yang diteruskan ke parameter handler aksi. Maksimal kedalaman 16 tingkat, panjang string per field 10.000 karakter.",
           "additionalProperties": true
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128,
+          "description": "Kunci unik idempotensi opsional (wajib untuk mutasi) untuk mencegah eksekusi ganda dan replay attack."
         }
       }
     },
@@ -128,7 +134,9 @@
             "kylat:forbidden",
             "kylat:not_found",
             "kylat:server_error",
-            "kylat:action_error"
+            "kylat:action_error",
+            "kylat:idempotency_conflict",
+            "kylat:in_progress"
           ],
           "description": "Pengenal tipe galat stabil."
         },

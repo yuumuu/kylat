@@ -27,7 +27,8 @@ export type CallErrorType =
   | 'kylat:not_found'
   | 'kylat:server_error'
   | 'kylat:action_error'
-  | 'kylat:idempotency_conflict';
+  | 'kylat:idempotency_conflict'
+  | 'kylat:in_progress';
 
 export interface CallError {
   type: CallErrorType;
