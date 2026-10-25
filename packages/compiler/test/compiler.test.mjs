@@ -42,7 +42,7 @@ final class CartCounter extends Component
     assert.ok(result.code.includes("createSignal"));
     assert.ok(result.code.includes("export function createCartCounter(props = {})"));
     assert.ok(result.code.includes("const [qty, set_qty] = createSignal(1);"));
-    assert.ok(result.code.includes('callServerAction("CartActions::add"'));
+    assert.ok(result.code.includes('callServerAction("CartActions::add", { productId: prop_productId, qty: qty() }'));
     assert.equal(result.ir?.name, 'CartCounter');
     assert.equal(result.ir?.props.length, 1);
     assert.equal(result.ir?.props[0].name, 'productId');
@@ -253,5 +253,50 @@ final class ReadMutationTest extends Component
     assert.ok(result.code.includes('callServerAction("DataActions::save", { itemId: itemId() }, { idempotencyKey:'));
     // fetchItem adalah read: true: TIDAK boleh ada idempotencyKey
     assert.ok(result.code.includes('callServerAction("DataActions::load", { itemId: itemId() });'));
+  });
+
+  it('mendeteksi KIL-104 jika argumen aksi server berupa variabel lokal ($localVar)', async () => {
+    const code = `<?php
+declare(strict_types=1);
+namespace App\\Components;
+use Kylat\\Component;
+
+#[Uses(CartActions::class)]
+final class LocalVarArg extends Component
+{
+    #[Server]
+    public function save(): void
+    {
+        $localVar = '123';
+        $this->server(CartActions::class)->add($localVar);
+    }
+}
+`;
+    const result = await compile(code, 'LocalVarArg.php');
+    assert.equal(result.success, false);
+    const kil104 = result.diagnostics.find((d) => d.code === 'KIL-104');
+    assert.ok(kil104, 'Harus mendeteksi KIL-104 jika argumen berupa variabel lokal');
+  });
+
+  it('mendeteksi KIL-104 jika argumen aksi server berupa properti tidak dideklarasikan ($this->unknown)', async () => {
+    const code = `<?php
+declare(strict_types=1);
+namespace App\\Components;
+use Kylat\\Component;
+
+#[Uses(CartActions::class)]
+final class UndeclaredPropArg extends Component
+{
+    #[Server]
+    public function save(): void
+    {
+        $this->server(CartActions::class)->add($this->unknownProp);
+    }
+}
+`;
+    const result = await compile(code, 'UndeclaredPropArg.php');
+    assert.equal(result.success, false);
+    const kil104 = result.diagnostics.find((d) => d.code === 'KIL-104');
+    assert.ok(kil104, 'Harus mendeteksi KIL-104 jika argumen properti tidak dideklarasikan');
   });
 });

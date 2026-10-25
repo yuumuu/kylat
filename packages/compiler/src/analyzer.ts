@@ -388,15 +388,45 @@ export function analyzePhpComponent(
               const propMatch = argText.match(/^\$this->([a-zA-Z0-9_]+)$/);
               if (propMatch && propMatch[1]) {
                 const prop = propMatch[1];
-                argsList.push({ name: prop, valueExpr: `${prop}()` });
+                const isProp = propDefinitions.some((p) => p.name === prop);
+                const isState = stateDefinitions.some((s) => s.name === prop);
+
+                if (isProp) {
+                  argsList.push({ name: prop, valueExpr: `prop_${prop}` });
+                  continue;
+                }
+                if (isState) {
+                  argsList.push({ name: prop, valueExpr: `${prop}()` });
+                  continue;
+                }
+
+                // Jika properti tidak terdaftar di kelas komponen
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-104',
+                    filename,
+                    arg.startPosition.row + 1,
+                    arg.startPosition.column + 1,
+                    `Properti '$this->${prop}' tidak dideklarasikan di komponen.`,
+                    `Deklarasikan properti '${prop}' sebagai #[Prop] atau state komponen.`
+                  )
+                );
                 continue;
               }
 
-              // 2. $varName
+              // 2. Variabel lokal ($varName) ditolak di v0 (wajib melalui properti komponen)
               const varMatch = argText.match(/^\$([a-zA-Z0-9_]+)$/);
               if (varMatch && varMatch[1] && argText !== '$this') {
-                const varName = varMatch[1];
-                argsList.push({ name: varName, valueExpr: `${varName}()` });
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-104',
+                    filename,
+                    arg.startPosition.row + 1,
+                    arg.startPosition.column + 1,
+                    `Argumen berupa variabel lokal '$${varMatch[1]}' tidak didukung. Argumen wajib berupa properti komponen ($this->prop).`,
+                    `Simpan nilai '$${varMatch[1]}' ke properti state $this->${varMatch[1]} terlebih dahulu.`
+                  )
+                );
                 continue;
               }
 
@@ -407,7 +437,7 @@ export function analyzePhpComponent(
                   filename,
                   arg.startPosition.row + 1,
                   arg.startPosition.column + 1,
-                  `Argumen aksi server '${argText}' tidak didukung. Argumen wajib berupa referensi properti ($this->prop) atau variabel.`,
+                  `Argumen aksi server '${argText}' tidak didukung. Argumen wajib berupa referensi properti komponen ($this->prop).`,
                   'Simpan nilai atau hasil kalkulasi ke dalam properti komponen sebelum memanggil aksi server.'
                 )
               );
