@@ -1,6 +1,11 @@
 /**
- * Human-Authored Golden File: CartCounter.expected.js
- * Ditinjau dan diverifikasi secara independen sebagai kontrak uji output @kylat/compiler untuk CartCounter.
+ * Kontrak Golden Tertulis Manual: CartCounter.expected.js
+ * Ditulis secara independen berdasarkan spesifikasi normatif (spec/template.md, spec/ir.md, spec/threat-model.md).
+ * Tidak disalin dari output compiler.
+ * 
+ * REVIEW DIHARAPKAN:
+ * Mohon review manusia untuk memverifikasi kesesuaian struktur sinyal, binding atribut proteksi (aria-busy, data-pending, disabled),
+ * serta penolakan null/undefined pada prop wajib non-nullable 'productId'.
  */
 
 import { bindAttr, bindText, callServerAction, createSignal, on } from '@kylat/runtime';
