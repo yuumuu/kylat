@@ -100,6 +100,7 @@ class IdempotencyStore
                 'status' => 'in_progress',
                 'hash' => $payloadHash,
                 'response' => null,
+                'attempt' => 1,
             ], self::IN_PROGRESS_LEASE_SECONDS);
 
             if ($locked) {
@@ -132,7 +133,7 @@ class IdempotencyStore
                         'status' => 'in_progress',
                         'hash' => $payloadHash,
                         'response' => null,
-                        'attempt' => $attempt + 1,
+                        'attempt' => $attempt,
                     ], self::IN_PROGRESS_LEASE_SECONDS);
                     return ['status' => 'acquired'];
                 }
@@ -142,6 +143,7 @@ class IdempotencyStore
         }
 
         // 2. Driver Fallback (In-Memory dengan Lease Pendek & TTL)
+        $currentAttempt = 1;
         if (isset(self::$memoryStore[$key])) {
             $entry = self::$memoryStore[$key];
 
@@ -159,6 +161,7 @@ class IdempotencyStore
                     return ['status' => 'completed', 'response' => $entry['response']];
                 }
                 // Jika status === 'failed', diizinkan retry dengan payload sama
+                $currentAttempt = (int) ($entry['attempt'] ?? 1);
             }
         }
 
@@ -168,6 +171,7 @@ class IdempotencyStore
             'hash' => $payloadHash,
             'response' => null,
             'expires_at' => $now + self::IN_PROGRESS_LEASE_SECONDS,
+            'attempt' => $currentAttempt,
         ];
 
         return ['status' => 'acquired'];
@@ -184,25 +188,33 @@ class IdempotencyStore
         $now = time();
 
         if (class_exists('Illuminate\\Support\\Facades\\Cache') && self::$customDriver === null) {
+            $record = \Illuminate\Support\Facades\Cache::get($cacheKey);
+            $attempt = is_array($record) ? ((int) ($record['attempt'] ?? 1)) : 1;
+            \Illuminate\Support\Facades\Cache::forget("kylat:idemp:lock:{$key}:{$attempt}");
+
             \Illuminate\Support\Facades\Cache::put($cacheKey, [
                 'status' => 'completed',
                 'hash' => $payloadHash,
                 'response' => $response,
+                'attempt' => $attempt,
             ], $ttl);
             return;
         }
 
+        $attempt = isset(self::$memoryStore[$key]['attempt']) ? (int) self::$memoryStore[$key]['attempt'] : 1;
         self::$memoryStore[$key] = [
             'status' => 'completed',
             'hash' => $payloadHash,
             'response' => $response,
+            'attempt' => $attempt,
             'expires_at' => $now + $ttl,
         ];
     }
 
     /**
-     * Menandai status eksekusi sebagai gagal, namun tetap mengikat payloadHash
-     * agar key ini tidak dapat dibajak untuk payload lain di kemudian hari.
+     * Menandai status eksekusi sebagai gagal, menaikkan counter attempt, dan melepas lock per-attempt
+     * agar panggilan retry langsung berikutnya dapat berhasil diperoleh tanpa terhalang lock kadaluarsa,
+     * namun tetap mengikat payloadHash agar key ini tidak dapat dibajak untuk payload lain.
      */
     public static function markFailed(string $key, string $payloadHash, int $ttl = self::DEFAULT_TTL_SECONDS): void
     {
@@ -210,18 +222,32 @@ class IdempotencyStore
         $now = time();
 
         if (class_exists('Illuminate\\Support\\Facades\\Cache') && self::$customDriver === null) {
+            $record = \Illuminate\Support\Facades\Cache::get($cacheKey);
+            $attempt = is_array($record) ? ((int) ($record['attempt'] ?? 1)) : 1;
+
+            // Lepaskan lock attempt saat ini agar retry tidak terhambat
+            \Illuminate\Support\Facades\Cache::forget("kylat:idemp:lock:{$key}:{$attempt}");
+
+            // Naikkan attempt untuk percobaan retry berikutnya
+            $nextAttempt = $attempt + 1;
+
             \Illuminate\Support\Facades\Cache::put($cacheKey, [
                 'status' => 'failed',
                 'hash' => $payloadHash,
                 'response' => null,
+                'attempt' => $nextAttempt,
             ], $ttl);
             return;
         }
+
+        $attempt = isset(self::$memoryStore[$key]['attempt']) ? (int) self::$memoryStore[$key]['attempt'] : 1;
+        $nextAttempt = $attempt + 1;
 
         self::$memoryStore[$key] = [
             'status' => 'failed',
             'hash' => $payloadHash,
             'response' => null,
+            'attempt' => $nextAttempt,
             'expires_at' => $now + $ttl,
         ];
     }
@@ -234,6 +260,11 @@ class IdempotencyStore
         $cacheKey = "kylat:idemp:{$key}";
 
         if (class_exists('Illuminate\\Support\\Facades\\Cache') && self::$customDriver === null) {
+            $record = \Illuminate\Support\Facades\Cache::get($cacheKey);
+            if (is_array($record) && isset($record['attempt'])) {
+                $attempt = (int) $record['attempt'];
+                \Illuminate\Support\Facades\Cache::forget("kylat:idemp:lock:{$key}:{$attempt}");
+            }
             \Illuminate\Support\Facades\Cache::forget($cacheKey);
             return;
         }

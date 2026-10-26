@@ -117,4 +117,6 @@ jobs:
         run: pnpm test
 
       - name: Run PHP Tests (Adapter Laravel & Security Audits)
-        run: php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/AdapterTest.php
+        run: |
+          php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/AdapterTest.php
+          php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/CacheDriverIdempotencyTest.php

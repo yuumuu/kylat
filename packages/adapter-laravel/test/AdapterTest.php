@@ -279,6 +279,80 @@ function runTests(): void
     );
     echo "   ✅ Key yang sama setelah panggilan gagal tetap menolak payload baru dengan kylat:idempotency_conflict.\n";
 
+    // 6b. Uji Gagal Pertama Lalu Retry Langsung Harus Berhasil (Menaikkan Attempt & Melepas Lock)
+    echo "6b. Menguji Gagal Pertama Lalu Retry Langsung Harus Berhasil...\n";
+    $retryKey = "idemp_retry_" . uniqid();
+    
+    // Matikan otorisasi agar panggilan pertama gagal
+    $counterActions->authorized = false;
+    $initialExecCount = $counterActions->executionCount;
+
+    $attempt1 = $controller->handle([
+        'calls' => [
+            [
+                'id' => 'retry_call_1',
+                'action' => 'CounterActions::saveCount',
+                'args' => ['count' => 77],
+                'idempotencyKey' => $retryKey,
+            ],
+        ],
+    ]);
+    assertTrue($attempt1['results'][0]['ok'] === false, "Percobaan 1 harus gagal otorisasi");
+    assertTrue($attempt1['results'][0]['error']['type'] === 'kylat:unauthorized', "Error type harus kylat:unauthorized");
+    assertTrue($counterActions->executionCount === $initialExecCount, "Handler belum pernah dieksekusi");
+
+    // Sekarang beri otorisasi (kondisi pulih) dan retry LANGSUNG tanpa jeda waktu lease 30 detik
+    $counterActions->authorized = true;
+
+    $attempt2 = $controller->handle([
+        'calls' => [
+            [
+                'id' => 'retry_call_2',
+                'action' => 'CounterActions::saveCount',
+                'args' => ['count' => 77],
+                'idempotencyKey' => $retryKey,
+            ],
+        ],
+    ]);
+    assertTrue($attempt2['results'][0]['ok'] === true, "Retry langsung dengan payload sama WAJIB berhasil");
+    assertTrue($attempt2['results'][0]['id'] === 'retry_call_2', "ID panggilan percobaan 2 sesuai");
+    assertTrue($counterActions->executionCount === $initialExecCount + 1, "Handler dieksekusi tepat 1 kali pada percobaan sukses");
+    assertTrue($counterActions->lastSavedCount === 77, "Nilai state tersimpan");
+
+    // Panggilan ketiga dengan key yang sama harus mengembalikan cache completed tanpa eksekusi ulang
+    $attempt3 = $controller->handle([
+        'calls' => [
+            [
+                'id' => 'retry_call_3',
+                'action' => 'CounterActions::saveCount',
+                'args' => ['count' => 77],
+                'idempotencyKey' => $retryKey,
+            ],
+        ],
+    ]);
+    assertTrue($attempt3['results'][0]['ok'] === true, "Panggilan ketiga harus sukses dari cache");
+    assertTrue($counterActions->executionCount === $initialExecCount + 1, "Handler TIDAK boleh dieksekusi ulang setelah completed");
+
+    // Uji kegagalan beruntun (multi-retry) menaikkan counter attempt dan melepas lock
+    $multiRetryKey = "idemp_multi_" . uniqid();
+    $counterActions->authorized = false;
+    
+    // Gagal 1
+    $multi1 = $controller->handle(['calls' => [['id' => 'm1', 'action' => 'CounterActions::saveCount', 'args' => ['count' => 88], 'idempotencyKey' => $multiRetryKey]]]);
+    assertTrue($multi1['results'][0]['ok'] === false, "Multi-retry percobaan 1 gagal");
+
+    // Gagal 2 langsung (membuktikan attempt naik dan lock dilepas, tidak hang in_progress)
+    $multi2 = $controller->handle(['calls' => [['id' => 'm2', 'action' => 'CounterActions::saveCount', 'args' => ['count' => 88], 'idempotencyKey' => $multiRetryKey]]]);
+    assertTrue($multi2['results'][0]['ok'] === false, "Multi-retry percobaan 2 gagal tanpa hang lock");
+    assertTrue($multi2['results'][0]['error']['type'] === 'kylat:unauthorized', "Bukan in_progress melainkan unauthorized");
+
+    // Beri izin -> Berhasil pada retry ke-3 langsung
+    $counterActions->authorized = true;
+    $multi3 = $controller->handle(['calls' => [['id' => 'm3', 'action' => 'CounterActions::saveCount', 'args' => ['count' => 88], 'idempotencyKey' => $multiRetryKey]]]);
+    assertTrue($multi3['results'][0]['ok'] === true, "Multi-retry percobaan 3 langsung berhasil");
+    assertTrue($counterActions->lastSavedCount === 88, "State tersimpan pada percobaan 3");
+    echo "   ✅ Gagal pertama lalu retry langsung (serta multi-retry) berhasil tanpa terhalang lock.\n";
+
     // 7. Uji Kanonikalisasi JSON: Urutan key berbeda tetap dianggap payload identik
     echo "7. Menguji Kanonikalisasi JSON Payload Hashing (Kekebalan Urutan Key)...\n";
     $canonKey = "idemp_canon_" . uniqid();

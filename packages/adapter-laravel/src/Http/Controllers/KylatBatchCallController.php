@@ -163,7 +163,7 @@ final class KylatBatchCallController
                 $results[] = $result;
             } catch (\Throwable $e) {
                 if ($idempotencyKey !== '') {
-                    IdempotencyStore::release($idempotencyKey);
+                    IdempotencyStore::markFailed($idempotencyKey, $payloadHash);
                 }
                 throw $e;
             }
