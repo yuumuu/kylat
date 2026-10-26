@@ -196,6 +196,57 @@ final class EscapeTest extends Component
     assert.equal(actualCode, expectedCode, 'Output kompilasi CartCounter harus identik persis dengan kode CartCounter.expected.js');
   });
 
+  it('uji sabotase permanen CartCounter: mutasi atribut tombol atau null-check wajib menggagalkan pengujian golden', async () => {
+    const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.php');
+    const cartCounterBladePath = path.resolve(__dirname, '../../../examples/counter-app/cart-counter.blade.php');
+    const expectedJsPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.expected.js');
+
+    const phpSource = fs.readFileSync(cartCounterPhpPath, 'utf-8');
+    const bladeSource = fs.readFileSync(cartCounterBladePath, 'utf-8');
+    const expectedJs = fs.readFileSync(expectedJsPath, 'utf-8');
+    const result = await compile(phpSource, 'CartCounter.php', { template: bladeSource });
+
+    const stripBanner = (str) => str.replace(/^\/\*\*[\s\S]*?\*\/\s*/, '').trim().replace(/\r\n/g, '\n');
+    const expectedCode = stripBanner(expectedJs);
+    const validActualCode = stripBanner(result.code);
+
+    assert.equal(validActualCode, expectedCode, 'Baseline kompilasi CartCounter harus valid');
+
+    // SABOTASE 1: Menghapus binding atribut 'disabled' pada tombol submitOrder
+    const sabotagedDisabled = validActualCode.replace(
+      'bindAttr(el_button_3, "disabled", () => is_pending_submitOrder() ? "disabled" : null);',
+      ''
+    );
+    assert.notEqual(sabotagedDisabled, validActualCode, 'Sabotase disabled harus mengubah kode');
+    assert.throws(
+      () => {
+        assert.equal(sabotagedDisabled, expectedCode);
+      },
+      (err) => {
+        assert.ok(err instanceof assert.AssertionError, 'Wajib melempar AssertionError');
+        return true;
+      },
+      'Hilangnya binding disabled pada tombol WAJIB menggagalkan golden check'
+    );
+
+    // SABOTASE 2: Menghapus penolakan null pada prop non-nullable
+    const sabotagedNullCheck = validActualCode.replace(
+      'if (prop_productId === undefined || prop_productId === null)',
+      'if (prop_productId === undefined)'
+    );
+    assert.notEqual(sabotagedNullCheck, validActualCode, 'Sabotase null check harus mengubah kode');
+    assert.throws(
+      () => {
+        assert.equal(sabotagedNullCheck, expectedCode);
+      },
+      (err) => {
+        assert.ok(err instanceof assert.AssertionError, 'Wajib melempar AssertionError');
+        return true;
+      },
+      'Hilangnya penolakan null pada prop WAJIB menggagalkan golden check'
+    );
+  });
+
   it('memastikan prop wajib tanpa default melempar TypeError saat diinisialisasi tanpa props atau bernilai null', async () => {
     const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.php');
     const phpSource = fs.readFileSync(cartCounterPhpPath, 'utf-8');
