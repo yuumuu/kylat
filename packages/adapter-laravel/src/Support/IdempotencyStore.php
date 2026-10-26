@@ -14,8 +14,15 @@ class IdempotencyStore
     public const IN_PROGRESS_LEASE_SECONDS = 30; // Lease pendek 30 detik untuk mencegah hang in_progress
 
     /**
-     * Store in-memory untuk testing dan fallback standalone.
-     * @var array<string, array{status: 'in_progress'|'completed'|'failed', hash: string, response: array<string, mixed>|null, expires_at: int}>
+     * Store in-memory untuk testing dan lingkungan development/CLI single-process.
+     * 
+     * PERINGATAN ARSITEKTUR:
+     * Fallback in-memory ini HANYA berlaku untuk satu proses PHP (single-process memory space).
+     * Pada lingkungan produksi multi-worker (seperti PHP-FPM, Octane, FrankenPHP, atau multi-server),
+     * WAJIB mengonfigurasi driver cache terdistribusi Laravel (Redis, Memcached, atau Database)
+     * yang mendukung primitif locking atomik Cache::add() untuk mencegah race-condition antar-worker.
+     * 
+     * @var array<string, array{status: 'in_progress'|'completed'|'failed', hash: string, response: array<string, mixed>|null, expires_at: int, attempt?: int}>
      */
     private static array $memoryStore = [];
 
@@ -113,11 +120,19 @@ class IdempotencyStore
                     return ['status' => 'completed', 'response' => $record['response']];
                 }
                 if ($record['status'] === 'failed') {
-                    // Retry setelah kegagalan sebelumnya: ambil alih kunci kembali dengan lease 30 detik
+                    // Retry setelah kegagalan sebelumnya secara atomik:
+                    // Cegah 2 request paralel saling berebut dengan atomic lock per-attempt via Cache::add
+                    $attempt = (int) ($record['attempt'] ?? 1);
+                    $retryLocked = \Illuminate\Support\Facades\Cache::add("kylat:idemp:lock:{$key}:{$attempt}", true, self::IN_PROGRESS_LEASE_SECONDS);
+                    if (!$retryLocked) {
+                        return ['status' => 'in_progress'];
+                    }
+
                     \Illuminate\Support\Facades\Cache::put($cacheKey, [
                         'status' => 'in_progress',
                         'hash' => $payloadHash,
                         'response' => null,
+                        'attempt' => $attempt + 1,
                     ], self::IN_PROGRESS_LEASE_SECONDS);
                     return ['status' => 'acquired'];
                 }

@@ -18,6 +18,12 @@ final class KylatBatchCallController
     public const MAX_BODY_BYTES = 256 * 1024; // 256 KB
     public const MAX_CALLS_PER_BATCH = 20;
     public const MAX_JSON_DEPTH = 16;
+    /**
+     * Batas waktu eksekusi aman per-call aksi server (detik).
+     * Wajib lebih kecil dari batas lease in_progress (IdempotencyStore::IN_PROGRESS_LEASE_SECONDS = 30)
+     * untuk mencegah request kedua merebut lease saat request pertama masih berjalan.
+     */
+    public const MAX_ACTION_EXECUTION_SECONDS = 20;
 
     /**
      * Memproses request batch mentah.
@@ -82,6 +88,19 @@ final class KylatBatchCallController
                 continue;
             }
 
+            // Tegakkan batasan panjang Idempotency-Key sesuai skema (minLength: 8, maxLength: 128)
+            if ($idempotencyKey !== '' && (strlen($idempotencyKey) < 8 || strlen($idempotencyKey) > 128)) {
+                $results[] = [
+                    'id' => $callId,
+                    'ok' => false,
+                    'error' => [
+                        'type' => 'kylat:validation',
+                        'message' => sprintf("Idempotency-Key '%s' tidak valid. Panjang karakter harus antara 8 hingga 128 (diberikan: %d).", $idempotencyKey, strlen($idempotencyKey)),
+                    ],
+                ];
+                continue;
+            }
+
             // Pengecekan Idempotency-Key, Kanonikalisasi JSON, & Anti-Race-Condition
             $payloadHash = '';
             if ($idempotencyKey !== '') {
@@ -127,6 +146,10 @@ final class KylatBatchCallController
             }
 
             try {
+                // Batasi eksekusi aksi maksimal 20 detik agar selalu selesai/abort sebelum batas lease 30 detik
+                if (function_exists('set_time_limit') && !in_array('set_time_limit', explode(',', (string) ini_get('disable_functions')), true)) {
+                    @set_time_limit(self::MAX_ACTION_EXECUTION_SECONDS);
+                }
                 $result = $this->dispatchCall($callId, $action, $args);
 
                 if ($idempotencyKey !== '') {

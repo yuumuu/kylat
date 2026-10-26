@@ -162,6 +162,22 @@ function runTests(): void
     assertTrue(str_contains($noKeyRes['results'][0]['error']['message'], 'wajib menyertakan Idempotency-Key'), "Pesan error harus mewajibkan Idempotency-Key");
     echo "   ✅ Invarian Dokumen 3 §4 terkonfirmasi: mutasi tanpa Idempotency-Key ditolak server.\n";
 
+    // 3f. Penolakan Idempotency-Key dengan panjang < 8 karakter (minLength: 8)
+    $shortKeyRes = $controller->handle([
+        'calls' => [
+            [
+                'id' => 'c_short_key',
+                'action' => 'CounterActions::saveCount',
+                'args' => ['count' => 10],
+                'idempotencyKey' => 'short_7', // 7 karakter (< 8)
+            ],
+        ],
+    ]);
+    assertTrue($shortKeyRes['results'][0]['ok'] === false, "Idempotency-Key < 8 karakter wajib ditolak");
+    assertTrue($shortKeyRes['results'][0]['error']['type'] === 'kylat:validation', "Error type harus kylat:validation");
+    assertTrue(str_contains($shortKeyRes['results'][0]['error']['message'], 'antara 8 hingga 128'), "Pesan error harus menyatakan batasan panjang 8-128");
+    echo "   ✅ Validasi minLength 8 karakter untuk Idempotency-Key terverifikasi di adapter.\n";
+
     // 4. Uji Idempotency-Key untuk Mutasi saveCount
     echo "4. Menguji Idempotency-Key untuk Mutasi (Dua Klik Cegah Duplikasi)...\n";
     $idempKey = "idemp_test_" . uniqid();
