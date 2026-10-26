@@ -4,7 +4,7 @@ Diperbarui: 26 Oktober 2026. Sumber kebenaran: spec/ di repo. File ini hanya rin
 
 ## Repo
 - Publik: https://github.com/yuumuu/kylat, branch main
-- HEAD terakhir terverifikasi: 52ce47b
+- HEAD terakhir terverifikasi: ad5fe93
 
 ## Hierarki normatif (dari spec/README.md)
 1. spec/php-subset.md
@@ -29,19 +29,18 @@ Diperbarui: 26 Oktober 2026. Sumber kebenaran: spec/ di repo. File ini hanya rin
 - Argumen aksi server dipetakan dari AST.
 - IdempotencyStore dengan Cache::add, lease 30 detik, dan kanonikalisasi JSON.
 - Penolakan kylat:idempotency_conflict dan kylat:in_progress.
-- Runtime dengan backoff eksponensial dan jitter, retry hanya 502, 503, 504.
-- CI dengan action yang dipin ke SHA, lockfile beku, dan cek versi PHP.
-- Uji sabotase permanen untuk CartCounter.
+- markFailed menaikkan attempt dan melepas per-attempt lock atomik; panggilan gagal lalu retry langsung terbukti berhasil dieksekusi.
+- IdempotencyStore::heartbeat() memperpanjang lease waktu nyata selama aksi berjalan, dan complete() memverifikasi keabsahan lease untuk mencegah eksekusi ganda.
+- Runtime memisahkan budget retry kylat:in_progress (30 kali, mencakup lease 30s) dari budget 5xx transient (2 kali).
+- Verifikasi versi PHP di CI dan test suite gagal-tertutup (fail-closed) untuk cabang minor yang tidak dikenal.
+- CI dengan action yang dipin ke SHA, lockfile beku, dan cek versi PHP fail-closed.
+- CartCounter.expected.js ditulis ulang secara manual berdasarkan spesifikasi. Uji sabotase permanen lulus.
 
 ## Masalah terbuka (urut prioritas)
-1. Lease 30 detik tidak dilindungi terhadap aksi yang berjalan lebih lama. set_time_limit hanya menghitung waktu CPU. Perlu heartbeat atau batas waktu nyata.
-2. markFailed belum terbukti menaikkan attempt atau melepas lock. Perlu tes: gagal lalu retry langsung harus berhasil.
-3. Budget retry kylat:in_progress terlalu kecil (2 kali, sekitar 450 ms) dibanding lease 30 detik. Perlu dipisah dari budget 5xx.
-4. Cek versi PHP gagal-terbuka untuk cabang minor yang tidak dikenal. Harus gagal-tertutup.
-5. CartCounter.expected.js masih mirip output compiler. Perlu ditulis ulang tanpa melihat output, lalu direview manusia.
-6. Fallback memori idempotensi hanya untuk satu proses. Perlu dicatat di dokumentasi publik.
-7. Keputusan terbuka: usort (mutasi by-reference dan balikan bool), dan lisensi repo. Repo publik belum punya LICENSE.
-8. Verifikasi isi Google Docs versi 1.1 terhadap spec/ di repo. Dokumen di Drive bukan sumber kebenaran.
+1. Fallback memori idempotensi hanya untuk satu proses. Perlu dicatat di dokumentasi publik.
+2. Keputusan terbuka: usort (mutasi by-reference dan balikan bool), dan lisensi repo. Repo publik belum punya LICENSE.
+3. Verifikasi isi Google Docs versi 1.1 terhadap spec/ di repo. Dokumen di Drive bukan sumber kebenaran.
+4. Review manusia untuk berkas manual golden CartCounter.expected.js.
 
 ## Aturan kerja
 - Commit kecil, satu perubahan per commit.
