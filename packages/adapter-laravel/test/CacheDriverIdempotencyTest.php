@@ -149,5 +149,23 @@ namespace Kylat\Laravel\Tests {
     }
     echo "✅ Panggilan ketiga dikembalikan dari cache tanpa mengeksekusi handler lagi.\n";
 
+    // 4. Percobaan 4: Heartbeat memperpanjang lease pada Cache Facade
+    $longKey = "cache_hb_" . uniqid();
+    $hash = IdempotencyStore::computeCanonicalHash('CounterActions::saveCount', ['count' => 555]);
+    $acquired = IdempotencyStore::acquire($longKey, $hash);
+    if ($acquired['status'] !== 'acquired') {
+        throw new RuntimeException("Acquire gagal");
+    }
+    // Periksa heartbeat
+    $hbRes = IdempotencyStore::heartbeat($longKey, $hash, 60);
+    if (!$hbRes) {
+        throw new RuntimeException("Heartbeat harus mengembalikan true pada Cache");
+    }
+    $cachedRec = Cache::get("kylat:idemp:{$longKey}");
+    if (!is_array($cachedRec) || $cachedRec['status'] !== 'in_progress') {
+        throw new RuntimeException("Record harus tetap in_progress");
+    }
+    echo "✅ Heartbeat berhasil memperpanjang lease pada driver Cache.\n";
+
     echo "\n🎉 SEMUA PENGUJIAN CACHE FACADE IDEMPOTENCYSTORE BERHASIL 100%!\n";
 }

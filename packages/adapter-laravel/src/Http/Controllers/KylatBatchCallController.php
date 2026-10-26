@@ -146,15 +146,32 @@ final class KylatBatchCallController
             }
 
             try {
-                // Batasi eksekusi aksi maksimal 20 detik agar selalu selesai/abort sebelum batas lease 30 detik
+                // Batasi eksekusi aksi maksimal 20 detik CPU jika didukung lingkungan
                 if (function_exists('set_time_limit') && !in_array('set_time_limit', explode(',', (string) ini_get('disable_functions')), true)) {
                     @set_time_limit(self::MAX_ACTION_EXECUTION_SECONDS);
                 }
+
+                if ($idempotencyKey !== '') {
+                    IdempotencyStore::setCurrentActive($idempotencyKey, $payloadHash);
+                }
+
                 $result = $this->dispatchCall($callId, $action, $args);
 
                 if ($idempotencyKey !== '') {
+                    IdempotencyStore::clearCurrentActive();
+
                     if ($result['ok'] ?? false) {
-                        IdempotencyStore::complete($idempotencyKey, $payloadHash, $result);
+                        $completed = IdempotencyStore::complete($idempotencyKey, $payloadHash, $result);
+                        if (!$completed) {
+                            $result = [
+                                'id' => $callId,
+                                'ok' => false,
+                                'error' => [
+                                    'type' => 'kylat:action_error',
+                                    'message' => "Lease idempotensi telah kadaluarsa sebelum aksi selesai dieksekusi. Gunakan IdempotencyStore::heartbeat() untuk aksi berdurasi panjang.",
+                                ],
+                            ];
+                        }
                     } else {
                         IdempotencyStore::markFailed($idempotencyKey, $payloadHash);
                     }
@@ -163,6 +180,7 @@ final class KylatBatchCallController
                 $results[] = $result;
             } catch (\Throwable $e) {
                 if ($idempotencyKey !== '') {
+                    IdempotencyStore::clearCurrentActive();
                     IdempotencyStore::markFailed($idempotencyKey, $payloadHash);
                 }
                 throw $e;

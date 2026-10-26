@@ -457,6 +457,71 @@ function runTests(): void
     assertTrue($evalVersion('8.5.12', '8.5')[0] === true && $evalVersion('8.5.12', '8.5')[1] === 'safe', 'PHP 8.5.12 aman harus diterima');
     echo "   ✅ Verifikasi fail-closed untuk cabang minor tak dikenal & ambang patch aman terbukti 100%.\n";
 
+    // 11. Uji Heartbeat & Perlindungan Aksi Berjalan Lebih Lama dari Lease (Mencegah Eksekusi Ganda)
+    echo "11. Menguji Heartbeat & Aksi Berjalan Lebih Lama dari Lease (Anti Eksekusi Ganda)...\n";
+    $longActionKey = "idemp_long_" . uniqid();
+    $longHash = IdempotencyStore::computeCanonicalHash('CounterActions::saveCount', ['count' => 999]);
+
+    // Set lease pendek: 0.12 detik (120 ms)
+    IdempotencyStore::setLeaseSeconds(0.12);
+
+    // Kunci proses pertama (misal worker 1 mengeksekusi)
+    $lock1 = IdempotencyStore::acquire($longActionKey, $longHash);
+    assertTrue($lock1['status'] === 'acquired', "Worker 1 berhasil memperoleh lease");
+    IdempotencyStore::setCurrentActive($longActionKey, $longHash);
+
+    // Simulasikan eksekusi waktu nyata (misal I/O atau remote call) selama 200 ms (> 120 ms lease!)
+    // Tanpa heartbeat, lease akan mati pada 120 ms. Namun dengan heartbeat pada 70 ms dan 140 ms:
+    usleep(70000); // 70 ms
+    $hb1 = IdempotencyStore::heartbeat();
+    assertTrue($hb1 === true, "Heartbeat 1 berhasil memperpanjang lease");
+
+    usleep(70000); // total 140 ms (> lease awal 120 ms)
+    // Cek bahwa pada t=140 ms, request paralel dari pengguna lain tetap ditolak in_progress (BUKAN acquired)
+    $parallelCheck = IdempotencyStore::acquire($longActionKey, $longHash);
+    assertTrue(
+        $parallelCheck['status'] === 'in_progress',
+        "Request paralel pada t=140ms WAJIB ditolak in_progress berkat heartbeat, tidak boleh merebut lock!"
+    );
+
+    // Heartbeat kedua memperpanjang lagi
+    $hb2 = IdempotencyStore::heartbeat();
+    assertTrue($hb2 === true, "Heartbeat 2 berhasil memperpanjang lease");
+
+    usleep(60000); // total 200 ms
+    // Selesaikan aksi setelah 200 ms
+    $completeRes = IdempotencyStore::complete($longActionKey, $longHash, [
+        'id' => 'long_call_1',
+        'ok' => true,
+        'result' => true,
+    ]);
+    assertTrue($completeRes === true, "Aksi berhasil komit karena lease dijaga tetap aktif oleh heartbeat");
+    IdempotencyStore::clearCurrentActive();
+
+    // Verifikasi request subsequent mengembalikan data completed tanpa mengeksekusi ulang
+    $afterCheck = IdempotencyStore::acquire($longActionKey, $longHash);
+    assertTrue($afterCheck['status'] === 'completed', "Status akhir adalah completed");
+
+    // Pengujian skenario TANPA heartbeat: aksi melebihi batas waktu lease harus ditolak saat komit
+    $expiredActionKey = "idemp_expired_" . uniqid();
+    $expiredHash = IdempotencyStore::computeCanonicalHash('CounterActions::saveCount', ['count' => 111]);
+    IdempotencyStore::setLeaseSeconds(0.08); // 80 ms
+    $lockExp = IdempotencyStore::acquire($expiredActionKey, $expiredHash);
+    assertTrue($lockExp['status'] === 'acquired', "Lease berhasil diperoleh");
+
+    // Tunggu 120 ms tanpa heartbeat (> 80 ms lease)
+    usleep(120000);
+
+    // Upaya komit setelah lease mati tanpa heartbeat harus DITOLAK
+    $expiredComplete = IdempotencyStore::complete($expiredActionKey, $expiredHash, ['id' => 'exp', 'ok' => true]);
+    assertTrue(
+        $expiredComplete === false,
+        "Komit harus ditolak jika lease kadaluarsa tanpa heartbeat untuk mencegah state korup / eksekusi ganda!"
+    );
+
+    IdempotencyStore::resetLeaseSeconds();
+    echo "   ✅ Heartbeat terbukti melindungi aksi berdurasi lama & mencegah eksekusi ganda 100%.\n";
+
     echo "\n🎉 SEMUA PENGUJIAN ADAPTER LARAVEL SUKSES 100% DENGAN STRICT ASSERTIONS!\n";
 }
 

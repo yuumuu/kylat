@@ -14,6 +14,17 @@ class IdempotencyStore
     public const IN_PROGRESS_LEASE_SECONDS = 30; // Lease pendek 30 detik untuk mencegah hang in_progress
 
     /**
+     * Konfigurasi durasi lease in_progress (detik, mendukung nilai float untuk pengujian sub-detik).
+     */
+    public static float|int $inProgressLeaseSeconds = self::IN_PROGRESS_LEASE_SECONDS;
+
+    /**
+     * Konteks eksekusi aksi server saat ini untuk heartbeat tanpa argumen eksplisit.
+     */
+    public static ?string $currentActiveKey = null;
+    public static ?string $currentActiveHash = null;
+
+    /**
      * Store in-memory untuk testing dan lingkungan development/CLI single-process.
      * 
      * PERINGATAN ARSITEKTUR:
@@ -22,7 +33,7 @@ class IdempotencyStore
      * WAJIB mengonfigurasi driver cache terdistribusi Laravel (Redis, Memcached, atau Database)
      * yang mendukung primitif locking atomik Cache::add() untuk mencegah race-condition antar-worker.
      * 
-     * @var array<string, array{status: 'in_progress'|'completed'|'failed', hash: string, response: array<string, mixed>|null, expires_at: int, attempt?: int}>
+     * @var array<string, array{status: 'in_progress'|'completed'|'failed', hash: string, response: array<string, mixed>|null, expires_at: float|int, attempt?: int}>
      */
     private static array $memoryStore = [];
 
@@ -31,6 +42,28 @@ class IdempotencyStore
      * @var object|null
      */
     private static ?object $customDriver = null;
+
+    public static function setLeaseSeconds(float|int $seconds): void
+    {
+        self::$inProgressLeaseSeconds = $seconds;
+    }
+
+    public static function resetLeaseSeconds(): void
+    {
+        self::$inProgressLeaseSeconds = self::IN_PROGRESS_LEASE_SECONDS;
+    }
+
+    public static function setCurrentActive(?string $key, ?string $hash): void
+    {
+        self::$currentActiveKey = $key;
+        self::$currentActiveHash = $hash;
+    }
+
+    public static function clearCurrentActive(): void
+    {
+        self::$currentActiveKey = null;
+        self::$currentActiveHash = null;
+    }
 
     public static function setDriver(?object $driver): void
     {
@@ -80,8 +113,46 @@ class IdempotencyStore
     }
 
     /**
+     * Memperpanjang lease waktu in_progress (Heartbeat) selama aksi server sedang berjalan.
+     * Mencegah lease 30 detik kadaluarsa ketika aksi sah membutuhkan waktu nyata (wall-clock time) lebih lama.
+     * Dapat dipanggil tanpa parameter dari dalam handler aksi server.
+     */
+    public static function heartbeat(?string $key = null, ?string $payloadHash = null, float|int|null $extendSeconds = null): bool
+    {
+        $key = $key ?? self::$currentActiveKey;
+        $payloadHash = $payloadHash ?? self::$currentActiveHash;
+        $extendSeconds = $extendSeconds ?? self::$inProgressLeaseSeconds;
+
+        if ($key === null || $payloadHash === null) {
+            return false;
+        }
+
+        $cacheKey = "kylat:idemp:{$key}";
+        $now = microtime(true);
+
+        if (class_exists('Illuminate\\Support\\Facades\\Cache') && self::$customDriver === null) {
+            $record = \Illuminate\Support\Facades\Cache::get($cacheKey);
+            if (!is_array($record) || ($record['hash'] ?? null) !== $payloadHash || ($record['status'] ?? null) !== 'in_progress') {
+                return false;
+            }
+            \Illuminate\Support\Facades\Cache::put($cacheKey, $record, (int) ceil($extendSeconds));
+            return true;
+        }
+
+        if (!isset(self::$memoryStore[$key])) {
+            return false;
+        }
+        $entry = &self::$memoryStore[$key];
+        if (($entry['hash'] ?? null) !== $payloadHash || ($entry['status'] ?? null) !== 'in_progress' || ($entry['expires_at'] ?? 0) < $now) {
+            return false;
+        }
+        $entry['expires_at'] = $now + $extendSeconds;
+        return true;
+    }
+
+    /**
      * Mencoba mengunci / memeriksa Idempotency-Key sebelum aksi dieksekusi secara atomik.
-     * Menggunakan lease pendek 30 detik untuk status 'in_progress' agar tidak mengunci pengguna selama 24 jam jika crash.
+     * Menggunakan lease pendek (default 30 detik) untuk status 'in_progress' agar tidak mengunci pengguna jika crash.
      *
      * @return array{
      *   status: 'acquired'|'conflict'|'in_progress'|'completed',
@@ -91,7 +162,8 @@ class IdempotencyStore
     public static function acquire(string $key, string $payloadHash): array
     {
         $cacheKey = "kylat:idemp:{$key}";
-        $now = time();
+        $now = microtime(true);
+        $lease = self::$inProgressLeaseSeconds;
 
         // 1. Integrasi Laravel Cache dengan Atomic Lock (Cache::add set-if-absent)
         if (class_exists('Illuminate\\Support\\Facades\\Cache') && self::$customDriver === null) {
@@ -101,7 +173,7 @@ class IdempotencyStore
                 'hash' => $payloadHash,
                 'response' => null,
                 'attempt' => 1,
-            ], self::IN_PROGRESS_LEASE_SECONDS);
+            ], (int) ceil($lease));
 
             if ($locked) {
                 return ['status' => 'acquired'];
@@ -124,7 +196,7 @@ class IdempotencyStore
                     // Retry setelah kegagalan sebelumnya secara atomik:
                     // Cegah 2 request paralel saling berebut dengan atomic lock per-attempt via Cache::add
                     $attempt = (int) ($record['attempt'] ?? 1);
-                    $retryLocked = \Illuminate\Support\Facades\Cache::add("kylat:idemp:lock:{$key}:{$attempt}", true, self::IN_PROGRESS_LEASE_SECONDS);
+                    $retryLocked = \Illuminate\Support\Facades\Cache::add("kylat:idemp:lock:{$key}:{$attempt}", true, (int) ceil($lease));
                     if (!$retryLocked) {
                         return ['status' => 'in_progress'];
                     }
@@ -134,7 +206,7 @@ class IdempotencyStore
                         'hash' => $payloadHash,
                         'response' => null,
                         'attempt' => $attempt,
-                    ], self::IN_PROGRESS_LEASE_SECONDS);
+                    ], (int) ceil($lease));
                     return ['status' => 'acquired'];
                 }
             }
@@ -165,12 +237,12 @@ class IdempotencyStore
             }
         }
 
-        // Kunci pertama kali (atau retry pasca-kegagalan): tandai sebagai in_progress dengan lease 30 detik
+        // Kunci pertama kali (atau retry pasca-kegagalan): tandai sebagai in_progress dengan lease
         self::$memoryStore[$key] = [
             'status' => 'in_progress',
             'hash' => $payloadHash,
             'response' => null,
-            'expires_at' => $now + self::IN_PROGRESS_LEASE_SECONDS,
+            'expires_at' => $now + $lease,
             'attempt' => $currentAttempt,
         ];
 
@@ -179,17 +251,24 @@ class IdempotencyStore
 
     /**
      * Menyimpan hasil eksekusi setelah aksi berhasil diselesaikan.
+     * Memverifikasi bahwa lease masih aktif dan dipegang oleh payload ini sebelum menyimpan,
+     * untuk mencegah eksekusi ganda jika aksi melebihi lease tanpa heartbeat.
      *
      * @param array<string, mixed> $response
+     * @return bool True jika berhasil dikomit, false jika lease kadaluarsa / hilang
      */
-    public static function complete(string $key, string $payloadHash, array $response, int $ttl = self::DEFAULT_TTL_SECONDS): void
+    public static function complete(string $key, string $payloadHash, array $response, int $ttl = self::DEFAULT_TTL_SECONDS): bool
     {
         $cacheKey = "kylat:idemp:{$key}";
-        $now = time();
+        $now = microtime(true);
 
         if (class_exists('Illuminate\\Support\\Facades\\Cache') && self::$customDriver === null) {
             $record = \Illuminate\Support\Facades\Cache::get($cacheKey);
-            $attempt = is_array($record) ? ((int) ($record['attempt'] ?? 1)) : 1;
+            if (!is_array($record) || ($record['hash'] ?? null) !== $payloadHash || ($record['status'] ?? null) !== 'in_progress') {
+                return false;
+            }
+
+            $attempt = (int) ($record['attempt'] ?? 1);
             \Illuminate\Support\Facades\Cache::forget("kylat:idemp:lock:{$key}:{$attempt}");
 
             \Illuminate\Support\Facades\Cache::put($cacheKey, [
@@ -198,10 +277,19 @@ class IdempotencyStore
                 'response' => $response,
                 'attempt' => $attempt,
             ], $ttl);
-            return;
+            return true;
         }
 
-        $attempt = isset(self::$memoryStore[$key]['attempt']) ? (int) self::$memoryStore[$key]['attempt'] : 1;
+        if (!isset(self::$memoryStore[$key])) {
+            return false;
+        }
+
+        $entry = self::$memoryStore[$key];
+        if (($entry['hash'] ?? null) !== $payloadHash || ($entry['status'] ?? null) !== 'in_progress' || ($entry['expires_at'] ?? 0) < $now) {
+            return false;
+        }
+
+        $attempt = (int) ($entry['attempt'] ?? 1);
         self::$memoryStore[$key] = [
             'status' => 'completed',
             'hash' => $payloadHash,
@@ -209,6 +297,7 @@ class IdempotencyStore
             'attempt' => $attempt,
             'expires_at' => $now + $ttl,
         ];
+        return true;
     }
 
     /**
@@ -219,7 +308,7 @@ class IdempotencyStore
     public static function markFailed(string $key, string $payloadHash, int $ttl = self::DEFAULT_TTL_SECONDS): void
     {
         $cacheKey = "kylat:idemp:{$key}";
-        $now = time();
+        $now = microtime(true);
 
         if (class_exists('Illuminate\\Support\\Facades\\Cache') && self::$customDriver === null) {
             $record = \Illuminate\Support\Facades\Cache::get($cacheKey);
