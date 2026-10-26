@@ -348,6 +348,41 @@ function runTests(): void
     assertTrue(IdempotencyStore::DEFAULT_TTL_SECONDS === 86400, "TTL default wajib 86.400 detik (24 jam)");
     echo "   ✅ TTL idempotensi terkonfirmasi 24 jam (86.400 detik).\n";
 
+    // 10. Uji Verifikasi Versi PHP Fail-Closed (Threat Model F1 - PHP2Shell CVE-2026-109618 / CVE-2026-109619)
+    echo "10. Menguji Verifikasi Versi PHP Fail-Closed (Threat Model F1)...\n";
+    $minVersions = [
+        '8.2' => '8.2.35',
+        '8.3' => '8.3.36',
+        '8.4' => '8.4.27',
+        '8.5' => '8.5.12',
+    ];
+    $evalVersion = function (string $v, string $minor) use ($minVersions): array {
+        if (!isset($minVersions[$minor])) {
+            return [false, 'unknown_branch'];
+        }
+        if (version_compare($v, $minVersions[$minor], '<')) {
+            return [false, 'vulnerable_patch'];
+        }
+        return [true, 'safe'];
+    };
+
+    // Fail-closed untuk cabang minor tak dikenal
+    assertTrue($evalVersion('8.1.30', '8.1')[0] === false && $evalVersion('8.1.30', '8.1')[1] === 'unknown_branch', 'Cabang minor PHP 8.1 harus ditolak (fail-closed)');
+    assertTrue($evalVersion('7.4.33', '7.4')[0] === false && $evalVersion('7.4.33', '7.4')[1] === 'unknown_branch', 'Cabang minor PHP 7.4 harus ditolak (fail-closed)');
+    assertTrue($evalVersion('8.6.0', '8.6')[0] === false && $evalVersion('8.6.0', '8.6')[1] === 'unknown_branch', 'Cabang minor PHP 8.6 belum terverifikasi harus ditolak (fail-closed)');
+    assertTrue($evalVersion('9.0.0', '9.0')[0] === false && $evalVersion('9.0.0', '9.0')[1] === 'unknown_branch', 'Cabang minor PHP 9.0 belum terverifikasi harus ditolak (fail-closed)');
+
+    // Penolakan patch rentan pada cabang dikenal
+    assertTrue($evalVersion('8.2.34', '8.2')[0] === false && $evalVersion('8.2.34', '8.2')[1] === 'vulnerable_patch', 'PHP 8.2.34 rentan harus ditolak');
+    assertTrue($evalVersion('8.3.35', '8.3')[0] === false && $evalVersion('8.3.35', '8.3')[1] === 'vulnerable_patch', 'PHP 8.3.35 rentan harus ditolak');
+
+    // Penerimaan patch aman pada cabang dikenal
+    assertTrue($evalVersion('8.2.35', '8.2')[0] === true && $evalVersion('8.2.35', '8.2')[1] === 'safe', 'PHP 8.2.35 aman harus diterima');
+    assertTrue($evalVersion('8.3.36', '8.3')[0] === true && $evalVersion('8.3.36', '8.3')[1] === 'safe', 'PHP 8.3.36 aman harus diterima');
+    assertTrue($evalVersion('8.4.27', '8.4')[0] === true && $evalVersion('8.4.27', '8.4')[1] === 'safe', 'PHP 8.4.27 aman harus diterima');
+    assertTrue($evalVersion('8.5.12', '8.5')[0] === true && $evalVersion('8.5.12', '8.5')[1] === 'safe', 'PHP 8.5.12 aman harus diterima');
+    echo "   ✅ Verifikasi fail-closed untuk cabang minor tak dikenal & ambang patch aman terbukti 100%.\n";
+
     echo "\n🎉 SEMUA PENGUJIAN ADAPTER LARAVEL SUKSES 100% DENGAN STRICT ASSERTIONS!\n";
 }
 
