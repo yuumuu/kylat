@@ -333,4 +333,169 @@ describe('@kylat/runtime - Batch RPC Dispatcher', () => {
     assert.deepEqual(res, { success: true, count: 42 });
     assert.equal(attempts, 2, 'Harus otomatis melakukan retry setelah menerima kylat:in_progress');
   });
+
+  it('otomatis melakukan retry berkali-kali saat in_progress bertahan beberapa kali melebihi budget 5xx', async () => {
+    let attempts = 0;
+    const mockFetch = async (url, options) => {
+      attempts++;
+      const body = JSON.parse(options.body);
+
+      // in_progress bertahan sebanyak 5 kali berturut-turut (jauh di atas budget 5xx yang hanya 2 kali)
+      if (attempts <= 5) {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          json: async () => ({
+            results: body.calls.map((c) => ({
+              id: c.id,
+              ok: false,
+              error: {
+                type: 'kylat:in_progress',
+                message: `Operasi sedang diproses (percobaan ${attempts}).`,
+              },
+            })),
+          }),
+        };
+      }
+
+      // Percobaan ke-6 akhirnya selesai
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({
+          results: body.calls.map((c) => ({
+            id: c.id,
+            ok: true,
+            data: { success: true, count: 100 },
+          })),
+        }),
+      };
+    };
+
+    const batcher = new RpcBatcher({ fetchFn: mockFetch });
+    const res = await batcher.call(
+      'CounterActions::multiProgress',
+      {},
+      {
+        idempotencyKey: 'idemp_multi_in_progress',
+        retryDelayFn: () => 5, // 5 ms agar pengujian cepat
+      }
+    );
+
+    assert.deepEqual(res, { success: true, count: 100 });
+    assert.equal(attempts, 6, 'Harus berhasil menyelesaikan operasi setelah 5 kali in_progress');
+  });
+
+  it('memisahkan budget retry 5xx transient dari budget in_progress', async () => {
+    let attempts = 0;
+    const mockFetch = async (url, options) => {
+      attempts++;
+      const body = JSON.parse(options.body);
+
+      // Percobaan 1, 2, 3: in_progress (menghabiskan 3 kuota in_progress, melebihi kuota 5xx yang default 2)
+      if (attempts <= 3) {
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          json: async () => ({
+            results: body.calls.map((c) => ({
+              id: c.id,
+              ok: false,
+              error: {
+                type: 'kylat:in_progress',
+                message: 'Sedang berjalan di server.',
+              },
+            })),
+          }),
+        };
+      }
+
+      // Percobaan 4: transient 503 error (menggunakan kuota 5xx ke-1)
+      if (attempts === 4) {
+        return {
+          ok: false,
+          status: 503,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          json: async () => ({ message: 'Service Temporarily Unavailable' }),
+        };
+      }
+
+      // Percobaan 5: akhirnya selesai
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({
+          results: body.calls.map((c) => ({
+            id: c.id,
+            ok: true,
+            data: { separatedBudgetsVerified: true },
+          })),
+        }),
+      };
+    };
+
+    const batcher = new RpcBatcher({ fetchFn: mockFetch });
+    const res = await batcher.call(
+      'CounterActions::separatedBudgets',
+      {},
+      {
+        idempotencyKey: 'idemp_sep_budget',
+        retryDelayFn: () => 5,
+      }
+    );
+
+    assert.deepEqual(res, { separatedBudgetsVerified: true });
+    assert.equal(attempts, 5, 'Harus berhasil menggabungkan retry in_progress dan retry 5xx secara independen');
+  });
+
+  it('menolak dengan kylat:in_progress jika seluruh kuota in_progress habis', async () => {
+    let attempts = 0;
+    const mockFetch = async (url, options) => {
+      attempts++;
+      const body = JSON.parse(options.body);
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({
+          results: body.calls.map((c) => ({
+            id: c.id,
+            ok: false,
+            error: {
+              type: 'kylat:in_progress',
+              message: 'Operasi macet di server.',
+            },
+          })),
+        }),
+      };
+    };
+
+    const batcher = new RpcBatcher({ fetchFn: mockFetch });
+    await assert.rejects(
+      async () => {
+        await batcher.call(
+          'CounterActions::stuckOperation',
+          {},
+          {
+            idempotencyKey: 'idemp_stuck',
+            inProgressRetries: 3, // Kuota 3 kali retry
+            retryDelayFn: () => 5,
+          }
+        );
+      },
+      (err) => {
+        assert(err instanceof KylatRpcError);
+        assert.equal(err.code, 'kylat:in_progress');
+        assert.equal(err.message, 'Operasi macet di server.');
+        return true;
+      }
+    );
+
+    // 1 pemanggilan awal + 3 retries = 4 attempts total
+    assert.equal(attempts, 4);
+  });
 });

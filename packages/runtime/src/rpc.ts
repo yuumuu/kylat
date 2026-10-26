@@ -21,6 +21,13 @@ export interface RpcClientConfig {
   fetchFn?: typeof fetch;
 }
 
+export interface CallOptions {
+  idempotencyKey?: string;
+  maxRetries?: number; // Kuota retry untuk error transient HTTP (502, 503, 504) atau jaringan
+  inProgressRetries?: number; // Kuota retry terpisah khusus untuk respons kylat:in_progress
+  retryDelayFn?: (attempt: number, type: 'transient_5xx' | 'in_progress') => number;
+}
+
 export class KylatRpcError extends Error {
   public readonly code?: string;
   public readonly pointer?: string;
@@ -42,8 +49,11 @@ interface QueuedCall {
   resolve: (value: unknown) => void;
   reject: (reason: unknown) => void;
   idempotencyKey?: string;
-  retriesRemaining?: number;
-  attempt?: number;
+  transientRetriesRemaining: number;
+  inProgressRetriesRemaining: number;
+  transientAttempt: number;
+  inProgressAttempt: number;
+  retryDelayFn?: (attempt: number, type: 'transient_5xx' | 'in_progress') => number;
 }
 
 export class RpcBatcher {
@@ -91,18 +101,25 @@ export class RpcBatcher {
   public call<T = unknown>(
     action: string,
     args: Record<string, unknown> = {},
-    options?: { idempotencyKey?: string; maxRetries?: number }
+    options?: CallOptions
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       this.callCounter++;
       const id = `c_${Date.now()}_${this.callCounter}`;
 
+      const hasIdempotency = Boolean(options?.idempotencyKey);
       this.queue.push({
         call: { id, action, args },
         resolve: resolve as (value: unknown) => void,
         reject,
         idempotencyKey: options?.idempotencyKey,
-        retriesRemaining: options?.maxRetries ?? (options?.idempotencyKey ? 2 : 0),
+        // Budget 5xx transient: default 2 kali (sekitar 450 ms - 2s)
+        transientRetriesRemaining: options?.maxRetries ?? (hasIdempotency ? 2 : 0),
+        // Budget in_progress terpisah: default 30 kali untuk menutupi lease server ~30 detik
+        inProgressRetriesRemaining: options?.inProgressRetries ?? (hasIdempotency ? 30 : 0),
+        transientAttempt: 0,
+        inProgressAttempt: 0,
+        retryDelayFn: options?.retryDelayFn,
       });
 
       if (!this.isFlushScheduled) {
@@ -176,13 +193,14 @@ export class RpcBatcher {
             });
           }
 
-          // Lakukan retry otomatis jika error transient dan memiliki sisa kuota retry (dengan exponential backoff + jitter)
+          // Lakukan retry otomatis jika error transient dan memiliki sisa kuota retry 5xx
           for (const q of batchChunk) {
-            if (isTransient && q.idempotencyKey && (q.retriesRemaining ?? 0) > 0) {
-              q.retriesRemaining = (q.retriesRemaining ?? 1) - 1;
-              const currentAttempt = (q.attempt ?? 0) + 1;
-              q.attempt = currentAttempt;
-              const delay = Math.min(2000, 150 * Math.pow(2, currentAttempt - 1)) + Math.random() * 50;
+            if (isTransient && q.idempotencyKey && q.transientRetriesRemaining > 0) {
+              q.transientRetriesRemaining--;
+              q.transientAttempt++;
+              const delay = q.retryDelayFn
+                ? q.retryDelayFn(q.transientAttempt, 'transient_5xx')
+                : Math.min(2000, 150 * Math.pow(2, q.transientAttempt - 1)) + Math.random() * 50;
 
               setTimeout(() => {
                 this.queue.push(q);
@@ -212,12 +230,13 @@ export class RpcBatcher {
           } else if (result.ok) {
             queued.resolve(result.data);
           } else {
-            // Tangani kylat:in_progress: operasi sedang diproses oleh request paralel, jadwalkan retry dengan backoff
-            if (result.error.type === 'kylat:in_progress' && queued.idempotencyKey && (queued.retriesRemaining ?? 0) > 0) {
-              queued.retriesRemaining = (queued.retriesRemaining ?? 1) - 1;
-              const currentAttempt = (queued.attempt ?? 0) + 1;
-              queued.attempt = currentAttempt;
-              const delay = Math.min(2000, 150 * Math.pow(2, currentAttempt - 1)) + Math.random() * 50;
+            // Tangani kylat:in_progress menggunakan budget inProgress terpisah
+            if (result.error.type === 'kylat:in_progress' && queued.idempotencyKey && queued.inProgressRetriesRemaining > 0) {
+              queued.inProgressRetriesRemaining--;
+              queued.inProgressAttempt++;
+              const delay = queued.retryDelayFn
+                ? queued.retryDelayFn(queued.inProgressAttempt, 'in_progress')
+                : Math.min(2000, 500 * Math.pow(1.25, queued.inProgressAttempt - 1)) + Math.random() * 100;
 
               setTimeout(() => {
                 this.queue.push(queued);
@@ -239,11 +258,12 @@ export class RpcBatcher {
       } catch (networkError) {
         const error = networkError instanceof Error ? networkError : new Error(String(networkError));
         for (const q of batchChunk) {
-          if (q.idempotencyKey && (q.retriesRemaining ?? 0) > 0) {
-            q.retriesRemaining = (q.retriesRemaining ?? 1) - 1;
-            const currentAttempt = (q.attempt ?? 0) + 1;
-            q.attempt = currentAttempt;
-            const delay = Math.min(2000, 150 * Math.pow(2, currentAttempt - 1)) + Math.random() * 50;
+          if (q.idempotencyKey && q.transientRetriesRemaining > 0) {
+            q.transientRetriesRemaining--;
+            q.transientAttempt++;
+            const delay = q.retryDelayFn
+              ? q.retryDelayFn(q.transientAttempt, 'transient_5xx')
+              : Math.min(2000, 150 * Math.pow(2, q.transientAttempt - 1)) + Math.random() * 50;
 
             setTimeout(() => {
               this.queue.push(q);
@@ -270,7 +290,7 @@ export const defaultRpcBatcher = new RpcBatcher();
 export function callServerAction<T = unknown>(
   action: string,
   args: Record<string, unknown> = {},
-  options?: { idempotencyKey?: string }
+  options?: CallOptions
 ): Promise<T> {
   return defaultRpcBatcher.call<T>(action, args, options);
 }
