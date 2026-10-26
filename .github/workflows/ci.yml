@@ -31,7 +31,23 @@ jobs:
           coverage: none
 
       - name: Verify PHP Patch Version (Threat Model F1 - PHP2Shell Mitigation)
-        run: php -r "version_compare(PHP_VERSION, '8.2.20', '>=') || (fwrite(STDERR, 'PHP ' . PHP_VERSION . ' is vulnerable to PHP2Shell/CVE-2024-4577.\n') && exit(1));"
+        run: |
+          php -r "
+          \$v = PHP_VERSION;
+          \$minVersions = [
+              '8.2' => '8.2.35',
+              '8.3' => '8.3.36',
+              '8.4' => '8.4.27',
+              '8.5' => '8.5.12',
+          ];
+          \$minor = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
+          if (isset(\$minVersions[\$minor])) {
+              if (version_compare(\$v, \$minVersions[\$minor], '<')) {
+                  fwrite(STDERR, \"PHP \$v is vulnerable to PHP2Shell (CVE-2026-109618, CVE-2026-109619). Minimum patched version for PHP \$minor is {\$minVersions[\$minor]}.\n\");
+                  exit(1);
+              }
+          }
+          "
 
       - name: Setup pnpm
         uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d # v3
