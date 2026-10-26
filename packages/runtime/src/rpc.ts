@@ -43,6 +43,7 @@ interface QueuedCall {
   reject: (reason: unknown) => void;
   idempotencyKey?: string;
   retriesRemaining?: number;
+  attempt?: number;
 }
 
 export class RpcBatcher {
@@ -158,7 +159,8 @@ export class RpcBatcher {
 
         // Tangani Problem Details HTTP level (RFC 9457) dan kegagalan status HTTP
         if (!response.ok) {
-          const isTransient = response.status >= 500 && response.status <= 599;
+          // Hanya retry untuk status transient (502, 503, 504), hindari 500 error deterministik
+          const isTransient = [502, 503, 504].includes(response.status);
           const contentType = response.headers.get('content-type') || '';
           let err: KylatRpcError;
 
@@ -174,17 +176,21 @@ export class RpcBatcher {
             });
           }
 
-          // Lakukan retry otomatis jika error transient dan memiliki sisa kuota retry
+          // Lakukan retry otomatis jika error transient dan memiliki sisa kuota retry (dengan exponential backoff + jitter)
           for (const q of batchChunk) {
             if (isTransient && q.idempotencyKey && (q.retriesRemaining ?? 0) > 0) {
               q.retriesRemaining = (q.retriesRemaining ?? 1) - 1;
+              const currentAttempt = (q.attempt ?? 0) + 1;
+              q.attempt = currentAttempt;
+              const delay = Math.min(2000, 150 * Math.pow(2, currentAttempt - 1)) + Math.random() * 50;
+
               setTimeout(() => {
                 this.queue.push(q);
                 if (!this.isFlushScheduled) {
                   this.isFlushScheduled = true;
                   queueMicrotask(() => this.flush());
                 }
-              }, 25);
+              }, delay);
             } else {
               q.reject(err);
             }
@@ -206,12 +212,28 @@ export class RpcBatcher {
           } else if (result.ok) {
             queued.resolve(result.data);
           } else {
-            queued.reject(
-              new KylatRpcError(result.error.message, {
-                code: result.error.type,
-                rawError: result.error,
-              })
-            );
+            // Tangani kylat:in_progress: operasi sedang diproses oleh request paralel, jadwalkan retry dengan backoff
+            if (result.error.type === 'kylat:in_progress' && queued.idempotencyKey && (queued.retriesRemaining ?? 0) > 0) {
+              queued.retriesRemaining = (queued.retriesRemaining ?? 1) - 1;
+              const currentAttempt = (queued.attempt ?? 0) + 1;
+              queued.attempt = currentAttempt;
+              const delay = Math.min(2000, 150 * Math.pow(2, currentAttempt - 1)) + Math.random() * 50;
+
+              setTimeout(() => {
+                this.queue.push(queued);
+                if (!this.isFlushScheduled) {
+                  this.isFlushScheduled = true;
+                  queueMicrotask(() => this.flush());
+                }
+              }, delay);
+            } else {
+              queued.reject(
+                new KylatRpcError(result.error.message, {
+                  code: result.error.type,
+                  rawError: result.error,
+                })
+              );
+            }
           }
         }
       } catch (networkError) {
@@ -219,13 +241,17 @@ export class RpcBatcher {
         for (const q of batchChunk) {
           if (q.idempotencyKey && (q.retriesRemaining ?? 0) > 0) {
             q.retriesRemaining = (q.retriesRemaining ?? 1) - 1;
+            const currentAttempt = (q.attempt ?? 0) + 1;
+            q.attempt = currentAttempt;
+            const delay = Math.min(2000, 150 * Math.pow(2, currentAttempt - 1)) + Math.random() * 50;
+
             setTimeout(() => {
               this.queue.push(q);
               if (!this.isFlushScheduled) {
                 this.isFlushScheduled = true;
                 queueMicrotask(() => this.flush());
               }
-            }, 25);
+            }, delay);
           } else {
             q.reject(error);
           }

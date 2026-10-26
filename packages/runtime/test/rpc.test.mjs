@@ -257,4 +257,80 @@ describe('@kylat/runtime - Batch RPC Dispatcher', () => {
     // Tanpa idempotency key, hanya dipanggil 1 kali tanpa auto-retry
     assert.equal(attempts, 1);
   });
+
+  it('tidak melakukan retry untuk error deterministik HTTP 500 meskipun memiliki Idempotency-Key', async () => {
+    let attempts = 0;
+    const mockFetch = async () => {
+      attempts++;
+      return {
+        ok: false,
+        status: 500,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ message: 'Internal Server Error (Deterministic Bug)' }),
+      };
+    };
+
+    const batcher = new RpcBatcher({ fetchFn: mockFetch });
+
+    await assert.rejects(
+      async () => {
+        await batcher.call('CounterActions::buggyAction', {}, { idempotencyKey: 'idemp_bug_500' });
+      },
+      (err) => {
+        assert(err instanceof KylatRpcError);
+        assert.equal(err.code, 'HTTP_500');
+        return true;
+      }
+    );
+
+    // Error 500 tidak transient, tidak boleh membuang beban server dengan re-attempt
+    assert.equal(attempts, 1);
+  });
+
+  it('otomatis melakukan retry saat menerima respons kylat:in_progress hingga operasi selesai', async () => {
+    let attempts = 0;
+    const mockFetch = async (url, options) => {
+      attempts++;
+      const body = JSON.parse(options.body);
+
+      if (attempts === 1) {
+        // Percobaan 1: Server merespons bahwa aksi sedang berjalan (in_progress)
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          json: async () => ({
+            results: body.calls.map((c) => ({
+              id: c.id,
+              ok: false,
+              error: {
+                type: 'kylat:in_progress',
+                message: 'Operasi sedang diproses di server.',
+              },
+            })),
+          }),
+        };
+      }
+
+      // Percobaan 2 (retry): Operasi terdahulu sudah selesai, kembalikan hasil
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({
+          results: body.calls.map((c) => ({
+            id: c.id,
+            ok: true,
+            data: { success: true, count: 42 },
+          })),
+        }),
+      };
+    };
+
+    const batcher = new RpcBatcher({ fetchFn: mockFetch });
+    const res = await batcher.call('CounterActions::longOperation', {}, { idempotencyKey: 'idemp_long_op_99' });
+
+    assert.deepEqual(res, { success: true, count: 42 });
+    assert.equal(attempts, 2, 'Harus otomatis melakukan retry setelah menerima kylat:in_progress');
+  });
 });
