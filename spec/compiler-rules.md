@@ -14,6 +14,9 @@ Setiap aturan wajib punya: kode stabil, lokasi di PHP, penjelasan satu kalimat, 
 | KIL-205 | Templat hanya ekspresi sederhana; logika masuk computed | Konvensi |
 | KIL-211 | Tidak ada dependensi sirkular antar komponen | Struktur |
 | KIL-212 | Tag `<x-nama>` wajib dideklarasikan lewat `#[Child(Nama::class)]` di komponen induk | Struktur |
+| KIL-214 | Bagian PHP hanya boleh berisi `declare`, `namespace`, `use`, dan satu class | Struktur |
+| KIL-215 | Nama class harus sama dengan nama berkas dalam PascalCase | Struktur |
+| KIL-216 | `?>` wajib ada, dan tidak boleh ada kode PHP setelahnya | Struktur |
 | KIL-310 | Aksi dengan parameter ID wajib punya `authorize` | Keamanan |
 | KIL-311 | Nama aksi unik per kontrak | Kontrak |
 | KIL-401 | Anggaran ukuran chunk per komponen (usulan 8 KB gzip) | Anggaran |
@@ -33,6 +36,12 @@ Rentang sah: `1xx` bahasa, `2xx` konvensi dan struktur, `3xx` keamanan dan kontr
 **KIL-211.** Siklus dependensi adalah masalah **graf**, bukan masalah sintaks: `A` memakai `B`, `B` memakai `A`, dan tidak ada urutan build yang sah. Kode ini dulu dipakai juga untuk "komponen anak tanpa deklarasi" di `template.md` §7 — dua kegagalan yang tidak berhubungan, dan pesan errornya tidak bisa benar untuk keduanya. Sejak E-01, arti itu pindah ke KIL-212.
 
 **KIL-212.** Kewajiban deklarasi `#[Child]` bersifat **struktur**, karena yang diperiksa adalah daftar dependensi komponen, bukan bentuk templat. Kode ini tetap muncul di `template.md` §8 karena lokasi pelanggarannya adalah tag `<x-nama>` di templat — nomor kode menyatakan jenis masalah, bukan berkas tempat pesan dicetak. `#[Uses]` dipakai untuk kontrak aksi server dan tidak membuka izin merender komponen. Aturan tag: kebab-case dari nama kelas, dua kelas yang memetakan ke tag sama menggagalkan build, dan `<x-...>` tidak boleh muncul di DOM hasil.
+
+**KIL-214.** Bagian PHP pada komponen single-file `*.kylat.php` hanya boleh berisi `declare(strict_types=1);`, `namespace`, pernyataan `use`, dan tepat satu definisi kelas komponen. Dilarang keras menempatkan pernyataan di luar tubuh kelas (*top-level statements*), fungsi mandiri, atau variabel di luar kelas.
+
+**KIL-215.** Nama kelas komponen wajib persis sama dengan nama berkas dalam format PascalCase (misal: berkas `Counter.kylat.php` wajib mendefinisikan `class Counter`). Perbedaan kapitalisasi atau nama yang tidak seragam menggagalkan build demi kepastian pemetaan rujukan dan tag island.
+
+**KIL-216.** Tag penutup PHP `?>` wajib ada setelah definisi kelas komponen untuk menutup bagian PHP. Tidak boleh ada tag PHP pembuka (`<?php` atau `<?=`) di dalam bagian templat setelahnya. Bagian kedua diperlakukan sepenuhnya sebagai templat HTML/Kylat.
 
 **KIL-311.** Kode ini menggantikan KIL-210. Keunikan nama aksi adalah masalah **kontrak**, bukan struktur file: dua komponen sah masing-masing dapat mendeklarasikan aksi bernama sama, dan bentrokannya baru terlihat saat kontrak digabung.
 
