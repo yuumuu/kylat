@@ -12,7 +12,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 
 | ID | Topik & Ringkasan Keputusan | Status | Tenggat | Pemilik |
 |---|---|---|---|---|
-| **KEP-01** | **Nama proyek Kylat**: namespace `Kylat\`, CLI `kylat`, adapter `kylat/laravel`. Pemeriksaan registry dan DJKI dilaporkan aman, bukti verifikasi dilampirkan sebelum rilis 1.0. | **PUTUSAN** | Akhir fase 0 | Pemilik proyek |
+| **KEP-01** | **Nama proyek Kylat**: namespace `Kylat\`, CLI `kylat`, adapter `kylat/laravel`. Pemeriksaan registry, DJKI, dan WIPO diverifikasi aman pada 27 Okt 2026 ([`0001-nama-proyek.md`](file:///c:/Users/haidaryuum/source/kylat/docs/decisions/0001-nama-proyek.md)). | **PUTUSAN** | Akhir fase 0 | Pemilik proyek |
 | **KEP-02** | **Ruang lingkup**: Fokus pada Mode A (backend PHP + RPC Kylat) terlebih dahulu; Mode B (OpenAPI) ditunda. | **PUTUSAN** | — | Pemilik proyek |
 | **KEP-03** | **Toolchain**: Compiler dan CLI berjalan di atas ekosistem Node (TypeScript). Parser PHP di frontend tidak boleh membutuhkan runtime PHP terpasang. | **PUTUSAN** | — | Reviewer teknis |
 | **KEP-04** | **Pemisahan Komponen & Aksi**: Komponen hanya mendeklarasikan aksi server; implementasi logika bisnis dan otorisasi hidup di kelas Action server. | **PUTUSAN** | — | Reviewer teknis |

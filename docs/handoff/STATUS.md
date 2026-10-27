@@ -14,7 +14,7 @@ Diperbarui: 27 Oktober 2026. Sumber kebenaran: spec/ di repo. File ini hanya rin
 - Ruang lingkup v0: Mode A saja (backend PHP). Mode B ditunda.
 
 ## Keputusan yang sudah ditetapkan
-- Nama: Kylat. Paket npm dan Composer: kylat. Status pemeriksaan registry dan DJKI: dilaporkan aman, bukti belum dilampirkan.
+- Nama: Kylat. Paket npm dan Composer: kylat. Status pemeriksaan registry, DJKI, dan WIPO: aman dan terverifikasi pada 27 Okt 2026 (bukti di docs/decisions/0001-nama-proyek.md).
 - ID di wire dan di signature PHP: string.
 - Fungsi string: mb_* dan fungsi yang setara untuk UTF-8 valid. trim, strtolower, strtoupper dihapus dari v0.
 - Templat: sintaks mirip Blade, atribut on: dan bind:, <x-nama> untuk komposisi tanpa slot.
@@ -58,7 +58,7 @@ Diperbarui: 27 Oktober 2026. Sumber kebenaran: spec/ di repo. File ini hanya rin
 13. **Keputusan terbuka**: Berkas lisensi repo (LICENSE), fungsi usort (mutasi by-reference vs bool), dan verifikasi sinkronisasi Google Docs v1.1 terhadap spec/.
 
 ## Roadmap Penutupan Fase 0 (Blocker Utama)
-1. **Bukti nama kylat**: Lampirkan bukti pemeriksaan nama di registry npm, Packagist, GitHub, DJKI, dan WIPO beserta tanggal dan tautan di docs/decisions/0001-nama-proyek.md.
+1. **Bukti nama kylat** [SELESAI]: Bukti pemeriksaan nama di registry npm, Packagist, GitHub, DJKI, dan WIPO beserta tanggal 27 Okt 2026 dan tautan resmi telah diarsipkan di docs/decisions/0001-nama-proyek.md.
 2. **Dokumentasi Spike S1 & S3**: Catat hasil dan keputusan tertulis untuk Spike S1 (Parser Tree-sitter WASM) dan S3 (Interface kontrak aksi server) di docs/decisions/.
 3. **Golden CartCounter ditulis manual**: Tulis ulang body CartCounter.expected.js secara manual dari spesifikasi normatif (spec/template.md, spec/ir.md), independen tanpa menyalin output compiler, dan ajukan review manusia.
 4. **Verifikasi Gate P1 sampai P12**: Tulis uji otomatis (fail-on-violation test) di compiler dan runtime untuk masing-masing prinsip P1–P12.
