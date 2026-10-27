@@ -26,7 +26,7 @@ Pada arsitektur Kylat, komponen frontend berjalan sebagai pulau interaktif (*int
 
 ## 2. Pengujian dan Validasi Prototipe
 
-Kedua prototipe diuji secara empiris menggunakan **PHPStan Level 9** pada direktori [`bench/spikes/s3-action-declaration/`](file:///c:/Users/haidaryuum/source/kylat/bench/spikes/s3-action-declaration):
+Kedua prototipe diuji secara empiris menggunakan **PHPStan Level 9** pada direktori [`bench/spikes/s3-action-declaration/`](../../bench/spikes/s3-action-declaration):
 
 ```text
 ------ ----------------------------------------------------------------------- 

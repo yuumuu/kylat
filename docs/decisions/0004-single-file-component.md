@@ -2,7 +2,7 @@
 
 - **ID Keputusan**: KEP-34 (0004)
 - **Topik**: Format Berkas Komponen Tunggal (*Single-File Component*)
-- **Status**: **PUTUSAN**
+- **Status**: Diusulkan (menunggu review pemilik proyek)
 - **Tanggal Keputusan**: 27 Oktober 2026
 - **Pemilik**: Pemilik Proyek & Reviewer Teknis
 - **Target Tenggat**: Fase 0 (Tuntas)
@@ -45,7 +45,7 @@ Pemisahan dua berkas ini menimbulkan sejumlah friksi teknis dan pengalaman penge
 
 ## 3. Keputusan
 
-1. Mengesahkan **KEP-34**: Proyek Kylat secara definitif menetapkan **Format Single-File Component (`*.kylat.php`)** (Opsi B) sebagai format resmi penulisan komponen Kylat.
+1. **KEP-34**: Format Single-File Component (`*.kylat.php`) (Opsi B) diusulkan sebagai format resmi penulisan komponen Kylat.
 2. Format struktur berkas `*.kylat.php`:
    - **Bagian Pertama**:
      - Tag pembuka `<?php`.
@@ -58,7 +58,7 @@ Pemisahan dua berkas ini menimbulkan sejumlah friksi teknis dan pengalaman penge
    - **Bagian Kedua**:
      - Tag penutup `?>` wajib ada setelah tubuh kelas komponen.
      - Dilarang ada kode PHP (`<?php` atau `<?=`) setelah tag penutup `?>` (menghasilkan galat `KIL-216`).
-     - Seluruh konten setelah `?>` adalah templat HTML dengan sintaks ekspresi Kylat sesuai [`spec/template.md`](file:///c:/Users/haidaryuum/source/kylat/spec/template.md).
+     - Seluruh konten setelah `?>` adalah templat HTML dengan sintaks ekspresi Kylat sesuai [`spec/template.md`](../../spec/template.md).
 3. Hubungan dengan Blade:
    - Templat komponen **tidak lagi** menggunakan berkas `.blade.php` terpisah.
    - Layout aplikasi host di Laravel tetap menggunakan Blade reguler dengan direktif `@kylat('Nama', $props)`.
@@ -126,3 +126,5 @@ final class Counter extends Component
   - Kompatibel penuh dengan linter PHP (`php -l`), tooling analisis statis, dan IDE populer tanpa plugin khusus.
 - **Batasan & Aturan Penegakan Compiler**:
   - Ditegakkan aturan build baru pada `@kylat/compiler`: `KIL-214`, `KIL-215`, dan `KIL-216`.
+
+Pengesahan: belum. Menunggu review dan persetujuan tertulis dari pemilik proyek.

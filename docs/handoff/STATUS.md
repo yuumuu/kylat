@@ -14,12 +14,9 @@ Diperbarui: 27 Oktober 2026. Sumber kebenaran: spec/ di repo. File ini hanya rin
 - Ruang lingkup v0: Mode A saja (backend PHP). Mode B ditunda.
 
 ## Keputusan yang sudah ditetapkan
-- Nama: Kylat. Paket npm dan Composer: kylat. Status pemeriksaan registry, DJKI, dan WIPO: aman dan terverifikasi pada 27 Okt 2026 (bukti di docs/decisions/0001-nama-proyek.md).
-- Format Komponen Single-File (*.kylat.php) disahkan (KEP-34 / ADR 0004): Bagian pertama PHP (<?php ... ?>) dan bagian kedua templat HTML/Kylat. Aturan baru KIL-214, KIL-215, dan KIL-216 ditegakkan.
-- Sinkronisasi Dokumen Acuan (Google Docs v1.2):
-  - Dokumen 4 §10: Struktur direktori dan komponen aplikasi resmi menggunakan `resources/kylat/*.kylat.php`.
-  - Dokumen 1: Paradigma single-file component (SFC) masuk ke dalam visi arsitektur inti Kylat.
-  - Dokumen 5: Pembaruan panduan CLI dan alur kerja pengembangan interaktif `kylat dev` berbasis SFC.
+- Nama: Kylat. Paket npm dan Composer: kylat. Pemeriksaan registry dan DJKI dilaporkan aman. Bukti dilampirkan di docs/decisions/0001-nama-proyek.md: ya.
+- Format komponen single-file (*.kylat.php) diusulkan (ADR 0004), menunggu review.
+- Google Docs belum diperbarui ke v1.2. Dokumen repo (spec/, docs/) sudah diperbarui.
 - ID di wire dan di signature PHP: string.
 - Fungsi string: mb_* dan fungsi yang setara untuk UTF-8 valid. trim, strtolower, strtoupper dihapus dari v0.
 - Templat: sintaks mirip Blade, atribut on: dan bind:, <x-nama> untuk komposisi tanpa slot.

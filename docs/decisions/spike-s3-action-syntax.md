@@ -19,7 +19,7 @@
 
 ## 2. Pengujian Prototipe dengan PHPStan Level 9
 
-Uji prototipe dijalankan di [`bench/spikes/s3-action-declaration/`](file:///c:/Users/haidaryuum/source/kylat/bench/spikes/s3-action-declaration):
+Uji prototipe dijalankan di [`bench/spikes/s3-action-declaration/`](../../bench/spikes/s3-action-declaration):
 
 ### Prototipe A: Pendekatan Interface Kontrak (`CartActions`)
 ```php

@@ -42,4 +42,4 @@
 
 Spike S1 resmi **ditutup**. Toolchain `@kylat/compiler` menetapkan **Tree-sitter (via `web-tree-sitter` dan `tree-sitter-php.wasm`)** sebagai mesin parser PHP subset v0.
 
-Uji prototipe terdokumentasi dan dapat diulang pada: [`packages/compiler/test/spike-s1.mjs`](file:///c:/Users/haidaryuum/source/kylat/packages/compiler/test/spike-s1.mjs).
+Uji prototipe terdokumentasi dan dapat diulang pada: [`packages/compiler/test/spike-s1.mjs`](../../packages/compiler/test/spike-s1.mjs).

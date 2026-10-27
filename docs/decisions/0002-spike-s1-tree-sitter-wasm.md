@@ -48,7 +48,7 @@ Toolchain compiler Kylat (`@kylat/compiler`) bertanggung jawab untuk mem-parse b
 
 1. Mengesahkan **KEP-06**: `@kylat/compiler` secara definitif menggunakan **`web-tree-sitter`** dengan gramatika terkompilasi **`tree-sitter-php.wasm`** sebagai mesin parser resmi PHP subset v0.
 2. Tidak menggunakan parser berbasis binary native `node-gyp` agar instalasi `npm install` atau `pnpm add` bersifat instan tanpa dependensi kompilator C++.
-3. Hasil prototipe dan benchmark terdokumentasi serta dapat diuji ulang secara otomatis pada: [`packages/compiler/test/spike-s1.mjs`](file:///c:/Users/haidaryuum/source/kylat/packages/compiler/test/spike-s1.mjs).
+3. Hasil prototipe dan benchmark terdokumentasi serta dapat diuji ulang secara otomatis pada: [`packages/compiler/test/spike-s1.mjs`](../../packages/compiler/test/spike-s1.mjs).
 
 ---
 

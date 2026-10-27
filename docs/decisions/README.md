@@ -12,14 +12,14 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 
 | ID | Topik & Ringkasan Keputusan | Status | Tenggat | Pemilik |
 |---|---|---|---|---|
-| **KEP-01** | **Nama proyek Kylat**: namespace `Kylat\`, CLI `kylat`, adapter `kylat/laravel`. Pemeriksaan registry, DJKI, dan WIPO diverifikasi aman pada 27 Okt 2026 ([`0001-nama-proyek.md`](file:///c:/Users/haidaryuum/source/kylat/docs/decisions/0001-nama-proyek.md)). | **PUTUSAN** | Akhir fase 0 | Pemilik proyek |
+| **KEP-01** | **Nama proyek Kylat**: namespace `Kylat\`, CLI `kylat`, adapter `kylat/laravel`. Pemeriksaan registry, DJKI, dan WIPO diverifikasi aman pada 27 Okt 2026 ([`0001-nama-proyek.md`](0001-nama-proyek.md)). | **PUTUSAN** | Akhir fase 0 | Pemilik proyek |
 | **KEP-02** | **Ruang lingkup**: Fokus pada Mode A (backend PHP + RPC Kylat) terlebih dahulu; Mode B (OpenAPI) ditunda. | **PUTUSAN** | — | Pemilik proyek |
 | **KEP-03** | **Toolchain**: Compiler dan CLI berjalan di atas ekosistem Node (TypeScript). Parser PHP di frontend tidak boleh membutuhkan runtime PHP terpasang. | **PUTUSAN** | — | Reviewer teknis |
 | **KEP-04** | **Pemisahan Komponen & Aksi**: Komponen hanya mendeklarasikan aksi server; implementasi logika bisnis dan otorisasi hidup di kelas Action server. | **PUTUSAN** | — | Reviewer teknis |
 | **KEP-05** | **Runtime Reaktif**: Tidak menulis runtime sinyal sendiri; menggunakan lapisan tipis di atas pustaka signals pihak ketiga yang teruji. | **PUTUSAN** | — | Reviewer teknis |
-| **KEP-06** | **Pilihan Parser PHP**: Ditetapkan menggunakan `web-tree-sitter` (WASM) + `tree-sitter-php.wasm`. Lolos evaluasi Spike S1 ([`0002-spike-s1-tree-sitter-wasm.md`](file:///c:/Users/haidaryuum/source/kylat/docs/decisions/0002-spike-s1-tree-sitter-wasm.md)). | **PUTUSAN** | — | Reviewer teknis |
+| **KEP-06** | **Pilihan Parser PHP**: Ditetapkan menggunakan `web-tree-sitter` (WASM) + `tree-sitter-php.wasm`. Lolos evaluasi Spike S1 ([`0002-spike-s1-tree-sitter-wasm.md`](0002-spike-s1-tree-sitter-wasm.md)). | **PUTUSAN** | — | Reviewer teknis |
 | **KEP-07** | **Pilihan Inti Signals**: Ditetapkan menggunakan `alien-signals`. Lolos evaluasi Spike S2 (ukuran ultra-ringkas 1.8 KB gzip, kecepatan 4.8 juta ops/detik, arsitektur push-pull monomorfik stabil). | **PUTUSAN** | — | Reviewer teknis |
-| **KEP-08** | **Sintaks Deklarasi Aksi**: Ditetapkan menggunakan interface kontrak PHP (`#[Uses(NamaKontrak::class)]` + `$this->server(...)`). Lolos evaluasi Spike S3 ([`0003-spike-s3-server-action-contracts.md`](file:///c:/Users/haidaryuum/source/kylat/docs/decisions/0003-spike-s3-server-action-contracts.md)). | **PUTUSAN** | — | Pemilik proyek |
+| **KEP-08** | **Sintaks Deklarasi Aksi**: Ditetapkan menggunakan interface kontrak PHP (`#[Uses(NamaKontrak::class)]` + `$this->server(...)`). Lolos evaluasi Spike S3 ([`0003-spike-s3-server-action-contracts.md`](0003-spike-s3-server-action-contracts.md)). | **PUTUSAN** | — | Pemilik proyek |
 | **KEP-09** | **Distribusi Binary CLI**: Keputusan apakah CLI didistribusikan sebagai binary tunggal mandiri atau paket npm murni. | `[TERBUKA]` | Akhir fase 0 | Pemilik proyek |
 | **KEP-10** | **Compiler di Browser**: Kebutuhan build WASM compiler untuk playground interaktif di peramban web. | `[TERBUKA]` | Akhir fase 0 | Pemilik proyek |
 | **KEP-11** | **Batas Runtime & Konkurensi**: Nilai batas timeout dan konkurensi worker PHP-FPM. Diputuskan lewat spike S4 dan uji beban nyata. | `[TERBUKA]` | Akhir fase 3 | Reviewer teknis |
@@ -45,7 +45,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 | **KEP-31** | **Renumber Kode Galat**: KIL-202 → KIL-102 (aturan bahasa), KIL-206 → KIL-103 (aturan bahasa), KIL-210 → KIL-311 (kontrak aksi). Dilakukan sebelum fase 0. | **PUTUSAN** | — | Pemilik proyek |
 | **KEP-32** | **Pemisahan Atribut `#[Uses]` dan `#[Child]`**: `#[Uses(CartActions::class)]` khusus kontrak aksi server; `#[Child(Counter::class)]` khusus izin render komponen anak `<x-counter>`. Quickstart counter tidak perlu `#[Child]`. | **PUTUSAN** | — | Pemilik proyek |
 | **KEP-33** | **Allowlist `array_values`**: `array_values` disahkan masuk allowlist fungsi PHP v0 tanpa syarat sementara, sebagai prasyarat teknis pemenuhan aturan `array_filter` (D5). | **PUTUSAN** | — | Pemilik proyek |
-| **KEP-34** | **Format Komponen Single-File (`*.kylat.php`)**: Menetapkan berkas tunggal `*.kylat.php` dengan bagian PHP (`<?php ... ?>`) dan bagian templat HTML/Kylat setelahnya ([`0004-single-file-component.md`](file:///c:/Users/haidaryuum/source/kylat/docs/decisions/0004-single-file-component.md)). | **PUTUSAN** | Akhir fase 0 | Pemilik proyek |
+| **KEP-34** | **Format Komponen Single-File (`*.kylat.php`)**: Menetapkan berkas tunggal `*.kylat.php` dengan bagian PHP (`<?php ... ?>`) dan bagian templat HTML/Kylat setelahnya ([`0004-single-file-component.md`](0004-single-file-component.md)). | `Diusulkan` | Akhir fase 0 | Pemilik proyek |
 
 ---
 

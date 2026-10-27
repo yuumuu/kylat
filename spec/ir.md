@@ -2,7 +2,7 @@
 
 Status: **Draf Normatif**.
 Disahkan: 25 Oktober 2026.
-Bergantung pada: [`spec/php-subset.md`](file:///c:/Users/haidaryuum/source/kylat/spec/php-subset.md), [`spec/template.md`](file:///c:/Users/haidaryuum/source/kylat/spec/template.md), [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md).
+Bergantung pada: [`spec/php-subset.md`](php-subset.md), [`spec/template.md`](template.md), [`spec/compiler-rules.md`](compiler-rules.md).
 
 ---
 
@@ -193,7 +193,7 @@ export interface ComponentInstanceNode {
 
 ## 5. Atribut dan Direktif
 
-Sesuai aturan tiga kelas nilai atribut di [`spec/template.md` §4](file:///c:/Users/haidaryuum/source/kylat/spec/template.md):
+Sesuai aturan tiga kelas nilai atribut di [`spec/template.md` §4](template.md):
 
 ```typescript
 export type AttributeNode =

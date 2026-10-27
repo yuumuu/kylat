@@ -14,6 +14,6 @@ decisions/    ADR: keputusan arsitektur beserta alasannya
 **Struktur & Status:**
 - `tutorial/` — panduan jalur dari nol ke komponen pertama *(belum ada, menunggu fase 0)*
 - `guide/` — panduan praktis: form, list, aksi server, deployment *(belum ada, menunggu fase 1)*
-- [`reference/errors.md`](file:///c:/Users/haidaryuum/source/kylat/docs/reference/errors.md) — referensi kode galat dan panduan perbaikan (menaut ke `spec/errors.md`)
-- [`decisions/README.md`](file:///c:/Users/haidaryuum/source/kylat/docs/decisions/README.md) — register keputusan arsitektur (ADR KEP-01 s/d KEP-33 dan prinsip P1–P12)
+- [`reference/errors.md`](reference/errors.md) — referensi kode galat dan panduan perbaikan (menaut ke `spec/errors.md`)
+- [`decisions/README.md`](decisions/README.md) — register keputusan arsitektur (ADR KEP-01 s/d KEP-33 dan prinsip P1–P12)
 

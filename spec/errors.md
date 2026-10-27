@@ -68,7 +68,7 @@ Tiga kode lama yang melanggar klasifikasi rentang telah di-renumber sebelum fase
 - **Klasifikasi**: Aturan Bahasa
 - **Pemicu**: Penggunaan operator perbandingan longgar `==` atau `!=` di dalam method `#[Client]` atau ekspresi templat.
 - **Pesan**: `Operator perbandingan longgar '==' dan '!=' dilarang. Gunakan perbandingan strict '===' atau '!=='`
-- **Rujukan**: [`spec/php-subset.md` §3](file:///c:/Users/haidaryuum/source/kylat/spec/php-subset.md)
+- **Rujukan**: [`spec/php-subset.md` §3](php-subset.md)
 
 ##### Contoh Salah
 ```php
@@ -92,7 +92,7 @@ if ($this->status === 1) {
 - **Klasifikasi**: Aturan Bahasa
 - **Pemicu**: Berkas komponen PHP tidak memuat `declare(strict_types=1);` pada deklarasi pembuka berkas.
 - **Pesan**: `Berkas komponen wajib mendeklarasikan 'declare(strict_types=1);' di awal berkas`
-- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md)
+- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md)
 
 ##### Contoh Salah
 ```php
@@ -126,7 +126,7 @@ final class Counter extends Component {}
 - **Klasifikasi**: Aturan Bahasa
 - **Pemicu**: Penggunaan `static` property, variabel superglobal (`$GLOBALS`, `$_GET`, dll.), kata kunci `global`, atau pola singleton di dalam kelas komponen. Catatan: Enum case dan konstanta kelas `public const` tetap diizinkan karena bukan state yang bermutasi.
 - **Pesan**: `Komponen dilarang menggunakan static property, variabel global, atau pola singleton`
-- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md)
+- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md)
 
 ##### Contoh Salah
 ```php
@@ -159,7 +159,7 @@ final class Cart extends Component
 - **Klasifikasi**: Aturan Bahasa & Subset PHP
 - **Pemicu**: Penggunaan fitur sintaks bahasa PHP yang dilarang di v0, seperti ekspresi `match`, generator `yield`, pernyataan `goto`, atau evaluasi dinamis `eval()`.
 - **Pesan**: `Fitur sintaks PHP '{fitur}' tidak didukung di subset Kylat v0`
-- **Rujukan**: [`spec/php-subset.md` §1](file:///c:/Users/haidaryuum/source/kylat/spec/php-subset.md)
+- **Rujukan**: [`spec/php-subset.md` §1](php-subset.md)
 
 ##### Contoh Salah
 ```php
@@ -192,7 +192,7 @@ public function statusLabel(int $status): string
 - **Klasifikasi**: Aturan Bahasa / Keamanan
 - **Pemicu**: Memanggil fungsi bawaan PHP yang tidak terdaftar di allowlist v0, atau menginstansiasi objek kelas sembarang menggunakan operator `new X`. Referensi tipe pada signature method, docblock generik, deklarasi `use`, `extends Component`, dan atribut komponen tetap sah.
 - **Pesan**: `Pemanggilan fungsi '{nama}' atau instansiasi kelas '{kelas}' di luar allowlist tidak diizinkan di client`
-- **Rujukan**: [`spec/php-subset.md` §2, §3](file:///c:/Users/haidaryuum/source/kylat/spec/php-subset.md)
+- **Rujukan**: [`spec/php-subset.md` §2, §3](php-subset.md)
 
 ##### Contoh Salah
 ```php
@@ -222,7 +222,7 @@ public function formatData(string $raw): void
 - **Klasifikasi**: Arsitektur / Integritas Client
 - **Pemicu**: Pemanggilan fungsi/method I/O filesystem, panggilan database (Eloquent/PDO), session, atau operasi jaringan langsung di dalam method beranotasi `#[Client]`.
 - **Pesan**: `Method #[Client] tidak boleh mengakses I/O, database, filesystem, atau sesi`
-- **Rujukan**: [`spec/php-subset.md` §3](file:///c:/Users/haidaryuum/source/kylat/spec/php-subset.md)
+- **Rujukan**: [`spec/php-subset.md` §3](php-subset.md)
 
 ##### Contoh Salah
 ```php
@@ -249,7 +249,7 @@ public function loadProfile(): void
 - **Klasifikasi**: Sistem Tipe
 - **Pemicu**: Variabel atau properti bertipe `array` tanpa anotasi tipe generik yang jelas (`list<T>` vs `array<string, T>`), atau pemakaian langsung hasil `array_filter` sebagai list tanpa dibungkus `array_values()`.
 - **Pesan**: `Tipe array ambigu antara list dan map. Gunakan docblock generik atau bungkus hasil array_filter dengan array_values()`
-- **Rujukan**: [`spec/php-subset.md` §3, §4](file:///c:/Users/haidaryuum/source/kylat/spec/php-subset.md)
+- **Rujukan**: [`spec/php-subset.md` §3, §4](php-subset.md)
 
 ##### Contoh Salah
 ```php
@@ -284,7 +284,7 @@ public function removeInactive(): void
 - **Klasifikasi**: Sistem Tipe
 - **Pemicu**: Properti, parameter method, atau return value tidak memiliki deklarasi tipe eksplisit. Kode ini juga dipicu jika operator penggabungan string `.` digunakan pada salah satu operand yang bukan bertipe `string`.
 - **Pesan**: `Tipe data wajib dideklarasikan secara eksplisit, atau operand operator '.' bukan string`
-- **Rujukan**: [`spec/php-subset.md` §1, §3, §5](file:///c:/Users/haidaryuum/source/kylat/spec/php-subset.md)
+- **Rujukan**: [`spec/php-subset.md` §1, §3, §5](php-subset.md)
 
 ##### Contoh Salah
 ```php
@@ -313,7 +313,7 @@ public function updateQuery(string $query): void
 - **Klasifikasi**: Subset Bahasa / Integritas UTF-8
 - **Pemicu**: Menggunakan fungsi string standar bawaan PHP yang bekerja di tingkat byte (misal `strlen`, `substr`, `strpos`, `strtolower`, `strtoupper`) yang tidak aman untuk karakter UTF-8 multibyte.
 - **Pesan**: `Fungsi byte-level '{nama}' dilarang karena berisiko memecah karakter UTF-8. Gunakan padanan 'mb_{nama}'`
-- **Rujukan**: [`spec/php-subset.md` §3, §4](file:///c:/Users/haidaryuum/source/kylat/spec/php-subset.md)
+- **Rujukan**: [`spec/php-subset.md` §3, §4](php-subset.md)
 
 ##### Contoh Salah
 ```php
@@ -336,7 +336,7 @@ $prefix = mb_substr($this->title, 0, 3);
 - **Klasifikasi**: Grammar Templat
 - **Pemicu**: Menulis direktif Blade warisan di dalam berkas komponen Kylat (misal `@for`, `@while`, `@switch`, `@php`, `@include`, `@extends`, `@yield`, `@section`, `@component`, `@slot`).
 - **Pesan**: `Direktif '@{nama}' tidak didukung di dalam templat komponen Kylat. Gunakan @if, @foreach, atau komponen <x-nama>`
-- **Rujukan**: [`spec/template.md` §3, §8](file:///c:/Users/haidaryuum/source/kylat/spec/template.md)
+- **Rujukan**: [`spec/template.md` §3, §8](template.md)
 
 ##### Contoh Salah
 ```html
@@ -360,7 +360,7 @@ $prefix = mb_substr($this->title, 0, 3);
 - **Klasifikasi**: Keamanan XSS
 - **Pemicu**: Menggunakan kurung kurawal unescaped `{!! $html !!}` di templat komponen, atau mencoba menyusupkan tag markup HTML melalui prop string ke komponen anak (Kylat v0 tidak mendukung slot markup).
 - **Pesan**: `HTML mentah '{!! !!}' dilarang. Semua output wajib menggunakan interpolasi aman '{{ }}'`
-- **Rujukan**: [`spec/template.md` §2, §7, §8](file:///c:/Users/haidaryuum/source/kylat/spec/template.md)
+- **Rujukan**: [`spec/template.md` §2, §7, §8](template.md)
 
 ##### Contoh Salah
 ```html
@@ -383,7 +383,7 @@ $prefix = mb_substr($this->title, 0, 3);
 - **Klasifikasi**: Binding Event
 - **Pemicu**: Direktif `on:<event>` diarahkan ke method yang tidak beranotasi `#[Client]` atau `#[Server]`, atau menggunakan nama event di luar daftar v0 (`click`, `input`, `change`, `submit`, `keydown`).
 - **Pesan**: `Handler 'on:{event}' mengarah ke method yang tidak beranotasi #[Client]/#[Server], atau event di luar daftar sah v0`
-- **Rujukan**: [`spec/template.md` §4, §8](file:///c:/Users/haidaryuum/source/kylat/spec/template.md)
+- **Rujukan**: [`spec/template.md` §4, §8](template.md)
 
 ##### Contoh Salah
 ```html
@@ -411,7 +411,7 @@ public function save(): void
 - **Klasifikasi**: Two-Way Binding
 - **Pemicu**: Mengarahkan `bind:value` dua arah ke properti yang dideklarasikan dengan `#[Prop]` (read-only dari induk) atau ke ekspresi komputasi/literal.
 - **Pesan**: `Target direktif 'bind:value' wajib berupa state lokal yang dapat dimutasi, bukan prop atau ekspresi`
-- **Rujukan**: [`spec/template.md` §4, §8](file:///c:/Users/haidaryuum/source/kylat/spec/template.md)
+- **Rujukan**: [`spec/template.md` §4, §8](template.md)
 
 ##### Contoh Salah
 ```html
@@ -432,7 +432,7 @@ public function save(): void
 - **Klasifikasi**: Integritas Reaktivitas DOM
 - **Pemicu**: Menulis perulangan `@foreach` pada elemen DOM tanpa menyertakan atribut penanda unik `key="..."`.
 - **Pesan**: `Elemen di dalam direktif @foreach wajib menyertakan atribut 'key' dengan pengenal unik`
-- **Rujukan**: [`spec/template.md` §4, §8](file:///c:/Users/haidaryuum/source/kylat/spec/template.md)
+- **Rujukan**: [`spec/template.md` §4, §8](template.md)
 
 ##### Contoh Salah
 ```html
@@ -455,7 +455,7 @@ public function save(): void
 - **Klasifikasi**: Validasi Form
 - **Pemicu**: Atribut penampil pesan kesalahan `error="..."` menunjuk path yang segmen pertamanya bukan nama state yang terdaftar di komponen.
 - **Pesan**: `Atribut error='{path}' mengarah ke path yang segmen pertamanya bukan nama state yang valid`
-- **Rujukan**: [`spec/template.md` §4, §8](file:///c:/Users/haidaryuum/source/kylat/spec/template.md)
+- **Rujukan**: [`spec/template.md` §4, §8](template.md)
 
 ##### Contoh Salah
 ```html
@@ -477,7 +477,7 @@ public function save(): void
 - **Klasifikasi**: Reaktivitas / Pencegahan Loop Jaringan
 - **Pemicu**: Method beranotasi `#[Effect]` memanggil method aksi server `#[Server]`, yang dapat menyebabkan *infinite request loop* jika respons server memicu reaktivitas sinyal kembali.
 - **Pesan**: `Method #[Effect] dilarang memanggil aksi #[Server] untuk mencegah infinite loop`
-- **Rujukan**: [`spec/template.md` §6, §8](file:///c:/Users/haidaryuum/source/kylat/spec/template.md)
+- **Rujukan**: [`spec/template.md` §6, §8](template.md)
 
 ##### Contoh Salah
 ```php
@@ -511,7 +511,7 @@ public function handleSearch(): void
 - **Klasifikasi**: Keamanan XSS
 - **Pemicu**: Penggunaan skema URL di luar allowlist (`http`, `https`, `mailto`, `tel`), termasuk protokol berbahaya seperti `javascript:`. Validasi dijalankan terhadap nilai akhir hasil evaluasi ekspresi/interpolasi.
 - **Pesan**: `URL menggunakan skema tidak diizinkan. Gunakan skema 'https', 'http', 'mailto', 'tel', atau path relatif`
-- **Rujukan**: [`spec/template.md` §4, §8](file:///c:/Users/haidaryuum/source/kylat/spec/template.md)
+- **Rujukan**: [`spec/template.md` §4, §8](template.md)
 
 ##### Contoh Salah
 ```html
@@ -532,7 +532,7 @@ public function handleSearch(): void
 - **Klasifikasi**: Grammar Nilai Atribut
 - **Pemicu**: Menggunakan sintaks interpolasi `{{ }}` di dalam atribut direktif (`bind:`, `on:`) atau atribut dinamis berekspresi (`:nama`).
 - **Pesan**: `Dilarang menggunakan '{{ }}' di dalam atribut direktif atau atribut dinamis. Tulis ekspresi polos`
-- **Rujukan**: [`spec/template.md` §4, §8](file:///c:/Users/haidaryuum/source/kylat/spec/template.md)
+- **Rujukan**: [`spec/template.md` §4, §8](template.md)
 
 ##### Contoh Salah
 ```html
@@ -553,7 +553,7 @@ public function handleSearch(): void
 - **Klasifikasi**: Keamanan XSS / Penataan Gaya
 - **Pemicu**: Menggunakan kurung kurawal `{{ }}` pada atribut `style` atau atribut event bawaan HTML (`onclick`, `onload`, dll.) karena berpotensi mengeksekusi script/CSS berbahaya.
 - **Pesan**: `Interpolasi '{{ }}' dilarang pada atribut 'style' atau atribut bawaan 'on*'`
-- **Rujukan**: [`spec/template.md` §4, §8](file:///c:/Users/haidaryuum/source/kylat/spec/template.md)
+- **Rujukan**: [`spec/template.md` §4, §8](template.md)
 
 ##### Contoh Salah
 ```html
@@ -577,7 +577,7 @@ public function handleSearch(): void
 - **Klasifikasi**: Struktur Berkas
 - **Pemicu**: Berkas memuat lebih dari satu deklarasi kelas komponen, nama berkas tidak sama persis dengan nama kelas komponen, atau kelas komponen tidak dideklarasikan sebagai `final`.
 - **Pesan**: `Satu berkas hanya boleh mendefinisikan satu kelas komponen 'final' dengan nama berkas persis sama`
-- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md)
+- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md)
 
 ##### Contoh Salah
 ```php
@@ -598,7 +598,7 @@ final class ShoppingCart extends Component {}
 - **Klasifikasi**: Konvensi Kode
 - **Pemicu**: Anggota kelas komponen tidak disusun berurutan: konstanta → `#[Prop]` → state publik/privat → computed (`#[Computed]`) → `#[Client]` → `#[Server]`.
 - **Pesan**: `Urutan anggota kelas komponen wajib: konstanta, #[Prop], state, computed, #[Client], #[Server]`
-- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md)
+- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md)
 
 ##### Contoh Salah
 ```php
@@ -635,7 +635,7 @@ final class Counter extends Component
 - **Klasifikasi**: Konvensi Kode (Peringatan / Soft Limit)
 - **Pemicu**: Method beranotasi `#[Client]` melebihi batas lunak 40 baris kode atau memiliki kedalaman sarang (*nesting level*) lebih dari 3 tingkat.
 - **Pesan**: `Method #[Client] '{nama}' terlalu panjang (> 40 baris) atau nesting terlalu dalam (> 3 tingkat)`
-- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md)
+- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md)
 
 ##### Contoh Salah
 Method client berisi 50 baris dengan 4 blok `if/foreach` bersarang.
@@ -650,7 +650,7 @@ Pecah logika menjadi method privat kecil atau pindahkan logika kalkulasi ke comp
 - **Klasifikasi**: Konvensi Templat
 - **Pemicu**: Templat memuat ekspresi kalkulasi atau transformasi data multi-langkah yang seharusnya disederhanakan melalui computed property.
 - **Pesan**: `Templat hanya boleh memuat ekspresi sederhana. Pindahkan kalkulasi logika ke computed property`
-- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md)
+- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md)
 
 ##### Contoh Salah
 ```html
@@ -675,7 +675,7 @@ public function getTotalPrice(): int
 - **Klasifikasi**: Struktur Graf Komponen
 - **Pemicu**: Terjadi dependensi melingkar (*circular dependency*) antar-komponen anak (Komponen A menggunakan Komponen B, dan Komponen B menggunakan Komponen A).
 - **Pesan**: `Terdeteksi dependensi sirkular antar-komponen: {A} -> {B} -> {A}`
-- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md)
+- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md)
 
 ##### Contoh Salah
 `CommentList` mendeklarasikan `#[Child(CommentItem::class)]`, dan `CommentItem` mendeklarasikan `#[Child(CommentList::class)]` secara langsung tanpa pembatasan terarah.
@@ -691,7 +691,7 @@ Pisahkan komponen penampung (*container*) atau desain hierarki pohon rekursif te
 - **Klasifikasi**: Struktur Komponen / Komposisi
 - **Pemicu**: Menggunakan tag `<x-nama>` di dalam templat tanpa mendeklarasikannya di kelas komponen induk menggunakan atribut `#[Child(Nama::class)]`. Catatan: Atribut `#[Uses]` hanya untuk kontrak aksi server dan tidak memberikan izin render komponen.
 - **Pesan**: `Tag komponen '<x-{nama}>' wajib dideklarasikan di kelas induk menggunakan atribut #[Child({Kelas}::class)]`
-- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md), [`spec/template.md` §7, §8](file:///c:/Users/haidaryuum/source/kylat/spec/template.md)
+- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md), [`spec/template.md` §7, §8](template.md)
 
 ##### Contoh Salah
 ```html
@@ -720,7 +720,7 @@ final class Cart extends Component {}
 - **Klasifikasi**: Serialisasi Wadah Island
 - **Pemicu**: Payload JSON serialisasi props awal pada wadah island (`data-props="..."`) melebihi batas 16.384 bytes (16 KB).
 - **Pesan**: `Ukuran data-props untuk komponen '{nama}' ({ukuran} bytes) melebihi batas maksimum 16 KB (KIL-213)`
-- **Rujukan**: [`spec/template.md` §11](file:///c:/Users/haidaryuum/source/kylat/spec/template.md), [`spec/protocol.schema.json`](file:///c:/Users/haidaryuum/source/kylat/spec/protocol.schema.json)
+- **Rujukan**: [`spec/template.md` §11](template.md), [`spec/protocol.schema.json`](protocol.schema.json)
 
 ##### Contoh Salah
 ```html
@@ -740,7 +740,7 @@ Gunakan paginasi atau panggil data via aksi server RPC bertahap:
 - **Klasifikasi**: Struktur Berkas Single-File
 - **Pemicu**: Bagian PHP pada berkas `*.kylat.php` memuat pernyataan selain `declare(strict_types=1);`, `namespace`, pernyataan `use`, dan satu definisi kelas komponen (misal: terdapat kode bebas/top-level statement, fungsi mandiri di luar kelas, atau lebih dari satu kelas).
 - **Pesan**: `Bagian PHP hanya boleh berisi 'declare', 'namespace', 'use', dan satu class komponen`
-- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md), [`docs/decisions/0004-single-file-component.md`](file:///c:/Users/haidaryuum/source/kylat/docs/decisions/0004-single-file-component.md)
+- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md), [`docs/decisions/0004-single-file-component.md`](../docs/decisions/0004-single-file-component.md)
 
 ##### Contoh Salah
 ```php
@@ -783,7 +783,7 @@ final class Counter extends Component
 - **Klasifikasi**: Struktur Berkas Single-File
 - **Pemicu**: Nama kelas komponen di dalam berkas `*.kylat.php` tidak identik dengan nama berkas dalam format PascalCase (misal: kelas `CounterComponent` di dalam berkas `Counter.kylat.php`, atau perbedaan huruf besar/kecil `counter`).
 - **Pesan**: `Nama class '{class}' harus sama dengan nama berkas '{file}' dalam PascalCase`
-- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md), [`docs/decisions/0004-single-file-component.md`](file:///c:/Users/haidaryuum/source/kylat/docs/decisions/0004-single-file-component.md)
+- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md), [`docs/decisions/0004-single-file-component.md`](../docs/decisions/0004-single-file-component.md)
 
 ##### Contoh Salah
 ```php
@@ -826,7 +826,7 @@ final class Counter extends Component
 - **Klasifikasi**: Struktur Berkas Single-File
 - **Pemicu**: Berkas komponen `*.kylat.php` tidak memiliki tag penutup PHP `?>` setelah definisi kelas komponen, atau memuat tag pembuka PHP (`<?php` atau `<?=`) di dalam bagian templat setelah tag penutup `?>`.
 - **Pesan**: `Tag penutup '?>' wajib ada setelah class, dan tidak boleh ada kode PHP setelahnya`
-- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md), [`docs/decisions/0004-single-file-component.md`](file:///c:/Users/haidaryuum/source/kylat/docs/decisions/0004-single-file-component.md)
+- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md), [`docs/decisions/0004-single-file-component.md`](../docs/decisions/0004-single-file-component.md)
 
 ##### Contoh Salah
 ```php
@@ -873,7 +873,7 @@ final class Counter extends Component
 - **Klasifikasi**: Keamanan Server
 - **Pemicu**: Kelas aksi server yang mengimplementasikan `ServerAction` dan menerima parameter pengenal/ID (misal `string $id`) tidak mendeklarasikan method `authorize()`.
 - **Pesan**: `Aksi server '{aksi}' yang menerima parameter ID wajib mengimplementasikan method authorize()`
-- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md)
+- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md)
 
 ##### Contoh Salah
 ```php
@@ -910,7 +910,7 @@ final class DeleteItemAction implements ServerAction
 - **Klasifikasi**: Integritas Kontrak RPC
 - **Pemicu**: Terdapat dua deklarasi aksi dengan nama yang identik di dalam kontrak RPC yang sama saat digabungkan.
 - **Pesan**: `Nama aksi server '{nama}' bertabrakan dengan aksi lain di dalam kontrak yang sama`
-- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md)
+- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md)
 
 ##### Contoh Salah
 Dua komponen terpisah mendaftarkan aksi bernama sama `cancel` ke dalam kontrak `OrderActions`.
@@ -927,7 +927,7 @@ Gunakan nama aksi yang unik dan deskriptif, misal `cancelOrder` dan `cancelItem`
 - **Klasifikasi**: Anggaran Performa (Performance Budget)
 - **Pemicu**: Ukuran chunk JavaScript hasil kompilasi komponen melebihi pagu anggaran yang disepakati (usulan standar: 8 KB gzipped).
 - **Pesan**: `Ukuran chunk kompilasi komponen '{nama}' ({ukuran} KB) melebihi anggaran maksimal ({batas} KB)`
-- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md)
+- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md)
 
 ##### Contoh Salah
 Satu komponen monolitik yang mengompilasi ratusan baris method client dan templat besar hingga menghasilkan output 14 KB gzip.

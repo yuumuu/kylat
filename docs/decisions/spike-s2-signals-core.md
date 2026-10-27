@@ -35,7 +35,7 @@ Pengujian diukur langsung terhadap berkas distribusi produksi resmi menggunakan 
 
 ## 3. Hasil Pengujian Kinerja (Benchmark Harness)
 
-Harness pengujian dijalankan pada Node.js v22 via [`bench/spikes/s2-signals/benchmark.mjs`](file:///c:/Users/haidaryuum/source/kylat/bench/spikes/s2-signals/benchmark.mjs):
+Harness pengujian dijalankan pada Node.js v22 via [`bench/spikes/s2-signals/benchmark.mjs`](../../bench/spikes/s2-signals/benchmark.mjs):
 
 ### A. Skenario Counter (100.000 Iterasi)
 - **`alien-signals`**: Menyelesaikan 100.000 mutasi dan eksekusi computed-effect sinkron penuh dalam **20.68 ms** (~4.835.000 operasi/detik).
@@ -61,7 +61,7 @@ Harness pengujian dijalankan pada Node.js v22 via [`bench/spikes/s2-signals/benc
 
 ## 5. Keputusan
 
-Spike S2 resmi **ditutup**. Proyek Kylat menetapkan **`alien-signals`** sebagai mesin inti reaktivitas sinyal resmi untuk paket [`packages/runtime`](file:///c:/Users/haidaryuum/source/kylat/packages/runtime):
+Spike S2 resmi **ditutup**. Proyek Kylat menetapkan **`alien-signals`** sebagai mesin inti reaktivitas sinyal resmi untuk paket [`packages/runtime`](../../packages/runtime):
 
 1. Status **KEP-07** diubah menjadi **PUTUSAN**.
 2. `@kylat/runtime` menambahkan dependensi resmi ke `alien-signals`.
