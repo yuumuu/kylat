@@ -8,7 +8,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 
 ---
 
-## Tabel Register Keputusan (KEP-01 – KEP-33)
+## Tabel Register Keputusan (KEP-01 – KEP-34)
 
 | ID | Topik & Ringkasan Keputusan | Status | Tenggat | Pemilik |
 |---|---|---|---|---|
@@ -45,6 +45,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 | **KEP-31** | **Renumber Kode Galat**: KIL-202 → KIL-102 (aturan bahasa), KIL-206 → KIL-103 (aturan bahasa), KIL-210 → KIL-311 (kontrak aksi). Dilakukan sebelum fase 0. | **PUTUSAN** | — | Pemilik proyek |
 | **KEP-32** | **Pemisahan Atribut `#[Uses]` dan `#[Child]`**: `#[Uses(CartActions::class)]` khusus kontrak aksi server; `#[Child(Counter::class)]` khusus izin render komponen anak `<x-counter>`. Quickstart counter tidak perlu `#[Child]`. | **PUTUSAN** | — | Pemilik proyek |
 | **KEP-33** | **Allowlist `array_values`**: `array_values` disahkan masuk allowlist fungsi PHP v0 tanpa syarat sementara, sebagai prasyarat teknis pemenuhan aturan `array_filter` (D5). | **PUTUSAN** | — | Pemilik proyek |
+| **KEP-34** | **Format Komponen Single-File (`*.kylat.php`)**: Menetapkan berkas tunggal `*.kylat.php` dengan bagian PHP (`<?php ... ?>`) dan bagian templat HTML/Kylat setelahnya ([`0004-single-file-component.md`](file:///c:/Users/haidaryuum/source/kylat/docs/decisions/0004-single-file-component.md)). | **PUTUSAN** | Akhir fase 0 | Pemilik proyek |
 
 ---
 
