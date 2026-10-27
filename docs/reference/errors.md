@@ -68,6 +68,10 @@ Aturan struktur berkas, hierarki komponen, dan konvensi:
 - [KIL-205 (Logika Kompleks di Templat)](file:///c:/Users/haidaryuum/source/kylat/spec/errors.md#kil-205): Pindahkan kalkulasi berat dari templat ke computed property.
 - [KIL-211 (Dependensi Sirkular)](file:///c:/Users/haidaryuum/source/kylat/spec/errors.md#kil-211): Deteksi dependensi melingkar antar-komponen anak.
 - [KIL-212 (Komponen Anak Tanpa #[Child])](file:///c:/Users/haidaryuum/source/kylat/spec/errors.md#kil-212): Tag `<x-nama>` wajib dideklarasikan di kelas induk dengan atribut `#[Child]`.
+- [KIL-213 (Serialisasi data-props Melebihi 16 KB)](file:///c:/Users/haidaryuum/source/kylat/spec/errors.md#kil-213): Payload awal wadah island melebihi pagu 16 KB.
+- [KIL-214 (Statement PHP di Luar Class Dilarang)](file:///c:/Users/haidaryuum/source/kylat/spec/errors.md#kil-214): Bagian PHP hanya boleh berisi `declare`, `namespace`, `use`, dan satu class.
+- [KIL-215 (Nama Class Tidak Cocok dengan Berkas)](file:///c:/Users/haidaryuum/source/kylat/spec/errors.md#kil-215): Nama class harus sama dengan nama berkas dalam PascalCase.
+- [KIL-216 (Tag Penutup ?> Wajib dan Tanpa PHP Setelahnya)](file:///c:/Users/haidaryuum/source/kylat/spec/errors.md#kil-216): Tag `?>` wajib ada setelah class, dan tidak boleh ada kode PHP setelahnya.
 
 ### 4. Keamanan & Kontrak Aksi (`3xx`)
 Aturan RPC dan otorisasi:
