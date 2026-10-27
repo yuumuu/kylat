@@ -1,7 +1,7 @@
 # spec/template.md — Sintaks templat Kylat v0
 
-Status: disahkan untuk v0 (revisi P0, 25 Oktober 2026). Berlaku untuk bagian HTML di berkas komponen .php.
-Menjawab temuan K-01 (templat dan direktif tidak dispesifikasikan). Direvisi 25 Oktober 2026 untuk E-02, E-03, E-04, dan pemisahan `#[Uses]`/`#[Child]`.
+Status: disahkan untuk v0 (revisi P0, 27 Oktober 2026). Berlaku untuk templat HTML (bagian kedua setelah `?>`) di berkas komponen single-file `*.kylat.php`.
+Menjawab temuan K-01 (templat dan direktif tidak dispesifikasikan) dan KEP-34 (format single-file *.kylat.php). Direvisi 27 Oktober 2026 untuk penegasan format single-file tanpa berkas .blade.php komponen.
 
 ## 1. Prinsip
 
@@ -146,13 +146,13 @@ Daftar ini menjadi sumber kebenaran untuk pemetaan Livewire di dokumen 5 bagian 
 
 Blade dan Kylat bekerja di dua lapisan berbeda.
 
-- **Layout dan halaman host** (di luar komponen) tetap ditulis dengan Blade. Adapter Laravel menyediakan direktif `@kylat('Nama', $props)`, yang hanya menghasilkan wadah island: `<div data-island="Nama" data-props="…">`.
-- **Isi komponen** (di dalam `.php` komponen) ditulis dengan sintaks Kylat. Blade tidak diproses di dalam komponen. Direktif Blade di dalam berkas komponen menghasilkan KIL-151.
-- Templat Kylat **tidak menggantikan** Blade di layout. Templat Kylat hanya menggantikan Blade di dalam komponen.
+- **Layout dan halaman host** (di luar komponen) tetap ditulis dengan Blade (`*.blade.php`). Adapter Laravel menyediakan direktif `@kylat('Nama', $props)`, yang hanya menghasilkan wadah island: `<div data-island="Nama" data-props="…">`.
+- **Isi komponen** berada di bagian kedua berkas tunggal `*.kylat.php` setelah tag penutup `?>`, ditulis dengan sintaks templat Kylat. Komponen Kylat **tidak menggunakan** berkas `.blade.php` terpisah (KEP-34). Blade tidak diproses di dalam komponen; direktif Blade di dalam berkas komponen menghasilkan KIL-151.
+- Templat Kylat **tidak menggantikan** Blade di layout aplikasi. Templat Kylat hanya menyusun markup di dalam komponen single-file `*.kylat.php`.
 
 Pembagian ini mengikat semua adapter. Adapter Laravel menyediakan `@kylat`; adapter lain menyediakan padanan dengan keluaran wadah yang sama.
 
-**Tidak ada tabrakan teknis dengan `<x-...>`.** Blade hanya memproses berkas layout; berkas komponen tidak pernah melewati Blade, jadi `<x-counter>` di dalam komponen tidak bisa ditafsirkan sebagai komponen Blade. Risikonya murni kebingungan manusia: developer bisa mengira `<x-counter>` di layout juga akan bekerja. Karena itu `<x-...>` hanya sah di dalam berkas komponen.
+**Tidak ada tabrakan teknis dengan `<x-...>`.** Blade hanya memproses berkas layout `*.blade.php`; berkas komponen `*.kylat.php` dikompilasi oleh toolchain Kylat dan tidak pernah melewati Blade, sehingga `<x-counter>` di dalam komponen tidak bisa ditafsirkan sebagai komponen Blade. Risikonya murni kebingungan manusia: developer bisa mengira `<x-counter>` di layout juga akan bekerja. Karena itu `<x-...>` hanya sah di dalam bagian templat berkas komponen `*.kylat.php`.
 
 ### Serialisasi `data-props`
 
