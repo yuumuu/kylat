@@ -735,6 +735,137 @@ Gunakan paginasi atau panggil data via aksi server RPC bertahap:
 
 ---
 
+#### KIL-214
+- **Nama**: Statement PHP di luar definisi class komponen dilarang
+- **Klasifikasi**: Struktur Berkas Single-File
+- **Pemicu**: Bagian PHP pada berkas `*.kylat.php` memuat pernyataan selain `declare(strict_types=1);`, `namespace`, pernyataan `use`, dan satu definisi kelas komponen (misal: terdapat kode bebas/top-level statement, fungsi mandiri di luar kelas, atau lebih dari satu kelas).
+- **Pesan**: `Bagian PHP hanya boleh berisi 'declare', 'namespace', 'use', dan satu class komponen`
+- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md), [`docs/decisions/0004-single-file-component.md`](file:///c:/Users/haidaryuum/source/kylat/docs/decisions/0004-single-file-component.md)
+
+##### Contoh Salah
+```php
+<?php
+declare(strict_types=1);
+namespace App\Kylat;
+
+use Kylat\Component;
+
+$initialCount = 10; // Statement PHP di luar class
+
+final class Counter extends Component
+{
+    public int $count = 0;
+}
+?>
+<div>{{ $count }}</div>
+```
+
+##### Contoh Benar
+```php
+<?php
+declare(strict_types=1);
+namespace App\Kylat;
+
+use Kylat\Component;
+
+final class Counter extends Component
+{
+    public int $count = 10;
+}
+?>
+<div>{{ $count }}</div>
+```
+
+---
+
+#### KIL-215
+- **Nama**: Nama class komponen tidak cocok dengan nama berkas
+- **Klasifikasi**: Struktur Berkas Single-File
+- **Pemicu**: Nama kelas komponen di dalam berkas `*.kylat.php` tidak identik dengan nama berkas dalam format PascalCase (misal: kelas `CounterComponent` di dalam berkas `Counter.kylat.php`, atau perbedaan huruf besar/kecil `counter`).
+- **Pesan**: `Nama class '{class}' harus sama dengan nama berkas '{file}' dalam PascalCase`
+- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md), [`docs/decisions/0004-single-file-component.md`](file:///c:/Users/haidaryuum/source/kylat/docs/decisions/0004-single-file-component.md)
+
+##### Contoh Salah
+```php
+// Di dalam berkas Counter.kylat.php
+<?php
+declare(strict_types=1);
+namespace App\Kylat;
+
+use Kylat\Component;
+
+final class CounterComponent extends Component // Nama class tidak cocok dengan nama berkas 'Counter'
+{
+    public int $count = 0;
+}
+?>
+<div>{{ $count }}</div>
+```
+
+##### Contoh Benar
+```php
+// Di dalam berkas Counter.kylat.php
+<?php
+declare(strict_types=1);
+namespace App\Kylat;
+
+use Kylat\Component;
+
+final class Counter extends Component
+{
+    public int $count = 0;
+}
+?>
+<div>{{ $count }}</div>
+```
+
+---
+
+#### KIL-216
+- **Nama**: Tag penutup PHP wajib ada dan tidak boleh ada kode PHP setelahnya
+- **Klasifikasi**: Struktur Berkas Single-File
+- **Pemicu**: Berkas komponen `*.kylat.php` tidak memiliki tag penutup PHP `?>` setelah definisi kelas komponen, atau memuat tag pembuka PHP (`<?php` atau `<?=`) di dalam bagian templat setelah tag penutup `?>`.
+- **Pesan**: `Tag penutup '?>' wajib ada setelah class, dan tidak boleh ada kode PHP setelahnya`
+- **Rujukan**: [`spec/compiler-rules.md`](file:///c:/Users/haidaryuum/source/kylat/spec/compiler-rules.md), [`docs/decisions/0004-single-file-component.md`](file:///c:/Users/haidaryuum/source/kylat/docs/decisions/0004-single-file-component.md)
+
+##### Contoh Salah
+```php
+// Contoh A: Tag penutup ?> tidak ada
+<?php
+declare(strict_types=1);
+namespace App\Kylat;
+use Kylat\Component;
+final class Counter extends Component {}
+<div>{{ $count }}</div>
+
+// Contoh B: Kode PHP diselundupkan setelah ?>
+<?php
+declare(strict_types=1);
+namespace App\Kylat;
+use Kylat\Component;
+final class Counter extends Component {}
+?>
+<div><?php echo $count; ?></div>
+```
+
+##### Contoh Benar
+```php
+<?php
+declare(strict_types=1);
+namespace App\Kylat;
+
+use Kylat\Component;
+
+final class Counter extends Component
+{
+    public int $count = 0;
+}
+?>
+<div>{{ $count }}</div>
+```
+
+---
+
 ### Rentang 3xx: Keamanan, Kontrak & Protokol RPC
 
 #### KIL-310
