@@ -40,6 +40,9 @@ Penetapan nama ini mengikat seluruh artefak proyek:
 
 ## 3. Bukti Pemeriksaan Registry & Kekayaan Intelektual
 
+> [!NOTE]
+> **Status Verifikasi**: Bukti dan temuan pemeriksaan registry serta pangkalan data di bawah ini merupakan pelaporan mandiri yang belum diverifikasi secara independen atau dilampiri arsip tangkapan layar/hasil pencarian mentah resmi.
+
 Pemeriksaan ketersediaan nama dan mitigasi risiko sengketa merek dagang dilakukan secara komprehensif pada **27 Oktober 2026**:
 
 ### A. NPM Registry (JavaScript Ecosystem)
@@ -99,4 +102,4 @@ Pemeriksaan ketersediaan nama dan mitigasi risiko sengketa merek dagang dilakuka
 
 1. Status **KEP-01** pada register keputusan arsitektur dinyatakan **PUTUSAN** (Tuntas).
 2. Seluruh dependensi, konfigurasi repositori, dokumentasi, paket build, dan namespace resmi menggunakan nama **Kylat**.
-3. Bukti verifikasi ini diarsipkan permanen sebagai bagian dari pemenuhan kriteria keluar (*exit gate*) Penutupan Fase 0.
+3. Catatan pemeriksaan nama ini diarsipkan sebagai pelaporan mandiri (belum diverifikasi independen) untuk pemenuhan kriteria keluar (*exit gate*) Penutupan Fase 0.

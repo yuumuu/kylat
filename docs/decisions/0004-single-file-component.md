@@ -3,9 +3,9 @@
 - **ID Keputusan**: KEP-34 (0004)
 - **Topik**: Format Berkas Komponen Tunggal (*Single-File Component*)
 - **Status**: Diusulkan (menunggu review pemilik proyek)
-- **Tanggal Keputusan**: 27 Oktober 2026
+- **Tanggal Usulan**: 27 Oktober 2026
 - **Pemilik**: Pemilik Proyek & Reviewer Teknis
-- **Target Tenggat**: Fase 0 (Tuntas)
+- **Target Tenggat**: Fase 0
 
 ---
 

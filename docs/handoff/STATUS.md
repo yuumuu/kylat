@@ -14,7 +14,7 @@ Diperbarui: 27 Oktober 2026. Sumber kebenaran: spec/ di repo. File ini hanya rin
 - Ruang lingkup v0: Mode A saja (backend PHP). Mode B ditunda.
 
 ## Keputusan yang sudah ditetapkan
-- Nama: Kylat. Paket npm dan Composer: kylat. Pemeriksaan registry dan DJKI dilaporkan aman. Bukti dilampirkan di docs/decisions/0001-nama-proyek.md: ya.
+- Nama: Kylat. Paket npm dan Composer: kylat. Pemeriksaan registry dan DJKI dilaporkan aman, namun bukti di docs/decisions/0001-nama-proyek.md merupakan pelaporan mandiri yang belum diverifikasi independen.
 - Format komponen single-file (*.kylat.php) diusulkan (ADR 0004), menunggu review.
 - Google Docs belum diperbarui ke v1.2. Dokumen repo (spec/, docs/) sudah diperbarui.
 - ID di wire dan di signature PHP: string.
@@ -60,7 +60,7 @@ Diperbarui: 27 Oktober 2026. Sumber kebenaran: spec/ di repo. File ini hanya rin
 13. **Keputusan terbuka**: Berkas lisensi repo (LICENSE), fungsi usort (mutasi by-reference vs bool), dan verifikasi sinkronisasi Google Docs v1.1 terhadap spec/.
 
 ## Roadmap Penutupan Fase 0 (Blocker Utama)
-1. **Bukti nama kylat** [SELESAI]: Bukti pemeriksaan nama di registry npm, Packagist, GitHub, DJKI, dan WIPO beserta tanggal 27 Okt 2026 dan tautan resmi telah diarsipkan di docs/decisions/0001-nama-proyek.md.
+1. **Bukti nama kylat**: Pemeriksaan nama di registry npm, Packagist, GitHub, DJKI, dan WIPO dicatat pada docs/decisions/0001-nama-proyek.md (pelaporan mandiri, belum diverifikasi independen).
 2. **Dokumentasi Spike S1 & S3** [SELESAI]: Keputusan tertulis untuk Spike S1 (Parser Tree-sitter WASM) dan Spike S3 (Interface kontrak aksi server) diarsipkan di docs/decisions/0002-spike-s1-tree-sitter-wasm.md dan docs/decisions/0003-spike-s3-server-action-contracts.md.
 3. **Golden CartCounter ditulis manual** [SELESAI]: Body CartCounter.expected.js telah ditulis ulang secara manual dari spesifikasi normatif (spec/template.md §4, spec/ir.md §3 & §8, spec/threat-model.md §3.1) tanpa menyalin output compiler, diverifikasi lulus uji sabotase, dan diajukan untuk review manusia.
 4. **Verifikasi Gate P1 sampai P12** [SELESAI]: Suite uji otomatis verifikasi fail-on-violation untuk Gate Prinsip P1–P12 ditulis dan diverifikasi di packages/compiler/test/principles-gate.test.mjs (12/12 lulus).
