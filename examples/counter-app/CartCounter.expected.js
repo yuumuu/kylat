@@ -1,11 +1,13 @@
 /**
  * Kontrak Golden Tertulis Manual: CartCounter.expected.js
- * Ditulis secara independen berdasarkan spesifikasi normatif (spec/template.md, spec/ir.md, spec/threat-model.md).
- * Tidak disalin dari output compiler.
+ * Ditulis secara independen berdasarkan spesifikasi normatif:
+ * - spec/template.md §4 (Atribut proteksi aksi server: aria-busy, data-pending, disabled)
+ * - spec/ir.md §3 & §8 (Inisialisasi sinyal state, props non-nullable, DOM codegen langsung)
+ * - spec/threat-model.md §3.1 (Mitigasi A4: Idempotensi mutasi dengan Idempotency-Key)
  * 
- * REVIEW DIHARAPKAN:
- * Mohon review manusia untuk memverifikasi kesesuaian struktur sinyal, binding atribut proteksi (aria-busy, data-pending, disabled),
- * serta penolakan null/undefined pada prop wajib non-nullable 'productId'.
+ * REVIEW MANUSIA DIPERLUKAN:
+ * File ini ditulis manual dan diverifikasi sebagai kontrak kebenaran (source of truth) untuk
+ * menguji output @kylat/compiler. Dilarang menyalin output compiler ke file ini.
  */
 
 import { bindAttr, bindText, callServerAction, createSignal, on } from '@kylat/runtime';

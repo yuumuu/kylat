@@ -44,7 +44,7 @@ Diperbarui: 27 Oktober 2026. Sumber kebenaran: spec/ di repo. File ini hanya rin
 3. **Jalur Cache tidak atomik (a2773c7, 4ab2875)**: Operasi pada driver Cache di complete, heartbeat, markFailed, dan release masih menggunakan get lalu put tanpa atomic compare-and-set atau distributed lock.
 4. **Batas waktu eksekusi aksi di PHP hanya CPU time (bc0fec9)**: set_time_limit hanya menghitung waktu CPU, bukan wall-clock time. Aksi yang terhambat I/O atau API eksternal tetap dapat melebihi lease 30 detik tanpa dihentikan prosesnya.
 5. **Heartbeat harus dipanggil manual (4ab2875)**: IdempotencyStore::heartbeat() saat ini harus dipanggil manual oleh pengembang; tanpa pemanggilan berkala, aksi berdurasi lama akan kehilangan lease dan ditolak saat complete().
-6. **Body golden CartCounter.expected.js belum ditulis ulang dari spesifikasi (ad5fe93)**: Commit ad5fe93 hanya mengubah komentar header (+7 −2) tanpa menulis ulang body JavaScript secara independen dari spesifikasi normatif.
+6. **Body golden CartCounter.expected.js menunggu review manusia**: Body telah ditulis ulang secara manual dari spesifikasi normatif (spec/template.md, spec/ir.md, spec/threat-model.md §3.1) dan lolos uji sabotase; menunggu pengesahan review manusia.
 
 ### Tinggi
 7. **Tes CI PHP menguji fungsi tiruan, bukan langkah CI sesungguhnya (4bf6ed5)**: Pengujian fail-closed saat ini menguji replika evaluatePhpVersion di PHP CLI; perlu diuji langsung pada environment CI dengan flag -d zend.assertions=1.
@@ -60,7 +60,7 @@ Diperbarui: 27 Oktober 2026. Sumber kebenaran: spec/ di repo. File ini hanya rin
 ## Roadmap Penutupan Fase 0 (Blocker Utama)
 1. **Bukti nama kylat** [SELESAI]: Bukti pemeriksaan nama di registry npm, Packagist, GitHub, DJKI, dan WIPO beserta tanggal 27 Okt 2026 dan tautan resmi telah diarsipkan di docs/decisions/0001-nama-proyek.md.
 2. **Dokumentasi Spike S1 & S3** [SELESAI]: Keputusan tertulis untuk Spike S1 (Parser Tree-sitter WASM) dan Spike S3 (Interface kontrak aksi server) diarsipkan di docs/decisions/0002-spike-s1-tree-sitter-wasm.md dan docs/decisions/0003-spike-s3-server-action-contracts.md.
-3. **Golden CartCounter ditulis manual**: Tulis ulang body CartCounter.expected.js secara manual dari spesifikasi normatif (spec/template.md, spec/ir.md), independen tanpa menyalin output compiler, dan ajukan review manusia.
+3. **Golden CartCounter ditulis manual** [SELESAI]: Body CartCounter.expected.js telah ditulis ulang secara manual dari spesifikasi normatif (spec/template.md §4, spec/ir.md §3 & §8, spec/threat-model.md §3.1) tanpa menyalin output compiler, diverifikasi lulus uji sabotase, dan diajukan untuk review manusia.
 4. **Verifikasi Gate P1 sampai P12**: Tulis uji otomatis (fail-on-violation test) di compiler dan runtime untuk masing-masing prinsip P1–P12.
 5. **Demo End-to-End**: Sediakan satu aplikasi contoh sederhana (counter dengan 1 mutasi) yang berjalan end-to-end dengan langkah reproduksi yang dapat diulang.
 
