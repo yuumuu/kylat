@@ -40,6 +40,7 @@ export const ERROR_MESSAGES = {
   KIL_110: "Tipe properti '{tipe}' atau pemanggilan di luar allowlist tidak diizinkan di client.",
   KIL_131: 'Tipe data wajib dideklarasikan secara eksplisit, atau visibilitas hilang.',
   KIL_151: 'Direktif templat tidak dikenal atau kesalahan struktur templat.',
+  KIL_152: "HTML mentah '{!! !!}' dilarang. Semua output wajib menggunakan interpolasi aman '{{ }}'",
   KIL_201: "Satu berkas hanya boleh mendefinisikan satu kelas komponen 'final' dengan nama berkas persis sama.",
   KIL_212: "Tag komponen '<x-{nama}>' wajib dideklarasikan di kelas induk menggunakan atribut #[Child({Kelas}::class)].",
   KIL_213: 'Ukuran data-props untuk komponen melebihi batas maksimum 16 KB (KIL-213).',

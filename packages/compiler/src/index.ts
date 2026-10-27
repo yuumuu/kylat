@@ -6,7 +6,8 @@
 import { initPhpParser, type ParserOptions } from './parser.js';
 import { analyzePhpComponent } from './analyzer.js';
 import { generateJavaScript } from './codegen.js';
-import type { Diagnostic } from './diagnostics.js';
+import { createDiagnostic, ERROR_MESSAGES, type Diagnostic } from './diagnostics.js';
+import { parseTemplate } from './template-parser.js';
 import type { ComponentIR } from './ir.js';
 
 export * from './diagnostics.js';
@@ -41,6 +42,31 @@ export async function compile(
   const tree = parser.parse(source);
 
   const { ir, diagnostics } = analyzePhpComponent(tree, filename);
+
+  if (options?.template) {
+    if (options.template.includes('{!!')) {
+      const idx = options.template.indexOf('{!!');
+      diagnostics.push(
+        createDiagnostic(
+          'KIL-152',
+          filename,
+          1,
+          idx + 1,
+          ERROR_MESSAGES.KIL_152
+        )
+      );
+    }
+    try {
+      parseTemplate(options.template);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const codeMatch = msg.match(/^(KIL-\d+):\s*(.*)$/);
+      const errCode = codeMatch && codeMatch[1] ? codeMatch[1] : 'KIL-151';
+      const errMsg = codeMatch && codeMatch[2] ? codeMatch[2] : msg;
+      diagnostics.push(createDiagnostic(errCode, filename, 1, 1, errMsg));
+    }
+  }
+
   const hasErrors = diagnostics.length > 0;
 
   if (!ir || hasErrors) {

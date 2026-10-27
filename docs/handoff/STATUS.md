@@ -61,7 +61,7 @@ Diperbarui: 27 Oktober 2026. Sumber kebenaran: spec/ di repo. File ini hanya rin
 1. **Bukti nama kylat** [SELESAI]: Bukti pemeriksaan nama di registry npm, Packagist, GitHub, DJKI, dan WIPO beserta tanggal 27 Okt 2026 dan tautan resmi telah diarsipkan di docs/decisions/0001-nama-proyek.md.
 2. **Dokumentasi Spike S1 & S3** [SELESAI]: Keputusan tertulis untuk Spike S1 (Parser Tree-sitter WASM) dan Spike S3 (Interface kontrak aksi server) diarsipkan di docs/decisions/0002-spike-s1-tree-sitter-wasm.md dan docs/decisions/0003-spike-s3-server-action-contracts.md.
 3. **Golden CartCounter ditulis manual** [SELESAI]: Body CartCounter.expected.js telah ditulis ulang secara manual dari spesifikasi normatif (spec/template.md §4, spec/ir.md §3 & §8, spec/threat-model.md §3.1) tanpa menyalin output compiler, diverifikasi lulus uji sabotase, dan diajukan untuk review manusia.
-4. **Verifikasi Gate P1 sampai P12**: Tulis uji otomatis (fail-on-violation test) di compiler dan runtime untuk masing-masing prinsip P1–P12.
+4. **Verifikasi Gate P1 sampai P12** [SELESAI]: Suite uji otomatis verifikasi fail-on-violation untuk Gate Prinsip P1–P12 ditulis dan diverifikasi di packages/compiler/test/principles-gate.test.mjs (12/12 lulus).
 5. **Demo End-to-End**: Sediakan satu aplikasi contoh sederhana (counter dengan 1 mutasi) yang berjalan end-to-end dengan langkah reproduksi yang dapat diulang.
 
 ## Aturan kerja
