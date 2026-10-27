@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kylat Counter Island — Demo End-to-End</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(22, 27, 46, 0.85);
+      --card-border: rgba(99, 102, 241, 0.2);
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent: #06b6d4;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --success: #10b981;
+      --danger: #ef4444;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.5rem 1rem;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.12) 0%, transparent 40%);
+    }
+
+    .container {
+      width: 100%;
+      max-width: 860px;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    header {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      align-self: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid var(--card-border);
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      background: linear-gradient(135deg, #ffffff 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 768px) {
+      .demo-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 1rem;
+      padding: 1.75rem;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #e2e8f0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 0.75rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 10px var(--success);
+    }
+
+    /* Island styling sesuai markup Counter.php */
+    #island-mount [data-kylat-component="Counter"] {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+    }
+
+    #island-mount h2 {
+      font-size: 1.25rem;
+      color: #f1f5f9;
+      font-weight: 700;
+    }
+
+    #island-mount .flex {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    #island-mount button {
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      border: none;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    #island-mount button:active {
+      transform: scale(0.97);
+    }
+
+    #island-mount button.bg-gray-200 {
+      background: #334155;
+      color: #f8fafc;
+      padding: 0.5rem 1.25rem;
+      font-size: 1.25rem;
+      border-radius: 0.5rem;
+    }
+    #island-mount button.bg-gray-200:hover {
+      background: #475569;
+    }
+
+    #island-mount button.bg-blue-600 {
+      background: var(--primary);
+      color: #ffffff;
+      padding: 0.5rem 1.25rem;
+      font-size: 1.25rem;
+      border-radius: 0.5rem;
+    }
+    #island-mount button.bg-blue-600:hover {
+      background: var(--primary-hover);
+    }
+
+    #island-mount span.font-mono {
+      font-family: var(--font-mono);
+      font-size: 2rem;
+      font-weight: 700;
+      min-width: 3.5rem;
+      text-align: center;
+      color: var(--accent);
+      background: rgba(6, 182, 212, 0.1);
+      border-radius: 0.5rem;
+      padding: 0.25rem 0.5rem;
+    }
+
+    #island-mount button.bg-green-600 {
+      width: 100%;
+      background: #059669;
+      color: #ffffff;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    #island-mount button.bg-green-600:hover {
+      background: #10b981;
+    }
+
+    /* Status tombol saat pending (P11 & spec/template.md §4) */
+    #island-mount button[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+      filter: grayscale(0.5);
+    }
+    #island-mount button[data-pending]::after {
+      content: " ⏳";
+    }
+
+    .log-terminal {
+      background: #050811;
+      border: 1px solid #1e293b;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      height: 320px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .log-line {
+      line-height: 1.4;
+      word-break: break-all;
+    }
+    .log-tag {
+      font-weight: 600;
+      padding: 0.1rem 0.3rem;
+      border-radius: 0.2rem;
+      margin-right: 0.4rem;
+    }
+    .log-tag.sig { background: rgba(99, 102, 241, 0.3); color: #818cf8; }
+    .log-tag.rpc { background: rgba(16, 185, 129, 0.3); color: #34d399; }
+    .log-tag.idemp { background: rgba(6, 182, 212, 0.3); color: #22d3ee; }
+    .log-tag.err { background: rgba(239, 68, 68, 0.3); color: #f87171; }
+
+    .meta-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 0.5rem;
+      padding: 0.85rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .meta-item {
+      display: flex;
+      justify-content: space-between;
+    }
+    .meta-val {
+      font-family: var(--font-mono);
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "@kylat/runtime": "/@kylat/runtime/index.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand-badge">⚡ Kylat Frontend Toolchain v0</div>
+      <h1>Demo End-to-End Counter Island</h1>
+      <p class="subtitle">PHP Component dikompilasi ke Fine-Grained Signals murni di Browser + Batch RPC Idempotensi</p>
+    </header>
+
+    <div class="demo-grid">
+      <!-- Kolom Kiri: Island Interaktif -->
+      <div class="card">
+        <div class="card-title">
+          <span>Pulau Reaktif (Island Component)</span>
+          <span class="status-dot" title="Island Aktif"></span>
+        </div>
+
+        <div id="island-mount">
+          <!-- Elemen DOM komponen Counter akan di-mount ke sini -->
+          <div style="color: var(--text-muted); font-size: 0.9rem;">Memuat modul komponen terkompilasi...</div>
+        </div>
+
+        <div class="meta-box">
+          <div class="meta-item">
+            <span>Komponen Sumber:</span>
+            <span class="meta-val">Counter.php + Blade</span>
+          </div>
+          <div class="meta-item">
+            <span>Reaktivitas:</span>
+            <span class="meta-val">Direct DOM Signals (Zero VDOM)</span>
+          </div>
+          <div class="meta-item">
+            <span>Server State:</span>
+            <span class="meta-val" id="server-state-val">0 (Sync: 0 kali)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kolom Kanan: Log Inspeksi Wire & Signal -->
+      <div class="card">
+        <div class="card-title">
+          <span>Log Sinyal & Wire RPC Protocol</span>
+          <button id="clear-log-btn" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.8rem;">Bersihkan Log</button>
+        </div>
+
+        <div class="log-terminal" id="log-box">
+          <div class="log-line"><span class="log-tag sig">INIT</span> Memulai runtime sinyal...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createCounter } from '/dist/Counter.js';
+
+    const logBox = document.getElementById('log-box');
+    const mountPoint = document.getElementById('island-mount');
+    const serverStateVal = document.getElementById('server-state-val');
+
+    function addLog(tag, type, message) {
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      const time = new Date().toLocaleTimeString();
+      line.innerHTML = `<span style="color: #64748b;">[${time}]</span> <span class="log-tag ${type}">${tag}</span> ${message}`;
+      logBox.appendChild(line);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    document.getElementById('clear-log-btn').addEventListener('click', () => {
+      logBox.innerHTML = '';
+      addLog('LOG', 'sig', 'Log dibersihkan.');
+    });
+
+    // Pasang interceptor fetch untuk menginspeksi panggilan RPC /_kylat/call
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const [resource, config] = args;
+      if (typeof resource === 'string' && resource.includes('/_kylat/call')) {
+        const idemp = config?.headers?.['Idempotency-Key'] || config?.headers?.['idempotency-key'] || 'NONE';
+        const body = config?.body ? JSON.parse(config.body) : {};
+        const action = body.calls?.[0]?.action || 'unknown';
+        const actionArgs = JSON.stringify(body.calls?.[0]?.args || {});
+
+        addLog('RPC WIRE', 'rpc', `POST /_kylat/call -> <b>${action}</b> (${actionArgs})`);
+        addLog('IDEMP KEY', 'idemp', `Idempotency-Key: <code>${idemp}</code>`);
+
+        const res = await originalFetch(...args);
+        const clone = res.clone();
+        try {
+          const data = await clone.json();
+          const isReplay = res.headers.get('X-Kylat-Idempotency-Replay') === 'true';
+          addLog('RPC RES', isReplay ? 'idemp' : 'rpc', `HTTP ${res.status}: ${JSON.stringify(data)} ${isReplay ? '(REPLAYED)' : ''}`);
+        } catch {
+          addLog('RPC RES', 'err', `HTTP ${res.status}`);
+        }
+        updateServerState();
+        return res;
+      }
+      return originalFetch(...args);
+    };
+
+    async function updateServerState() {
+      try {
+        const r = await originalFetch('/api/state');
+        const s = await r.json();
+        serverStateVal.textContent = `${s.serverSavedCount} (Sync: ${s.serverMutationCount} kali)`;
+      } catch {}
+    }
+
+    try {
+      mountPoint.innerHTML = '';
+      const counterElement = createCounter({ initialCount: 0 });
+      mountPoint.appendChild(counterElement);
+
+      addLog('MOUNT', 'sig', 'Komponen Counter berhasil di-mount ke DOM.');
+      updateServerState();
+
+      // Observer mutasi teks untuk mencatat sinyal lokal
+      const countSpan = counterElement.querySelector('span');
+      if (countSpan) {
+        const obs = new MutationObserver(() => {
+          addLog('SIGNAL', 'sig', `Sinyal $count bermutasi ke: <b>${countSpan.textContent}</b> (Direct DOM update)`);
+        });
+        obs.observe(countSpan, { childList: true, characterData: true, subtree: true });
+      }
+    } catch (err) {
+      mountPoint.innerHTML = `<div style="color: var(--danger);">Gagal me-mount: ${err.message}</div>`;
+      addLog('ERROR', 'err', err.message);
+    }
+  </script>
+</body>
+</html>

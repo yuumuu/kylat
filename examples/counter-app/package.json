@@ -1,0 +1,16 @@
+{
+  "name": "@kylat/example-counter-app",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Demo End-to-End Aplikasi Counter Sederhana dengan 1 Mutasi Server RPC",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node server.mjs",
+    "test": "node --test e2e.test.mjs"
+  },
+  "dependencies": {
+    "@kylat/compiler": "workspace:*",
+    "@kylat/runtime": "workspace:*"
+  }
+}

@@ -27,6 +27,15 @@ importers:
         specifier: ^1.9.17
         version: 1.9.17
 
+  examples/counter-app:
+    dependencies:
+      '@kylat/compiler':
+        specifier: workspace:*
+        version: link:../../packages/compiler
+      '@kylat/runtime':
+        specifier: workspace:*
+        version: link:../../packages/runtime
+
   packages/cli:
     dependencies:
       '@kylat/compiler':
