@@ -38,7 +38,7 @@ Dokumen ini mendefinisikan model ancaman keamanan (*threat model*), batas keperc
 
 1. **Bebas Eksekusi Dinamis**: Tanpa `eval()`, `new Function()`, `unserialize()`, atau refleksi dinamis dari input pengguna. Kompatibel penuh dengan CSP ketat tanpa `unsafe-eval`.
 2. **Default Deny**: Setiap aksi server wajib memiliki otorisasi eksplisit (`authorize()`). Aksi tanpa otorisasi ditolak saat build (`KIL-310`) atau saat runtime oleh backend adapter.
-3. **Idempotensi Mutasi**: Setiap mutasi RPC wajib menyertakan `Idempotency-Key` (TTL 24 jam) untuk mencegah klik ganda dan serangan *replay*.
+3. **Idempotensi Mutasi Atomik**: Setiap mutasi RPC wajib menyertakan `Idempotency-Key` (panjang 8–128 karakter, TTL 24 jam) yang dikelola secara atomik dalam satu transaksi database ACID bersama efek samping mutasi.
 4. **Isolasi Rahasia**: Tidak ada rahasia atau kredensial yang dikirim ke client. Hanya variabel dengan prefiks `PUBLIC_` yang diizinkan masuk ke bundel frontend.
 5. **DOM Kebal XSS**: DOM hanya dimanipulasi via API aman (`textContent`, `setAttribute` terfilter). Output HTML mentah dilarang (`KIL-152`); jika didukung di masa depan wajib melalui W3C Trusted Types.
 6. **Satu Temuan = Satu Uji Regresi**: Setiap temuan celah keamanan wajib menghasilkan minimal satu unit/e2e test regresi otomatis di CI.
@@ -54,7 +54,7 @@ Dokumen ini mendefinisikan model ancaman keamanan (*threat model*), batas keperc
 | **A1** | **Deserialisasi Tak Aman** (pola Livewire CVE-2025-54068, React2Shell) | RCE / Eksekusi kode arbitrary di server | Menggunakan format JSON polos dengan skema ketat (`spec/protocol.schema.json`). Dilarang keras menggunakan `unserialize()` PHP atau deserialisasi objek dinamis. |
 | **A2** | **Prototype Pollution** | Kerusakan state client atau bypass autentikasi | Memvalidasi dan menolak payload ber-key `__proto__`, `constructor`, atau `prototype`. Menggunakan `Map` untuk struktur data dinamis di runtime JS. |
 | **A3** | **Payload Bomb & ReDoS** | Denial of Service (DoS) pada parser server | Batas ukuran body 256 KB, kedalaman JSON max 16 tingkat, panjang string max 10.000 karakter, elemen array max 1.000. Regex dibatasi pada daftar teruji aman. |
-| **A4** | **Replay Attack & Klik Ganda** | Duplikasi transaksi atau mutasi ganda | Wajib `Idempotency-Key` pada semua mutasi `POST /_kylat/call` yang disimpan selama 24 jam terikat pada user dan aksi. |
+| **A4** | **Replay Attack & Klik Ganda** | Duplikasi transaksi atau mutasi ganda | Wajib `Idempotency-Key` pada semua mutasi. Mutasi wajib berjalan dalam transaksi database ACID bersama tabel `kylat_idempotency_keys` (lihat §3.1). |
 | **A5** | **Mass Assignment** (OWASP API3) | Modifikasi data ilegal melalui manipulasi atribut | Parameter aksi dipetakan ke DTO atau argumen bertipe ketat. Objek ORM/Model tidak pernah di-bind langsung dari input raw. |
 
 ### Kategori B: Otorisasi, Akses & Autentikasi
@@ -82,6 +82,62 @@ Dokumen ini mendefinisikan model ancaman keamanan (*threat model*), batas keperc
 | **D1** | **Web Cache Deception & Poisoning** | Data sensitif pengguna tersimpan di shared CDN cache | Endpoint personal/terautentikasi wajib mengirim header `Cache-Control: private, no-store`. Path endpoint baca tidak boleh berakhiran ekstensi statis (`.css`, `.js`). |
 | **D2** | **CORS Misconfiguration** | Pembocoran data API ke domain jahat | Allowlist Origin eksplisit pada adapter. Dilarang menggunakan wildcard `Access-Control-Allow-Origin: *` pada endpoint terautentikasi. |
 | **D3** | **SSRF** (OWASP API7) | Server backend mengakses infrastruktur internal | Endpoint RPC Kylat tidak menerima input URL mentah untuk di-fetch oleh backend tanpa validasi domain terpercaya. |
+
+---
+
+### 3.1 Spesifikasi Normatif Mitigasi A4: Idempotensi Mutasi Berbasis Transaksi Database (ACID)
+
+Untuk menjamin invarian **Zero Duplicate Execution** dan mencegah duplikasi saat terjadi kegagalan atau retry, seluruh mutasi backend Kylat wajib mengikuti kontrak atomisitas database berikut:
+
+#### 1. Prinsip Atomisitas Efek Samping & Catatan Idempotensi
+Mutasi state persistent dan catatan idempotensi wajib berada dalam **satu transaksi database ACID yang sama**. Efek samping dan status `completed` berhasil bersama-sama (*commit*), atau seluruhnya dibatalkan (*rollback*).
+
+#### 2. Skema Tabel Otoritatif (`kylat_idempotency_keys`)
+Adapter backend wajib menyediakan migrasi tabel database dengan skema minimal:
+- `key`: `VARCHAR(128)` — Kunci unik dari client (`Idempotency-Key`), **PRIMARY KEY**.
+- `action`: `VARCHAR(255)` — Nama aksi kontrak yang dipanggil.
+- `payload_hash`: `CHAR(64)` — Hash SHA-256 dari JSON payload aksi kanonikal.
+- `user_id`: `VARCHAR(255)`, NULLABLE — Identitas user untuk isolasi multi-tenant / kepemilikan.
+- `status`: `VARCHAR(20)` — Nilai: `'in_progress'`, `'completed'`.
+- `response`: `MEDIUMTEXT` / `JSON`, NULLABLE — Payload respons JSON yang dikembalikan saat status `'completed'`.
+- `created_at`: `TIMESTAMP` — Waktu pembuatan rekaman.
+- `updated_at`: `TIMESTAMP` — Waktu mutasi terakhir.
+- `expires_at`: `TIMESTAMP` — Batas kedaluwarsa record (default TTL: `created_at` + 24 jam / 86.400 detik).
+
+#### 3. Alur Transaksi Mutasi
+1. Buka transaksi database (`BEGIN TRANSACTION`).
+2. Masukkan baris baru ke tabel `kylat_idempotency_keys` dengan `key`, `action`, `payload_hash`, dan `status = 'in_progress'`.
+   - Jika kunci sudah ada (pelanggaran *unique constraint*):
+     - Lakukan kueri record yang ada.
+     - Jika `status === 'completed'`:
+       - Jika `payload_hash` berbeda: batalkan transaksi (`ROLLBACK`), tolak dengan `kylat:idempotency_conflict`.
+       - Jika `payload_hash` identik: batalkan transaksi (`ROLLBACK`), kembalikan respons tersimpan (`replay`).
+     - Jika `status === 'in_progress'`:
+       - Batalkan transaksi (`ROLLBACK`), tolak dengan `kylat:in_progress`.
+3. Jalankan handler mutasi aksi server.
+4. Perbarui baris pada `kylat_idempotency_keys` menjadi `status = 'completed'` beserta `response` hasil eksekusi.
+5. Komit transaksi database (`COMMIT`).
+
+#### 4. Rollback Semantik (Eliminasi `markFailed` pada Jalur Mutasi)
+- Jika terjadi exception atau kegagalan sebelum komit (pada langkah 3 atau 4), transaksi database di-rollback secara utuh (`ROLLBACK`).
+- Baris `in_progress` ikut terhapus/batal bersama efek samping mutasi.
+- **Dilarang memanggil `markFailed` pada jalur mutasi database**. Karena tidak ada data yang tercommit sebagian, client aman melakukan retry langsung tanpa risiko mutasi ganda dan tanpa terhalang lock sisa.
+
+#### 5. Eliminasi Kebutuhan Lease & Heartbeat pada Mutasi
+- Kegagalan proses worker, eksekusi melebihi batas waktu (timeout), atau crash koneksi jaringan akan secara otomatis memicu rollback oleh DBMS.
+- Oleh karena itu, mekanisme *lease time* 30 detik dan perpanjangan *heartbeat* manual **tidak digunakan** pada jalur mutasi database ACID.
+
+#### 6. Batasan Efek Samping Non-Database di v0
+- Transaksi database hanya dapat me-rollback mutasi pada level basis data.
+- Pada v0, **handler mutasi dilarang mengeksekusi efek samping non-database secara langsung** (misalnya pengiriman email langsung, panggilan webhook HTTP pihak ketiga, atau dispatch message queue eksternal).
+- Seluruh efek samping eksternal wajib dicatat ke tabel *Transactional Outbox* dalam transaksi database yang sama, untuk kemudian diproses oleh worker latar belakang terpisah.
+
+#### 7. Pemisahan Peran Store: Database vs Cache
+- **Database (`kylat_idempotency_keys`)**: Satu-satunya store otoritatif untuk aksi mutasi (`POST /_kylat/call` tanpa `read: true`).
+- **Cache Store (Redis / In-Memory)**: Hanya diizinkan untuk optimasi pemanggilan baca (`read: true`) atau rate limiting, dilarang menjadi store utama mutasi yang mengubah state persistent.
+
+#### 8. Batas Waktu Transaksi
+- Transaksi database mutasi wajib berdurasi singkat. Handler dilarang menahan transaksi terbuka untuk operasi komputasi berat atau pemanggilan I/O jaringan lambat.
 
 ---
 
