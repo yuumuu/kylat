@@ -25,7 +25,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 | **KEP-11** | **Batas Runtime & Konkurensi**: Nilai batas timeout dan konkurensi worker PHP-FPM. Diputuskan lewat spike S4 dan uji beban nyata. | `[TERBUKA]` | Akhir fase 3 | Reviewer teknis |
 | **KEP-12** | **Istilah Island vs Partial**: Istilah "island" digunakan secara definitif (`data-island`); istilah "partial" tidak dipakai di v0. | **PUTUSAN** | — | Pemilik proyek |
 | **KEP-13** | **Istilah Aksi vs Action**: Penyeragaman istilah di dokumentasi pengguna. | `[TERBUKA]` | Akhir fase 0 | Pemilik proyek |
-| **KEP-14** | **Lisensi & Tata Kelola Proyek**: Mengusulkan lisensi **Apache-2.0** untuk kode dengan berkas `NOTICE` dan DCO ([`0005-lisensi-apache-2.0.md`](0005-lisensi-apache-2.0.md)). | `Diusulkan` | Sebelum rilis 1.0 | Pemilik proyek |
+| **KEP-14** | **Lisensi & Tata Kelola Proyek**: Menetapkan lisensi **Apache-2.0** untuk kode dengan berkas `NOTICE` (hak cipta haidaryuum) dan DCO ([`0005-lisensi-apache-2.0.md`](0005-lisensi-apache-2.0.md)). | **PUTUSAN** | — | Pemilik proyek |
 | **KEP-15** | **Kebijakan Versi & Deprecations**: Skema SemVer dan jendela masa dukungan dependensi. | `[TERBUKA]` | Sebelum rilis 1.0 | Reviewer teknis |
 | **KEP-16** | **Implementasi Mode B**: Dukungan endpoint OpenAPI/JSON non-PHP. | `[TERBUKA]` (Bersyarat) | Setelah gerbang G1–G5 | Pemilik proyek |
 | **KEP-17** | **Format ID Wire & Signature**: ID dikirim sebagai string di wire protokol dan signature method PHP (K-03). Tidak ada integer untuk ID publik. | **PUTUSAN** | — | Pemilik proyek |
@@ -45,7 +45,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 | **KEP-31** | **Renumber Kode Galat**: KIL-202 → KIL-102 (aturan bahasa), KIL-206 → KIL-103 (aturan bahasa), KIL-210 → KIL-311 (kontrak aksi). Dilakukan sebelum fase 0. | **PUTUSAN** | — | Pemilik proyek |
 | **KEP-32** | **Pemisahan Atribut `#[Uses]` dan `#[Child]`**: `#[Uses(CartActions::class)]` khusus kontrak aksi server; `#[Child(Counter::class)]` khusus izin render komponen anak `<x-counter>`. Quickstart counter tidak perlu `#[Child]`. | **PUTUSAN** | — | Pemilik proyek |
 | **KEP-33** | **Allowlist `array_values`**: `array_values` disahkan masuk allowlist fungsi PHP v0 tanpa syarat sementara, sebagai prasyarat teknis pemenuhan aturan `array_filter` (D5). | **PUTUSAN** | — | Pemilik proyek |
-| **KEP-34** | **Format Komponen Single-File (`*.kylat.php`)**: Menetapkan berkas tunggal `*.kylat.php` dengan bagian PHP (`<?php ... ?>`) dan bagian templat HTML/Kylat setelahnya ([`0004-single-file-component.md`](0004-single-file-component.md)). | `Diusulkan` | Akhir fase 0 | Pemilik proyek |
+| **KEP-34** | **Format Komponen Single-File (`*.kylat.php`)**: Menetapkan berkas tunggal `*.kylat.php` dengan bagian PHP (`<?php ... ?>`) dan bagian templat HTML/Kylat setelahnya ([`0004-single-file-component.md`](0004-single-file-component.md)). | **PUTUSAN** | Akhir fase 0 | Pemilik proyek |
 
 ---
 

@@ -2,10 +2,11 @@
 
 - **ID Keputusan**: KEP-34 (0004)
 - **Topik**: Format Berkas Komponen Tunggal (*Single-File Component*)
-- **Status**: Diusulkan (menunggu review pemilik proyek)
+- **Status**: PUTUSAN (Disahkan sebagai format standar komponen Kylat)
 - **Tanggal Usulan**: 27 Oktober 2026
-- **Pemilik**: Pemilik Proyek & Reviewer Teknis
-- **Target Tenggat**: Fase 0
+- **Tanggal Keputusan**: 28 Oktober 2026
+- **Pemilik**: Pemilik Proyek (haidaryuum) & Reviewer Teknis
+- **Target Tenggat**: Fase 0 (Tuntas)
 
 ---
 
@@ -127,4 +128,4 @@ final class Counter extends Component
 - **Batasan & Aturan Penegakan Compiler**:
   - Ditegakkan aturan build baru pada `@kylat/compiler`: `KIL-214`, `KIL-215`, dan `KIL-216`.
 
-Pengesahan: belum. Menunggu review dan persetujuan tertulis dari pemilik proyek.
+Pengesahan: Disahkan secara tertulis oleh pemilik proyek (haidaryuum) pada 28 Oktober 2026.

@@ -15,9 +15,9 @@ Diperbarui: 27 Oktober 2026. Sumber kebenaran: spec/ di repo. File ini hanya rin
 
 ## Keputusan yang sudah ditetapkan
 - Nama: Kylat. Paket npm dan Composer: kylat. Pemeriksaan registry dan DJKI dilaporkan aman, namun bukti di docs/decisions/0001-nama-proyek.md merupakan pelaporan mandiri yang belum diverifikasi independen.
-- Format komponen single-file (*.kylat.php) diusulkan (ADR 0004), menunggu review.
+- Format komponen single-file (*.kylat.php) disahkan (ADR 0004 / KEP-34) sebagai format standar komponen Kylat.
 - Salinan repo sudah v1.2. Google Docs asli di Drive belum diperbarui.
-- Lisensi Apache-2.0 dan berkas NOTICE diusulkan (ADR 0005 / KEP-14), menunggu konfirmasi pemilik proyek.
+- Lisensi proyek disahkan Apache-2.0 dengan berkas NOTICE (hak cipta haidaryuum) dan DCO (ADR 0005 / KEP-14).
 - ID di wire dan di signature PHP: string.
 - Fungsi string: mb_* dan fungsi yang setara untuk UTF-8 valid. trim, strtolower, strtoupper dihapus dari v0.
 - Templat: sintaks mirip Blade, atribut on: dan bind:, <x-nama> untuk komposisi tanpa slot.
