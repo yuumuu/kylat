@@ -2,6 +2,7 @@
   "name": "@kylat/example-counter-app",
   "version": "0.0.1",
   "private": true,
+  "license": "Apache-2.0",
   "description": "Demo End-to-End Aplikasi Counter Sederhana dengan 1 Mutasi Server RPC",
   "type": "module",
   "scripts": {

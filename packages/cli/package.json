@@ -1,6 +1,7 @@
 {
   "name": "@kylat/cli",
   "version": "0.0.1",
+  "license": "Apache-2.0",
   "description": "Perkakas CLI pengembang untuk proyek Kylat",
   "type": "module",
   "bin": {

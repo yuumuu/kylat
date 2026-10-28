@@ -2,7 +2,7 @@
   "name": "kylat/laravel",
   "description": "Laravel adapter for Kylat frontend toolchain",
   "type": "library",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "require": {
     "php": "^8.2"
   },

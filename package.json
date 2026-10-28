@@ -2,6 +2,7 @@
   "name": "kylat",
   "version": "0.0.1",
   "private": true,
+  "license": "Apache-2.0",
   "description": "Toolchain frontend subset PHP bergaya Livewire yang dikompilasi ke JavaScript reaktivitas sinyal",
   "packageManager": "pnpm@11.17.0",
   "engines": {

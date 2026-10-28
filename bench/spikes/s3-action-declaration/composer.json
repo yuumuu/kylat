@@ -2,6 +2,7 @@
   "name": "kylat/spike-s3",
   "description": "Prototipe Spike S3 perbandingan deklarasi aksi server (Interface vs Atribut)",
   "type": "project",
+  "license": "Apache-2.0",
   "require": {
     "php": "^8.2"
   },

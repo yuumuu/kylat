@@ -1,6 +1,7 @@
 {
   "name": "@kylat/protocol",
   "version": "0.0.1",
+  "license": "Apache-2.0",
   "description": "Kontrak wire protokol RPC netral-bahasa antara client dan backend Kylat",
   "type": "module",
   "main": "./dist/index.js",

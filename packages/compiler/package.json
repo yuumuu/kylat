@@ -1,6 +1,7 @@
 {
   "name": "@kylat/compiler",
   "version": "0.0.1",
+  "license": "Apache-2.0",
   "description": "Compiler komponen subset PHP Kylat ke JavaScript signals",
   "type": "module",
   "main": "./dist/index.js",

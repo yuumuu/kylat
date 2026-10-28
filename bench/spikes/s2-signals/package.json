@@ -2,6 +2,7 @@
   "name": "kylat-spike-s2",
   "version": "0.0.1",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "dependencies": {
     "alien-signals": "^3.2.1",
