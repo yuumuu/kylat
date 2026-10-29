@@ -1,10 +1,10 @@
 # STATUS — Kylat
 
-Diperbarui: 27 Oktober 2026. Sumber kebenaran: spec/ di repo. File ini hanya ringkasan.
+Diperbarui: 29 Oktober 2026. Status Fase 0: Belum Tuntas. Sumber kebenaran: spec/ di repo. File ini hanya ringkasan.
 
 ## Repo
 - Publik: https://github.com/yuumuu/kylat, branch main
-- HEAD terakhir terverifikasi: 504782a
+- HEAD terakhir terverifikasi: 8e82029
 
 ## Hierarki normatif (dari spec/README.md)
 1. spec/php-subset.md
@@ -15,9 +15,9 @@ Diperbarui: 27 Oktober 2026. Sumber kebenaran: spec/ di repo. File ini hanya rin
 
 ## Keputusan yang sudah ditetapkan
 - Nama: Kylat. Paket npm dan Composer: kylat. Pemeriksaan registry dan DJKI dilaporkan aman, namun bukti di docs/decisions/0001-nama-proyek.md merupakan pelaporan mandiri yang belum diverifikasi independen.
-- Format komponen single-file (*.kylat.php) disahkan (ADR 0004 / KEP-34) sebagai format standar komponen Kylat.
+- Format komponen single-file (*.kylat.php) disahkan (ADR 0004 / KEP-34) sebagai format standar komponen Kylat. Target tenggat: Fase 0.
 - Salinan repo sudah v1.2. Google Docs asli di Drive belum diperbarui.
-- Lisensi proyek disahkan Apache-2.0 dengan berkas NOTICE (hak cipta haidaryuum) dan DCO (ADR 0005 / KEP-14).
+- Lisensi proyek disahkan Apache-2.0 dengan berkas NOTICE (hak cipta haidaryuum) dan DCO (ADR 0005 / KEP-14). Target tenggat: Fase 0.
 - ID di wire dan di signature PHP: string.
 - Fungsi string: mb_* dan fungsi yang setara untuk UTF-8 valid. trim, strtolower, strtoupper dihapus dari v0.
 - Templat: sintaks mirip Blade, atribut on: dan bind:, <x-nama> untuk komposisi tanpa slot.
@@ -26,6 +26,20 @@ Diperbarui: 27 Oktober 2026. Sumber kebenaran: spec/ di repo. File ini hanya rin
 - Mutasi wajib Idempotency-Key dengan panjang 8 sampai 128.
 - Batas versi PHP per cabang minor: 8.2.35, 8.3.36, 8.4.27, 8.5.12 (PHP2Shell, CVE-2026-109618 dan CVE-2026-109619). Sumber sekunder, perlu verifikasi ke php.net.
 - #[Uses] untuk kontrak aksi server, #[Child] untuk komponen anak.
+
+## Status Evaluasi Prinsip Non-Negosiasi (P1 – P12)
+- **P1 (Sintaks PHP standar tanpa DSL)**: **Terpenuhi**. Subset v0 diparsing via Tree-sitter WASM; construct di luar subset (misal keyword `global`) digagalkan dengan KIL-103.
+- **P2 (Satu konsep untuk memulai / counter)**: **Terpenuhi**. Quickstart counter (class komponen tunggal + templat) terkompilasi instan tanpa konfigurasi bundler rumit.
+- **P3 (Kesalahan build jelas + lokasi + rujukan)**: **Terpenuhi**. Katalog 32 kode galat di `spec/errors.md`; 12 kode compiler aktif memuat nomor baris, kolom, pesan deskriptif, dan tautan rujukan perbaikan.
+- **P4 (Tanpa virtual DOM, direct DOM binding)**: **Terpenuhi**. Runtime reaktivitas mengikat mutasi sinyal langsung ke node DOM riil via `bindText` dan `bindAttr` tanpa rekonsiliasi VDOM.
+- **P5 (Server otoritas data, mutasi via RPC)**: **Terpenuhi di compiler/protokol wire**, namun **belum tuntas di adapter**. Kompiler membelokkan mutasi ke `callServerAction` dengan Idempotency-Key, tetapi penjaminan transaksi database atomik pada adapter Laravel masih dalam perbaikan.
+- **P6 (Aman secara default, bebas eval, tolak raw HTML)**: **Terpenuhi**. Kompiler dan runtime bebas dari `eval`, `new Function`, dan `innerHTML`. Template dengan raw HTML `{!! !!}` digagalkan dengan KIL-152.
+- **P7 (Protokol RPC netral bahasa)**: **Terpenuhi**. Skema wire batch RPC divalidasi JSON Schema (`spec/protocol.schema.json`) mendukung BatchRequest, BatchResponse, dan RFC 9457 Problem Details.
+- **P8 (Waktu adopsi < 10 menit)**: **Belum diukur**. Merupakan metrik pantauan adopsi (KEP-21). Latensi kompilasi sub-detik tercapai (< 200 ms), namun uji coba ketercapaian waktu adopsi oleh developer pemula belum dilakukan di Fase 0.
+- **P9 (Dokumentasi sejalan dengan implementasi)**: **Terpenuhi untuk Counter**. Contoh `Counter.php` dan `CartCounter.php` diverifikasi 100% identik dengan golden contract di CI.
+- **P10 (Anggaran ukuran bundle runtime minimal & terukur)**: **Belum diukur**. Pagu unminified dev lolos (< 30 KB), namun batas anggaran resmi rilis produksi minified+gzipped belum diukur di harness benchmark resmi (dijadwalkan di Fase 1 dan Fase 2).
+- **P11 (Aksesibilitas bawaan WCAG 2.2 AA)**: **Terpenuhi**. Tombol pemicu mutasi server otomatis dipasangi `aria-busy`, `data-pending`, `disabled`, serta live region `aria-live="polite"` untuk pengumuman galat server.
+- **P12 (Kompatibel CSP ketat tanpa unsafe-eval)**: **Terpenuhi**. Reaktivitas signals dan binding DOM berjalan murni tanpa dependensi evaluasi kode dinamis.
 
 ## Yang sudah terbukti di repo
 - Parser template berbasis stack, bindText hanya di elemen daun.
@@ -58,14 +72,13 @@ Diperbarui: 27 Oktober 2026. Sumber kebenaran: spec/ di repo. File ini hanya rin
 ### Sedang
 11. **Batas total retry client runtime (~50 detik) belum terdokumentasi publik (ad247cb)**: Aksi yang memakan waktu melebihi batas retry client akan gagal di sisi frontend.
 12. **Fallback in-memory IdempotencyStore hanya aman untuk single-process**: Perlu dokumentasi publik bahwa multi-worker wajib menggunakan distributed cache/database.
-13. **Keputusan terbuka**: Berkas lisensi repo (LICENSE), fungsi usort (mutasi by-reference vs bool), dan verifikasi sinkronisasi Google Docs v1.1 terhadap spec/.
 
-## Roadmap Penutupan Fase 0 (Blocker Utama)
-1. **Bukti nama kylat**: Pemeriksaan nama di registry npm, Packagist, GitHub, DJKI, dan WIPO dicatat pada docs/decisions/0001-nama-proyek.md (pelaporan mandiri, belum diverifikasi independen).
-2. **Dokumentasi Spike S1 & S3** [SELESAI]: Keputusan tertulis untuk Spike S1 (Parser Tree-sitter WASM) dan Spike S3 (Interface kontrak aksi server) diarsipkan di docs/decisions/0002-spike-s1-tree-sitter-wasm.md dan docs/decisions/0003-spike-s3-server-action-contracts.md.
-3. **Golden CartCounter ditulis manual** [SELESAI]: Body CartCounter.expected.js telah ditulis ulang secara manual dari spesifikasi normatif (spec/template.md §4, spec/ir.md §3 & §8, spec/threat-model.md §3.1) tanpa menyalin output compiler, diverifikasi lulus uji sabotase, dan diajukan untuk review manusia.
-4. **Verifikasi Gate P1 sampai P12** [SELESAI]: Suite uji otomatis verifikasi fail-on-violation untuk Gate Prinsip P1–P12 ditulis dan diverifikasi di packages/compiler/test/principles-gate.test.mjs (12/12 lulus).
-5. **Demo End-to-End** [SELESAI]: Aplikasi contoh sederhana (counter dengan 1 mutasi saveCount) telah disediakan di examples/counter-app dengan server RPC idempotensi §3.1, antarmuka HTML interaktif, dan suite uji otomatis e2e (e2e.test.mjs).
+## Status Penutupan Fase 0: Belum Tuntas (Prasyarat Tertunda)
+1. **Bukti nama kylat**: Hasil pencarian nama di registry npm, Packagist, GitHub, DJKI, dan WIPO masih pelaporan mandiri dari pengembang di docs/decisions/0001-nama-proyek.md dan belum diverifikasi secara independen dengan tangkapan layar/nomor pendaftaran resmi.
+2. **Google Docs asli di Drive**: Dokumen asli di Google Drive belum dimutakhirkan ke v1.2 (hanya salinan lokal non-normatif di docs/google-docs/ yang sudah disinkronkan).
+3. **P8 dan P10 belum diukur secara formal**: Metrik waktu adopsi < 10 menit (P8) dan anggaran ukuran bundle minified+gzipped di benchmark harness resmi (P10) ditandai belum diukur pada Fase 0.
+4. **Review manusia CartCounter.expected.js**: Body golden file menunggu konfirmasi akhir reviewer manusia.
+5. **Jaminan transaksi atomik adapter Laravel**: Poin kritis 1–3 di atas harus diselesaikan di database nyata sebelum adapter dianggap siap produksi.
 
 ## Aturan kerja
 - Commit kecil, satu perubahan per commit.

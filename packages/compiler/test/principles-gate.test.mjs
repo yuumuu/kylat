@@ -215,7 +215,9 @@ final class SecureCart extends Component
   });
 
   // --- GATE P8 ---
-  it('P8: Waktu adopsi < 10 menit (metrik pantauan: latensi kompilasi cepat sub-detik)', async () => {
+  it('P8: Waktu dari instalasi hingga komponen pertama berjalan kurang dari 10 menit (metrik pantauan: belum diukur)', async () => {
+    // Sesuai KEP-21 dan Dok 1/Dok 6: P8 adalah target pantauan adopsi yang belum diukur lewat uji pengguna manusia di Fase 0.
+    // Di sini diuji latensi teknis kompilasi single-component yang menjadi prasyarat kecepatan build sub-detik (< 200 ms).
     const counterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.php');
     const counterBladePath = path.resolve(__dirname, '../../../examples/counter-app/counter.blade.php');
     const phpSource = fs.readFileSync(counterPhpPath, 'utf-8');
@@ -254,7 +256,9 @@ final class SecureCart extends Component
   });
 
   // --- GATE P10 ---
-  it('P10: Anggaran ukuran bundle JavaScript runtime minimal dan terukur ketat', () => {
+  it('P10: Anggaran ukuran bundle JavaScript runtime minimal dan terukur ketat (metrik pantauan: belum diukur)', () => {
+    // Sesuai Dok 4 §7 dan Dok 6: Anggaran ukuran rilis produksi minified+gzipped belum diukur di harness benchmark resmi pada Fase 0 (dijadwalkan di Fase 1 dan Fase 2).
+    // Di sini diuji pagu kasar unminified build pada lingkungan pengembangan sebagai batas atas awal.
     const runtimeDistDir = path.resolve(__dirname, '../../runtime/dist');
     assert.ok(fs.existsSync(runtimeDistDir), 'Distributable runtime harus telah dibangun');
 

@@ -6,7 +6,7 @@
 - **Tanggal Usulan**: 27 Oktober 2026
 - **Tanggal Keputusan**: 28 Oktober 2026
 - **Pemilik**: Pemilik Proyek (haidaryuum) & Reviewer Teknis
-- **Target Tenggat**: Fase 0 (Tuntas)
+- **Target Tenggat**: Fase 0
 
 ---
 

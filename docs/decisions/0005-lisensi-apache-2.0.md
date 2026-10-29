@@ -5,6 +5,7 @@
 - **Tanggal Keputusan**: 28 Oktober 2026
 - **Pengusul**: Rekomendasi perancangan (Claude / Agent)
 - **Pemilik Keputusan**: Pemilik Proyek (haidaryuum)
+- **Target Tenggat**: Fase 0
 - **Dokumen Terkait**: [KEP-14](README.md), [`LICENSE`](../../LICENSE), [`NOTICE`](../../NOTICE)
 
 ---
