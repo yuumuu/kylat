@@ -2,9 +2,9 @@
 
 - **ID Keputusan**: KEP-34 (0004)
 - **Topik**: Format Berkas Komponen Tunggal (*Single-File Component*)
-- **Status**: PUTUSAN (disetujui pemilik proyek, tanggal: 28 Oktober 2026)
+- **Status**: PUTUSAN (disetujui pemilik proyek, tanggal: 30 Oktober 2026)
 - **Tanggal Usulan**: 27 Oktober 2026
-- **Tanggal Keputusan**: 28 Oktober 2026
+- **Tanggal Keputusan**: 30 Oktober 2026
 - **Pemilik**: Pemilik Proyek (haidaryuum) & Reviewer Teknis
 - **Target Tenggat**: Fase 0
 
@@ -128,4 +128,4 @@ final class Counter extends Component
 - **Batasan & Aturan Penegakan Compiler**:
   - Ditegakkan aturan build baru pada `@kylat/compiler`: `KIL-214`, `KIL-215`, dan `KIL-216`.
 
-Pengesahan: PUTUSAN (disetujui pemilik proyek, tanggal: 28 Oktober 2026).
+Pengesahan: PUTUSAN (disetujui pemilik proyek, tanggal: 30 Oktober 2026).

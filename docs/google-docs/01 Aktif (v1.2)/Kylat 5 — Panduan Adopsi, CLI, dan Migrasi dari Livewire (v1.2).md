@@ -1,4 +1,4 @@
-VERSI 1.1 (revisi P0, 25 Oktober 2026). Perubahan dari v1.0: pemetaan Livewire (bagian 8) harus dicek ulang ke dokumentasi Livewire 4 terbaru sebelum dipublikasikan.
+VERSI 1.2 — 30 Oktober 2026. Perubahan dari v1.1: pembaruan format komponen kylat make:component ke *.kylat.php dan penegasan status [TERBUKA] untuk detail kylat dev di §6.
 
 Kylat 5 — Panduan Adopsi, CLI, dan Migrasi dari Livewire
 
@@ -94,13 +94,14 @@ Untuk Laravel: composer require kylat/laravel, lalu php artisan kylat:install. P
 
 [PUTUSAN] CLI utama dipasang lewat npm dengan Node 20 ke atas. Mesin frontend tidak perlu PHP.
 
-Alur kerja "kylat dev":
-1. Menjalankan server pengembangan lokal (berbasis Vite dev server) dengan plugin Kylat.
-2. Melakukan watch terhadap seluruh berkas *.kylat.php di src/components/ dan src/pages/.
-3. Kompilasi in-memory on-the-fly menjadi modul JavaScript signals reaktif.
-4. Hot Module Replacement (HMR) memperbarui templat dan logika client secara langsung tanpa reload halaman.
-5. Pengecekan KIL-xxx fail-fast di terminal secara real-time saat terjadi kesalahan sintaks atau pelanggaran subset PHP.
-6. Proxy rute RPC /_kylat/call ke server backend (misal Laravel pada localhost:8000) atau mock responder lokal.
+Alur kerja "kylat dev" [TERBUKA]:
+Catatan: spesifikasi CLI normatif (`spec/cli.md`) belum ada di repo, dijadwalkan di Fase 4. Hanya poin yang sudah tercatat di repo yang boleh ditulis sebagai fakta. Lainnya tetap `[TERBUKA]`:
+1. Menjalankan server pengembangan lokal (berbasis Vite dev server) dengan plugin Kylat `[TERBUKA]`.
+2. Melakukan watch terhadap seluruh berkas *.kylat.php di src/components/ dan src/pages/ `[TERBUKA]`.
+3. Kompilasi in-memory on-the-fly menjadi modul JavaScript signals reaktif `[TERBUKA]`.
+4. Hot Module Replacement (HMR) memperbarui templat dan logika client secara langsung tanpa reload halaman `[TERBUKA]`.
+5. Pengecekan KIL-xxx fail-fast di terminal secara real-time saat terjadi kesalahan sintaks atau pelanggaran subset PHP `[TERBUKA]`.
+6. Proxy rute RPC /_kylat/call ke server backend (misal Laravel pada localhost:8000) atau mock responder lokal `[TERBUKA]`.
 
 [TERBUKA] Apakah ada binary tunggal lintas platform, dan apakah create juga menawarkan template monolit Laravel. Keduanya diputuskan di fase 0, bersama keputusan parser (dokumen 2).
 

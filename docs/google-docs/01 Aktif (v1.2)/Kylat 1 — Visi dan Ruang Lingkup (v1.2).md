@@ -1,4 +1,4 @@
-VERSI 1.2 (28 Oktober 2026). Perubahan dari v1.1: integrasi paradigma komponen single-file (*.kylat.php) sesuai usulan ADR 0004 / KEP-34.
+VERSI 1.2 — 30 Oktober 2026. Perubahan dari v1.1: integrasi paradigma komponen single-file (*.kylat.php) sebagai format standar komponen sesuai ADR 0004 / KEP-34.
 
 Kylat 1 — Visi dan Ruang Lingkup
 
@@ -6,7 +6,7 @@ Status: draf konsolidasi v1.0 (dari dokumen perancangan v0.6). Bahasa: Indonesia
 
 1. Ringkasan
 
-Kylat adalah toolchain frontend yang memungkinkan komponen ditulis dalam format single-file (*.kylat.php) dengan sintaks PHP bergaya Livewire dan templat HTML dalam satu berkas, lalu dikompilasi menjadi JavaScript dengan reaktivitas fine-grained (signals) yang berjalan di browser. Server hanya dipanggil untuk hal yang memang membutuhkan server (data, penyimpanan, otorisasi) melalui protokol RPC yang netral bahasa.
+Kylat adalah toolchain frontend yang memungkinkan komponen ditulis dalam satu berkas `*.kylat.php`. Bagian PHP berisi class komponen, bagian setelah `?>` berisi templat HTML. Format ini adalah standar komponen (ADR 0004). Komponen dikompilasi menjadi JavaScript dengan reaktivitas fine-grained (signals) yang berjalan di browser. Server hanya dipanggil untuk hal yang memang membutuhkan server (data, penyimpanan, otorisasi) melalui protokol RPC yang netral bahasa.
 
 Hasilnya adalah frontend yang bisa berdiri sendiri (di-host statis di CDN) dan berbicara dengan backend mana pun yang mengimplementasikan kontrak protokol: Laravel, Symfony, Go, Node, atau lainnya.
 
@@ -59,6 +59,8 @@ Detail ada di dokumen 5.
 7. Glosarium ringkas
 
 Komponen: satu berkas single-file (*.kylat.php) yang menyatukan logika kelas PHP (state, computed, aksi #[Client]/#[Server]) dan templat HTML reaktif dalam satu tempat tanpa pemisahan berkas terpisah.
+
+SFC (single-file component): berkas `*.kylat.php` yang menyatukan logika class PHP dan templat HTML (standar komponen Kylat sesuai ADR 0004).
 
 Prop: data dari server saat komponen dimuat (#[Prop]). Dianggap publik.
 

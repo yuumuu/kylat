@@ -1,4 +1,4 @@
-VERSI 1.1 (revisi P0, 25 Oktober 2026). Perubahan dari v1.0: kode galat merujuk ke dokumen 2 bagian 10. Tidak ada perubahan keputusan arsitektur.
+VERSI 1.2 — 30 Oktober 2026. Perubahan dari v1.1: pembaruan struktur aplikasi topologi terpisah dan monolit di §10 serta penegakan anatomi berkas *.kylat.php sesuai KIL-102, KIL-201, KIL-214, KIL-215, KIL-216.
 
 Kylat 4 — Arsitektur, Runtime, dan Struktur Repo
 
@@ -176,17 +176,26 @@ Aturan: setiap package punya README. Impor lintas package hanya lewat API publik
 
 10. Struktur aplikasi hasil kylat create
 
+```
+  my-app/
+    resources/kylat/Counter.kylat.php
+    app/Kylat/Actions/AddToCart.php
+```
+
 Topologi terpisah (direkomendasikan):
+- `my-app-frontend/`: repo FE (Node saja, tanpa PHP), memuat komponen `*.kylat.php` di `src/components/`, konfigurasi `kylat.config.json`, dan kontrak yang dihasilkan di `contract/`.
+- `my-app-backend/`: repo BE (Laravel/PHP), memuat aksi di `app/Kylat/Actions/` (satu aksi satu kelas, mis. `AddToCart.php`), policies di `app/Kylat/Policies/`, dan config di `config/kylat.php`.
 
-my-app-frontend/                 repo FE, Node saja, tanpa PHP terpasang  kylat.config.json              divalidasi JSON Schema  src/components/                satu komponen single-file per berkas, mis. Counter.kylat.php (kelas PHP + templat HTML)  src/pages/                     rute halaman mengikuti struktur folder (*.kylat.php)  src/shared/                    fungsi #[Shared] murni  contract/                      DIHASILKAN dan dikomit: schema.json, types.d.ts  tests/  public/my-app-backend/                  repo BE, Laravel  app/Kylat/Actions/             satu aksi satu kelas, mis. AddToCart.php  app/Kylat/Policies/  app/Kylat/Data/                DTO masuk dan keluar  config/kylat.php  tests/Kylat/
+Topologi monolit: komponen ditaruh di `resources/kylat/` (mis. `resources/kylat/Counter.kylat.php`), aksi backend di `app/Kylat/Actions/AddToCart.php`, dengan plugin Vite terintegrasi.
 
-Topologi monolit: resources/kylat/components (*.kylat.php), app/Kylat/Actions, dan plugin Vite dalam satu proyek Laravel.
-
-Struktur anatomi berkas *.kylat.php (ADR 0004):
-- Baris 1: <?php declare(strict_types=1); (KIL-215)
-- Class komponen: final class Counter extends Component (KIL-201, KIL-216)
-- Tag penutup: ?> setelah class (KIL-214)
-- Templat HTML: tepat satu elemen root pembungkus di bawah ?> tanpa tag PHP tambahan (KIL-214, KIL-216)
+Struktur anatomi berkas `*.kylat.php` (ADR 0004):
+- Tag pembuka PHP: `<?php`
+- Deklarasi strict types wajib: `declare(strict_types=1);` (KIL-102)
+- Bagian PHP hanya boleh berisi `declare`, `namespace`, pernyataan `use`, dan tepat satu definisi kelas komponen (KIL-214)
+- Nama class komponen wajib persis sama dengan nama berkas dalam PascalCase (KIL-215)
+- Class komponen wajib final: `final class Counter extends Component` (KIL-201)
+- Tag penutup PHP: `?>` wajib ada setelah class, dan tidak boleh ada kode PHP setelahnya (KIL-216)
+- Templat HTML: tepat satu elemen root pembungkus di bawah `?>` tanpa tag PHP tambahan (KIL-216)
 
 11. Konvensi kode
 

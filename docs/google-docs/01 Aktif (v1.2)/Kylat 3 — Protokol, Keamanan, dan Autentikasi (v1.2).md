@@ -1,4 +1,4 @@
-VERSI 1.1 (revisi P0, 25 Oktober 2026). Perubahan dari v1.0: sumber insiden (Livewire, React2Shell, PHP2Shell, Shai-Hulud) dan status Trusted Types bersumber sekunder dan harus diverifikasi ke advisory resmi sebelum rilis 1.0.
+VERSI 1.2 — 30 Oktober 2026. Perubahan dari v1.1: penambahan 8 aturan normatif idempotensi mutasi pada §11.1 (kontrak protokol) sesuai spec/threat-model.md §3.1 tanpa detail database.
 
 Kylat 3 — Protokol, Keamanan, dan Autentikasi
 
@@ -216,7 +216,7 @@ A4
 
 Replay dan klik ganda
 
-Idempotency key
+Idempotency key (wajib 8–128 karakter, 8 aturan normatif di §11.1)
 
 A5
 
@@ -327,6 +327,19 @@ Prompt injection pada agen AI pengembang
 Agen tidak menjalankan instruksi dari data. Perubahan keamanan wajib review manusia
 
 Katalog lengkap (sekitar 40 ancaman) ada di dokumen perancangan bagian 19.
+
+11.1 Idempotensi mutasi (kontrak protokol)
+
+Kontrak ini normatif untuk semua implementasi Kylat. Cara penjaminannya ditentukan oleh adapter dan didokumentasikan sebagai referensi non-normatif.
+
+1. Setiap panggilan mutasi wajib membawa `Idempotency-Key` dengan panjang 8 sampai 128 karakter.
+2. Identitas idempotensi adalah pasangan (identitas pemanggil, key). Key yang sama dari pemanggil lain tidak boleh berbagi hasil.
+3. Hash permintaan adalah SHA-256 atas representasi JSON kanonikal (RFC 8785) dari `action` dan `args`. Key yang sama dengan hash berbeda ditolak dengan `kylat:idempotency_conflict`.
+4. Permintaan ulang dengan key dan hash yang sama, untuk mutasi yang sudah berhasil, mengembalikan hasil yang sama tanpa mengeksekusi ulang.
+5. Adapter wajib menjamin bahwa efek samping mutasi terjadi paling banyak sekali untuk satu pasangan identitas dan key, termasuk saat terjadi crash atau retry paralel.
+6. Hasil yang dikembalikan tidak boleh berisi rahasia atau kredensial.
+7. Key berlaku 24 jam. Setelah itu boleh dipakai ulang, dan klien tidak boleh mengirim key yang lebih tua dari itu.
+8. Hasil mutasi yang tidak dapat dijamin tersimpan untuk replay tidak boleh dianggap berhasil. Dalam kondisi itu, adapter wajib membatalkan mutasi dan membalas galat.
 
 12. Pelajaran dari insiden
 

@@ -1,4 +1,4 @@
-VERSI 1.2 (28 Oktober 2026). Perubahan dari v1.1: penyesuaian versi acuan konsolidasi v1.2 dan rujukan aturan komponen single-file (*.kylat.php).
+VERSI 1.2 — 30 Oktober 2026. Perubahan dari v1.1: penambahan kode galat KIL-214, KIL-215, KIL-216 untuk struktur berkas komponen single-file (*.kylat.php).
 
 Kylat 2 — Spesifikasi Bahasa
 
@@ -45,6 +45,18 @@ I/O, database, filesystem, atau sesi di #[Client]
 KIL-130
 
 Array tanpa tipe jelas (list vs map ambigu)
+
+KIL-214
+
+Statement PHP di luar definisi class komponen dilarang (hanya declare, namespace, use, dan satu class)
+
+KIL-215
+
+Nama class komponen tidak cocok dengan nama berkas (wajib PascalCase)
+
+KIL-216
+
+Tag penutup PHP `?>` wajib ada dan tidak boleh ada kode PHP setelahnya
 
 —
 
@@ -136,7 +148,7 @@ KIL-120  Method #[Client] tidak boleh mengakses database  --> src/components/Car
 
 KIL-1xx: bahasa dan subset PHP
 
-KIL-2xx: konvensi dan struktur proyek
+KIL-2xx: konvensi dan struktur proyek (termasuk aturan struktur berkas single-file KIL-214, KIL-215, KIL-216; rujukan normatif di spec/compiler-rules.md dan spec/errors.md)
 
 KIL-3xx: keamanan dan kontrak aksi
 

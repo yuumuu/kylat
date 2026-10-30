@@ -1,4 +1,4 @@
-VERSI 1.2 (28 Oktober 2026). Perubahan dari v1.1: penyesuaian versi acuan konsolidasi v1.2.
+VERSI 1.2 — 30 Oktober 2026. Perubahan dari v1.1: pengesahan KEP-34 dan KEP-14 per 30 Oktober 2026 serta penambahan status Fase 0 belum tuntas dan daftar blocker.
 
 Kylat 6 — Roadmap, Keputusan, Risiko, dan Gerbang
 
@@ -26,7 +26,12 @@ Selesai bila
 
 Spesifikasi PHP subset v0, IR, protokol, repo, CI, harness benchmark, spec/template.md, spike S1 dan S3, threat model, verifikasi nama
 
-Spike S1 dan S3 lolos kriteria. Spesifikasi dan template.md ditinjau reviewer teknis. Nama terverifikasi dan bukti dilampirkan
+Spike S1 dan S3 lolos kriteria. Spesifikasi dan template.md ditinjau reviewer teknis. Nama terverifikasi dan bukti dilampirkan. Status Fase 0: belum tuntas. Blocker penutupan Fase 0 (dari docs/handoff/STATUS.md):
+1. Bukti nama kylat: Hasil pencarian nama di registry npm, Packagist, GitHub, DJKI, dan WIPO masih pelaporan mandiri dan belum diverifikasi independen dengan bukti resmi.
+2. Google Docs asli di Drive: Dokumen asli di Google Drive belum dimutakhirkan ke v1.2 (hanya salinan lokal non-normatif di repo yang sudah disinkronkan).
+3. Gate P8 dan P10 belum diukur (di-skip): Metrik waktu adopsi < 10 menit (P8) dan anggaran ukuran bundle minified+gzipped di benchmark harness resmi (P10) ditandai belum diukur / di-skip pada Fase 0.
+4. Review manusia CartCounter.expected.js: Body golden file menunggu konfirmasi akhir reviewer manusia.
+5. Jaminan transaksi atomik adapter Laravel: Masalah kritis pada IdempotencyStore dan adapter harus diselesaikan di database nyata sebelum adapter dianggap siap produksi.
 
 1. Runtime
 
@@ -214,9 +219,9 @@ Akhir fase 0
 
 Pemilik proyek
 
-Lisensi dan tata kelola
+Lisensi dan tata kelola (KEP-14)
 
-TERBUKA
+PUTUSAN, disahkan 30 Oktober 2026 (Apache-2.0, NOTICE haidaryuum, DCO)
 
 Sebelum rilis 1.0
 
@@ -385,5 +390,9 @@ PUTUSAN Model kegagalan batch: kegagalan per panggilan di dalam hasil HTTP 200, 
 PUTUSAN Target 10 menit: target pantauan, bukan gerbang rilis 1.0 (P8).
 
 PUTUSAN Exit fase 0: spike S1 dan S3 (K-05). S2 di fase 1. S4 dan S5 di fase 3.
+
+PUTUSAN KEP-34 (Format Komponen Single-File `*.kylat.php`): PUTUSAN, disahkan 30 Oktober 2026 (ADR 0004).
+
+PUTUSAN KEP-14 (Lisensi & Tata Kelola Proyek Apache-2.0): PUTUSAN, disahkan 30 Oktober 2026 (ADR 0005).
 
 Penomoran: prinsip dirujuk sebagai P1 sampai P12 di semua dokumen (K-06).
