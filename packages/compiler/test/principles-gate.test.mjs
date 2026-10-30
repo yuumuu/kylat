@@ -19,7 +19,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 describe('Kylat Architectural Gates - Verifikasi Prinsip Non-Negosiasi P1 s/d P12', () => {
 
   // --- GATE P1 ---
-  it('P1: Sintaks PHP standar yang dikenal developer, tanpa DSL atau ekstensi compiler aneh', async () => {
+  it('P1 [perilaku]: Sintaks PHP standar yang dikenal developer, tanpa DSL atau ekstensi compiler yang aneh', async () => {
     // 1. PHP standar valid wajib lulus kompilasi
     const standardPhp = `<?php
 declare(strict_types=1);
@@ -65,7 +65,7 @@ final class BadGlobal extends Component {
   });
 
   // --- GATE P2 ---
-  it('P2: Satu konsep untuk memulai (quick start counter langsung jalan tanpa konfigurasi rumit)', async () => {
+  it('P2 [struktur]: Satu konsep untuk memulai (quick start counter langsung jalan tanpa konfigurasi rumit)', async () => {
     // Quickstart minimal: class tunggal + template sederhana langsung jalan tanpa config file atau atribut #[Child]
     const minimalComponent = `<?php
 declare(strict_types=1);
@@ -92,7 +92,7 @@ final class QuickCounter extends Component
   });
 
   // --- GATE P3 ---
-  it('P3: Kesalahan build memiliki pesan jelas, lokasi baris akurat, dan tautan panduan perbaikan', async () => {
+  it('P3 [perilaku]: Kesalahan build memiliki pesan yang jelas, lokasi baris akurat, dan tautan panduan perbaikan', async () => {
     // Pelanggaran KIL-102: tanpa declare(strict_types=1)
     const codeMissingStrict = `<?php
 namespace App\\Components;
@@ -116,7 +116,7 @@ final class MissingStrict extends Component
   });
 
   // --- GATE P4 ---
-  it('P4: Tidak ada virtual DOM di client; reaktivitas langsung mengikat mutasi sinyal ke node DOM riil', () => {
+  it('P4 [perilaku]: Tidak ada virtual DOM di client; reaktivitas langsung mengikat mutasi sinyal ke node DOM riil', () => {
     // Simulasi node DOM riil
     const mockSpan = {
       textContent: '0',
@@ -138,7 +138,7 @@ final class MissingStrict extends Component
   });
 
   // --- GATE P5 ---
-  it('P5: Server adalah otoritas kebenaran data; client tidak pernah dipercaya tanpa validasi', async () => {
+  it('P5 [struktur]: Server adalah otoritas kebenaran data; client tidak pernah dipercaya tanpa validasi', async () => {
     // Komponen mendeklarasikan aksi server; mutasi tidak dijalankan lokal melainkan diarahkan via callServerAction
     const cartPhp = `<?php
 declare(strict_types=1);
@@ -169,7 +169,7 @@ final class SecureCart extends Component
   });
 
   // --- GATE P6 ---
-  it('P6: Aman secara default (secure by default) — bebas eval/Function, raw HTML ditolak', async () => {
+  it('P6 [perilaku]: Aman secara default (secure by default) — bebas evaluasi runtime dinamis (eval, new Function), escape ganda dihindari', async () => {
     const counterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.php');
     const counterBladePath = path.resolve(__dirname, '../../../examples/counter-app/counter.blade.php');
     const phpSource = fs.readFileSync(counterPhpPath, 'utf-8');
@@ -191,7 +191,7 @@ final class SecureCart extends Component
   });
 
   // --- GATE P7 ---
-  it('P7: Protokol RPC netral bahasa (/_kylat/call) yang kompatibel dengan backend apa pun', async () => {
+  it('P7 [struktur]: Protokol RPC netral bahasa (/_kylat/call) yang kompatibel dengan backend apa pun', async () => {
     // Periksa bahwa kode hasil kompilasi mengimpor dan memanggil protokol RPC netral bahasa
     const cartPhpPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.php');
     const cartBladePath = path.resolve(__dirname, '../../../examples/counter-app/cart-counter.blade.php');
@@ -215,25 +215,13 @@ final class SecureCart extends Component
   });
 
   // --- GATE P8 ---
-  it('P8: Waktu dari instalasi hingga komponen pertama berjalan kurang dari 10 menit (metrik pantauan: belum diukur)', async () => {
-    // Sesuai KEP-21 dan Dok 1/Dok 6: P8 adalah target pantauan adopsi yang belum diukur lewat uji pengguna manusia di Fase 0.
-    // Di sini diuji latensi teknis kompilasi single-component yang menjadi prasyarat kecepatan build sub-detik (< 200 ms).
-    const counterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.php');
-    const counterBladePath = path.resolve(__dirname, '../../../examples/counter-app/counter.blade.php');
-    const phpSource = fs.readFileSync(counterPhpPath, 'utf-8');
-    const bladeSource = fs.readFileSync(counterBladePath, 'utf-8');
-
-    const start = performance.now();
-    const res = await compile(phpSource, 'Counter.php', { template: bladeSource });
-    const durationMs = performance.now() - start;
-
-    assert.equal(res.success, true);
-    // Latensi kompilasi single component harus sangat cepat (< 200 ms) untuk memastikan waktu adopsi < 10 menit
-    assert.ok(durationMs < 200, `Kompilasi komponen harus di bawah 200 ms (aktual: ${durationMs.toFixed(2)} ms)`);
+  it.skip('P8 [belum diukur]: Waktu dari instalasi hingga komponen pertama berjalan kurang dari 10 menit (metrik pantauan) — belum diukur, lihat Fase 5/6', () => {
+    // Belum diukur, lihat Fase 5/6 (pengujian pengguna pemula sesungguhnya).
+    // Asersi dinonaktifkan di Fase 0 agar tidak mengklaim kelulusan prematur.
   });
 
   // --- GATE P9 ---
-  it('P9: Dokumentasi dan contoh kode selalu diverifikasi dan sejalan dengan implementasi aktual', async () => {
+  it('P9 [struktur]: Dokumentasi dan contoh kode selalu diverifikasi dan sejalan dengan implementasi aktual', async () => {
     const counterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.php');
     const counterBladePath = path.resolve(__dirname, '../../../examples/counter-app/counter.blade.php');
     const counterExpectedPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.expected.js');
@@ -256,36 +244,13 @@ final class SecureCart extends Component
   });
 
   // --- GATE P10 ---
-  it('P10: Anggaran ukuran bundle JavaScript runtime minimal dan terukur ketat (metrik pantauan: belum diukur)', () => {
-    // Sesuai Dok 4 §7 dan Dok 6: Anggaran ukuran rilis produksi minified+gzipped belum diukur di harness benchmark resmi pada Fase 0 (dijadwalkan di Fase 1 dan Fase 2).
-    // Di sini diuji pagu kasar unminified build pada lingkungan pengembangan sebagai batas atas awal.
-    const runtimeDistDir = path.resolve(__dirname, '../../runtime/dist');
-    assert.ok(fs.existsSync(runtimeDistDir), 'Distributable runtime harus telah dibangun');
-
-    let totalRuntimeBytes = 0;
-    const distFiles = fs.readdirSync(runtimeDistDir).filter(f => f.endsWith('.js'));
-    for (const file of distFiles) {
-      const stats = fs.statSync(path.join(runtimeDistDir, file));
-      totalRuntimeBytes += stats.size;
-    }
-
-    // Pagu ukuran unminified runtime v0 maksimal 30 KB
-    const maxBudgetBytes = 30 * 1024;
-    assert.ok(
-      totalRuntimeBytes < maxBudgetBytes,
-      `Total ukuran unminified runtime (${(totalRuntimeBytes / 1024).toFixed(2)} KB) melampaui pagu ${maxBudgetBytes / 1024} KB`
-    );
-
-    // Pagu ukuran signals core unminified maksimal 5 KB
-    const signalsJsPath = path.join(runtimeDistDir, 'signals.js');
-    if (fs.existsSync(signalsJsPath)) {
-      const signalsSize = fs.statSync(signalsJsPath).size;
-      assert.ok(signalsSize < 5 * 1024, `Modul sinyal inti (${signalsSize} byte) harus di bawah 5 KB`);
-    }
+  it.skip('P10 [belum diukur]: Anggaran ukuran bundle JavaScript runtime minimal dan terukur ketat — belum diukur, lihat Fase 5/6', () => {
+    // Belum diukur, lihat Fase 5/6 (harness benchmark resmi rilis produksi minified+gzipped).
+    // Asersi dinonaktifkan di Fase 0 agar tidak mengklaim kelulusan prematur.
   });
 
   // --- GATE P11 ---
-  it('P11: Dukungan aksesibilitas (a11y) bawaan memenuhi standar WCAG 2.2 AA', async () => {
+  it('P11 [struktur]: Dukungan aksesibilitas (a11y) bawaan memenuhi standar WCAG 2.2 AA', async () => {
     const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.php');
     const cartCounterBladePath = path.resolve(__dirname, '../../../examples/counter-app/cart-counter.blade.php');
 
@@ -308,7 +273,7 @@ final class SecureCart extends Component
   });
 
   // --- GATE P12 ---
-  it('P12: Kompatibel penuh dengan kebijakan keamanan konten (CSP) ketat tanpa unsafe-eval', () => {
+  it('P12 [perilaku]: Kompatibel penuh dengan kebijakan keamanan konten (CSP) ketat tanpa unsafe-eval', () => {
     // Memverifikasi fungsi sinyal reaktif dan DOM binding berjalan murni tanpa eval atau Function
     const [name, setName] = createSignal('Kylat');
     const upper = createComputed(() => name().toUpperCase());

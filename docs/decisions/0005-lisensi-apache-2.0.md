@@ -1,6 +1,6 @@
 # ADR 0005: Pemilihan Lisensi Kode Apache-2.0 dan Tata Kelola Atribusi
 
-- **Status**: PUTUSAN (KEP-14)
+- **Status**: PUTUSAN (disetujui pemilik proyek, tanggal: 28 Oktober 2026) (KEP-14)
 - **Tanggal Usulan**: 28 Oktober 2026
 - **Tanggal Keputusan**: 28 Oktober 2026
 - **Pengusul**: Rekomendasi perancangan (Claude / Agent)
@@ -73,4 +73,4 @@ Audit menyeluruh dependensi dilakukan pada seluruh paket pnpm workspace dan Comp
 ## 5. Konsekuensi
 
 - Setiap berkas rilis dan distribusi paket menyertakan rujukan ke salinan `LICENSE` dan `NOTICE`.
-- Pengesahan: Disahkan secara tertulis oleh pemilik proyek (haidaryuum) pada 28 Oktober 2026.
+- Pengesahan: PUTUSAN (disetujui pemilik proyek, tanggal: 28 Oktober 2026).

@@ -1,10 +1,10 @@
 # STATUS — Kylat
 
-Diperbarui: 29 Oktober 2026. Status Fase 0: Belum Tuntas. Sumber kebenaran: spec/ di repo. File ini hanya ringkasan.
+Diperbarui: 30 Oktober 2026. Status Fase 0: Belum Tuntas. Sumber kebenaran: spec/ di repo. File ini hanya ringkasan.
 
 ## Repo
 - Publik: https://github.com/yuumuu/kylat, branch main
-- HEAD terakhir terverifikasi: 8e82029
+- HEAD terakhir terverifikasi: 2c76ff3
 
 ## Hierarki normatif (dari spec/README.md)
 1. spec/php-subset.md
@@ -15,9 +15,9 @@ Diperbarui: 29 Oktober 2026. Status Fase 0: Belum Tuntas. Sumber kebenaran: spec
 
 ## Keputusan yang sudah ditetapkan
 - Nama: Kylat. Paket npm dan Composer: kylat. Pemeriksaan registry dan DJKI dilaporkan aman, namun bukti di docs/decisions/0001-nama-proyek.md merupakan pelaporan mandiri yang belum diverifikasi independen.
-- Format komponen single-file (*.kylat.php) disahkan (ADR 0004 / KEP-34) sebagai format standar komponen Kylat. Target tenggat: Fase 0.
+- Format komponen single-file (*.kylat.php): PUTUSAN (disetujui pemilik proyek, tanggal: 28 Oktober 2026) (ADR 0004 / KEP-34) sebagai format standar komponen Kylat. Target tenggat: Fase 0.
 - Salinan repo sudah v1.2. Google Docs asli di Drive belum diperbarui.
-- Lisensi proyek disahkan Apache-2.0 dengan berkas NOTICE (hak cipta haidaryuum) dan DCO (ADR 0005 / KEP-14). Target tenggat: Fase 0.
+- Lisensi proyek Apache-2.0: PUTUSAN (disetujui pemilik proyek, tanggal: 28 Oktober 2026) dengan berkas NOTICE (hak cipta haidaryuum) dan DCO (ADR 0005 / KEP-14). Target tenggat: Fase 0.
 - ID di wire dan di signature PHP: string.
 - Fungsi string: mb_* dan fungsi yang setara untuk UTF-8 valid. trim, strtolower, strtoupper dihapus dari v0.
 - Templat: sintaks mirip Blade, atribut on: dan bind:, <x-nama> untuk komposisi tanpa slot.
@@ -28,18 +28,18 @@ Diperbarui: 29 Oktober 2026. Status Fase 0: Belum Tuntas. Sumber kebenaran: spec
 - #[Uses] untuk kontrak aksi server, #[Child] untuk komponen anak.
 
 ## Status Evaluasi Prinsip Non-Negosiasi (P1 – P12)
-- **P1 (Sintaks PHP standar tanpa DSL)**: **Terpenuhi**. Subset v0 diparsing via Tree-sitter WASM; construct di luar subset (misal keyword `global`) digagalkan dengan KIL-103.
-- **P2 (Satu konsep untuk memulai / counter)**: **Terpenuhi**. Quickstart counter (class komponen tunggal + templat) terkompilasi instan tanpa konfigurasi bundler rumit.
-- **P3 (Kesalahan build jelas + lokasi + rujukan)**: **Terpenuhi**. Katalog 32 kode galat di `spec/errors.md`; 12 kode compiler aktif memuat nomor baris, kolom, pesan deskriptif, dan tautan rujukan perbaikan.
-- **P4 (Tanpa virtual DOM, direct DOM binding)**: **Terpenuhi**. Runtime reaktivitas mengikat mutasi sinyal langsung ke node DOM riil via `bindText` dan `bindAttr` tanpa rekonsiliasi VDOM.
-- **P5 (Server otoritas data, mutasi via RPC)**: **Terpenuhi di compiler/protokol wire**, namun **belum tuntas di adapter**. Kompiler membelokkan mutasi ke `callServerAction` dengan Idempotency-Key, tetapi penjaminan transaksi database atomik pada adapter Laravel masih dalam perbaikan.
-- **P6 (Aman secara default, bebas eval, tolak raw HTML)**: **Terpenuhi**. Kompiler dan runtime bebas dari `eval`, `new Function`, dan `innerHTML`. Template dengan raw HTML `{!! !!}` digagalkan dengan KIL-152.
-- **P7 (Protokol RPC netral bahasa)**: **Terpenuhi**. Skema wire batch RPC divalidasi JSON Schema (`spec/protocol.schema.json`) mendukung BatchRequest, BatchResponse, dan RFC 9457 Problem Details.
-- **P8 (Waktu adopsi < 10 menit)**: **Belum diukur**. Merupakan metrik pantauan adopsi (KEP-21). Latensi kompilasi sub-detik tercapai (< 200 ms), namun uji coba ketercapaian waktu adopsi oleh developer pemula belum dilakukan di Fase 0.
-- **P9 (Dokumentasi sejalan dengan implementasi)**: **Terpenuhi untuk Counter**. Contoh `Counter.php` dan `CartCounter.php` diverifikasi 100% identik dengan golden contract di CI.
-- **P10 (Anggaran ukuran bundle runtime minimal & terukur)**: **Belum diukur**. Pagu unminified dev lolos (< 30 KB), namun batas anggaran resmi rilis produksi minified+gzipped belum diukur di harness benchmark resmi (dijadwalkan di Fase 1 dan Fase 2).
-- **P11 (Aksesibilitas bawaan WCAG 2.2 AA)**: **Terpenuhi**. Tombol pemicu mutasi server otomatis dipasangi `aria-busy`, `data-pending`, `disabled`, serta live region `aria-live="polite"` untuk pengumuman galat server.
-- **P12 (Kompatibel CSP ketat tanpa unsafe-eval)**: **Terpenuhi**. Reaktivitas signals dan binding DOM berjalan murni tanpa dependensi evaluasi kode dinamis.
+- **P1 (Sintaks PHP standar tanpa DSL)**: `perilaku`. Subset v0 diparsing via Tree-sitter WASM; pengujian mengeksekusi kompilasi dan membuktikan kegagalan build (KIL-103) saat construct di luar subset (`global`) digunakan.
+- **P2 (Satu konsep untuk memulai / counter)**: `struktur`. Mengompilasi kode counter minimal dan memeriksa keberadaan potongan kode string (`createSignal`, `bindText`, `on`).
+- **P3 (Kesalahan build jelas + lokasi + rujukan)**: `perilaku`. Mengompilasi kode yang melanggar aturan (`MissingStrict.php`), memverifikasi pelemparan KIL-102 dengan baris >= 1, kolom >= 0, pesan deskriptif, dan URL rujukan resmi.
+- **P4 (Tanpa virtual DOM, direct DOM binding)**: `perilaku`. Menjalankan runtime reaktivitas langsung pada node mock DOM; mutasi sinyal membuktikan textContent berubah seketika tanpa VDOM reconciliation.
+- **P5 (Server otoritas data, mutasi via RPC)**: `struktur`. Memeriksa keberadaan pemanggilan `callServerAction` dan `idempotencyKey` pada kode hasil kompilasi; proteksi transaksi atomik backend belum diuji di adapter.
+- **P6 (Aman secara default, bebas eval, tolak raw HTML)**: `perilaku`. Memeriksa ketiadaan `eval`/`new Function`/`innerHTML` dan mengeksekusi kompilasi dengan templat raw HTML `{!! !!}` yang membuktikan kegagalan build dengan KIL-152.
+- **P7 (Protokol RPC netral bahasa)**: `struktur`. Memverifikasi keberadaan dan validitas berkas skema wire `spec/protocol.schema.json` serta impor client RPC.
+- **P8 (Waktu adopsi < 10 menit)**: `belum diukur`. Merupakan metrik pantauan adopsi (KEP-21). Uji coba waktu adopsi oleh developer pemula belum diuji/diukur di Fase 0 (dijadwalkan di Fase 5/6).
+- **P9 (Dokumentasi sejalan dengan implementasi)**: `struktur`. Memeriksa kecocokan teks kode hasil kompilasi contoh `Counter.php` dan `CartCounter.php` terhadap berkas golden `Counter.expected.js` dan `CartCounter.expected.js`.
+- **P10 (Anggaran ukuran bundle runtime minimal & terukur)**: `belum diukur`. Anggaran ukuran bundle rilis produksi minified+gzipped belum diukur di harness benchmark resmi (dijadwalkan di Fase 1 dan Fase 2 / Fase 5/6).
+- **P11 (Aksesibilitas bawaan WCAG 2.2 AA)**: `struktur`. Memeriksa keberadaan atribut `aria-busy`, `data-pending`, `disabled`, `aria-live="polite"`, dan `role="status"` pada kode hasil kompilasi.
+- **P12 (Kompatibel CSP ketat tanpa unsafe-eval)**: `perilaku`. Mengeksekusi siklus reaktivitas sinyal `createSignal`, `createComputed`, dan `createEffect` di runtime, membuktikan berjalan normal tanpa dynamic eval.
 
 ## Yang sudah terbukti di repo
 - Parser template berbasis stack, bindText hanya di elemen daun.
