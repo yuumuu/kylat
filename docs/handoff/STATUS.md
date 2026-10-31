@@ -16,7 +16,7 @@ Diperbarui: 30 Oktober 2026. Status Fase 0: Belum Tuntas. Sumber kebenaran: spec
 ## Keputusan yang sudah ditetapkan
 - Nama: Kylat. Paket npm dan Composer: kylat. Pemeriksaan registry dan DJKI dilaporkan aman, namun bukti di docs/decisions/0001-nama-proyek.md merupakan pelaporan mandiri yang belum diverifikasi independen.
 - Format komponen single-file (*.kylat.php): PUTUSAN (disetujui pemilik proyek, tanggal: 30 Oktober 2026) (ADR 0004 / KEP-34) sebagai format standar komponen Kylat. Target tenggat: Fase 0.
-- Salinan repo sudah v1.2. Google Docs asli di Drive belum diperbarui.
+- Google Drive: diasumsikan sudah diperbarui ke v1.2 oleh pemilik proyek pada 31 Oktober 2026.
 - Lisensi proyek Apache-2.0: PUTUSAN (disetujui pemilik proyek, tanggal: 30 Oktober 2026) dengan berkas NOTICE (hak cipta haidaryuum) dan DCO (ADR 0005 / KEP-14). Target tenggat: Fase 0.
 - ID di wire dan di signature PHP: string.
 - Fungsi string: mb_* dan fungsi yang setara untuk UTF-8 valid. trim, strtolower, strtoupper dihapus dari v0.
@@ -75,7 +75,7 @@ Diperbarui: 30 Oktober 2026. Status Fase 0: Belum Tuntas. Sumber kebenaran: spec
 
 ## Status Penutupan Fase 0: Belum Tuntas (Prasyarat Tertunda)
 1. **Bukti nama kylat**: Hasil pencarian nama di registry npm, Packagist, GitHub, DJKI, dan WIPO masih pelaporan mandiri dari pengembang di docs/decisions/0001-nama-proyek.md dan belum diverifikasi secara independen dengan tangkapan layar/nomor pendaftaran resmi.
-2. **Google Docs asli di Drive**: Dokumen asli di Google Drive belum dimutakhirkan ke v1.2 (hanya salinan lokal non-normatif di docs/google-docs/ yang sudah disinkronkan).
+2. **Google Docs di Drive**: Google Drive diasumsikan sudah diperbarui ke v1.2 oleh pemilik proyek pada 31 Oktober 2026.
 3. **P8 dan P10 belum diukur secara formal**: Metrik waktu adopsi < 10 menit (P8) dan anggaran ukuran bundle minified+gzipped di benchmark harness resmi (P10) ditandai belum diukur pada Fase 0.
 4. **Review manusia CartCounter.expected.js**: Body golden file menunggu konfirmasi akhir reviewer manusia.
 5. **Jaminan transaksi atomik adapter Laravel**: Poin kritis 1–3 di atas harus diselesaikan di database nyata sebelum adapter dianggap siap produksi.
