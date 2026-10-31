@@ -15,7 +15,7 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "node --test"
+    "test": "node --test \"test/**/*.test.mjs\""
   },
   "dependencies": {
     "@kylat/protocol": "workspace:*",
