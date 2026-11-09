@@ -1,67 +1,106 @@
 # Kylat
 
-[![CI](https://github.com/yuumuu/kylat/actions/workflows/ci.yml/badge.svg)](https://github.com/yuumuu/kylat/actions/workflows/ci.yml)
+Toolchain frontend: komponen ditulis dalam subset PHP bergaya Livewire, dikompilasi menjadi JavaScript reaktivitas fine-grained (signals) yang ringan dan berjalan di browser. Server hanya dipanggil untuk data, penyimpanan, dan otorisasi melalui protokol RPC netral bahasa.
 
-Toolchain frontend: komponen ditulis dengan subset PHP bergaya Livewire, dikompilasi menjadi JavaScript dengan reaktivitas fine-grained (signals) yang berjalan di browser. Server hanya dipanggil untuk hal yang memang membutuhkan server — data, penyimpanan, otorisasi — melalui protokol RPC netral bahasa. Frontend bisa di-host statis di CDN dan berbicara dengan backend mana pun yang mengimplementasikan kontrak.
+**Status:** prototipe aktif. Fondasi compiler, runtime, CLI, dan adapter Laravel sudah berjalan; beberapa fitur spesifikasi masih ditandai `[TERBUKA]` atau belum diimplementasikan. Lihat [docs/handoff/STATUS.md](docs/handoff/STATUS.md) untuk catatan historis.
 
-**Status: Fase 0 (Fondasi) Selesai.** Seluruh spesifikasi normatif (`spec/`) telah lengkap. Spike S1 (Parser PHP via Tree-sitter WASM) dan Spike S3 (Interface kontrak aksi server) telah lolos dan ditutup. Siap memasuki Fase 1 (Runtime).
+## Mulai cepat
 
-## Sumber kebenaran
+```bash
+pnpm install
+pnpm build
 
-Alasan dan riwayat keputusan masih hidup di Google Drive, folder `Kylat` → `01 Aktif (v1.1)`. Repo ini belum memuat salinannya.
+# Buat komponen single-file
+node packages/cli/bin/kylat.js make:component Counter
 
-**Yang mengikat implementasi adalah `spec/`**, bukan dokumen Drive. Urutan prioritas antar berkas spec ada di [`spec/README.md`](spec/README.md).
+# Periksa dan kompilasi
+node packages/cli/bin/kylat.js check resources/views/components
+node packages/cli/bin/kylat.js build resources/views/components --out-dir public/dist/kylat
+```
 
-| Dokumen | Isi | Artefak spec terkait |
-|---|---|---|
-| Kylat 1 | Visi, ruang lingkup, mode distribusi, prinsip P1–P12 | — |
-| Kylat 2 | Subset PHP v0, semantik, IR, format error | `spec/php-subset.md`, `spec/ir.md`, `spec/errors.md` |
-| Kylat 3 | Protokol, keamanan, autentikasi, batas runtime | `spec/protocol.schema.json`, `spec/threat-model.md` |
-| Kylat 4 | Arsitektur, runtime, struktur repo, aksesibilitas | `spec/compiler-rules.md` |
-| Kylat 5 | Adopsi, CLI, migrasi dari Livewire 4 | — |
-| Kylat 6 | Roadmap, register keputusan, gerbang | — |
-| `template.md` | Grammar templat, komposisi `<x-nama>`, tiga kelas atribut, `data-props`, hubungan dengan Blade | `spec/template.md` |
+Output build menghasilkan modul per komponen, `manifest.json`, dan `client.js` yang mendaftarkan island serta memanggil `hydrateAll()`.
+
+Komponen menggunakan satu berkas `*.kylat.php`:
+
+```php
+<?php
+declare(strict_types=1);
+
+namespace App\Components;
+
+use Kylat\Component;
+use Kylat\Attributes\Client;
+
+final class Counter extends Component
+{
+    public int $count = 0;
+
+    #[Client]
+    public function increment(): void
+    {
+        $this->count += 1;
+    }
+}
+?>
+<div>
+    <button on:click="increment">+</button>
+    <span>{{ $count }}</span>
+    @if($count > 0)
+        <p>Positif</p>
+    @endif
+</div>
+```
 
 ## Struktur
 
-```
-spec/                 spesifikasi yang mengikat implementasi
-packages/
-  compiler/           parse, analyze, ir, codegen, diagnostics
-  runtime/            signals, DOM, list, scheduler, RPC client
-  protocol/           skema dan test konformansi
-  adapter-laravel/    kontrak aksi, endpoint, direktif @kylat, policy
-  cli/                create, dev, build, check, doctor, sync-contract, make:component, make:action, migrate:livewire
-bench/                scenarios, baselines, scripts
-examples/             contoh yang harus selalu berjalan
-docs/                 tutorial, guide, reference, decisions
+```text
+spec/                 spesifikasi normatif (bahasa, template, protokol, ancaman)
+packages/compiler/    parser PHP (tree-sitter WASM), analyzer, IR, codegen
+packages/runtime/     signals, DOM binding, list, RPC batch, hidrasi island
+packages/protocol/    tipe wire dan batas protokol
+packages/adapter-laravel/  controller RPC, registry aksi, idempotency, Blade
+packages/cli/         make:component, check, build, doctor
+examples/             contoh yang dijalankan di test
+docs/                 tutorial, referensi, ADR, status
 ```
 
-Aturan: setiap package punya README. Impor lintas package hanya lewat API publik. Lint mencegah dependensi sirkular. Modul di bawah sekitar 300 baris.
+## Yang sudah didukung compiler
+
+- Komponen single-file `*.kylat.php` (KEP-34), plus format dua-berkas legacy.
+- State signals, props, method client (`#[Client]`), aksi server (`#[Server]`).
+- Template: teks, `{{ ekspresi }}`, `@if/@elseif/@else`, `@foreach/@empty`, `key`, `on:`, `bind:value`, `bind:checked`, `:attr`, interpolasi atribut, `<x-nama>` dengan `#[Child]`.
+- Validasi fail-closed untuk direktif tak dikenal, raw HTML, `@foreach` tanpa key, bind ke prop, URL berbahaya, dan aturan struktur single-file.
+
+## Perintah
+
+| Perintah | Fungsi |
+|---|---|
+| `kylat make:component <Nama>` | Membuat `*.kylat.php` |
+| `kylat check [path]` | Lint komponen, termasuk template single-file |
+| `kylat build [path] [--out-dir dir]` | Preflight KIL-310, kompilasi ke modul JS + `manifest.json` + `client.js` |
+| `kylat doctor` | Cek Node, PHP, dan Composer |
 
 ## Invarian
 
-Yang tidak boleh dilanggar di seluruh repo, dari dokumen 3 §9:
-
 1. Tanpa `eval`, `new Function`, `unserialize`, atau refleksi dinamis atas input.
 2. Server selalu otoritas; client tidak pernah dipercaya.
-3. Setiap aksi server punya otorisasi eksplisit, validasi skema, batas, dan idempotency untuk mutasi.
+3. Setiap aksi server wajib terdaftar, ber-`#[Server]`, dan punya otorisasi eksplisit.
 4. Default deny.
-5. Tidak ada rahasia di client; hanya variabel `PUBLIC_` yang di-embed.
-6. Respons terautentikasi atau personal tidak pernah di-cache bersama.
-7. DOM hanya ditulis lewat API aman; HTML mentah hanya lewat Trusted Types.
-8. Dependensi runtime minimum, di-pin, tanpa install script.
-9. Konfigurasi aman secara default; `kylat doctor` gagal di CI bila tidak aman.
-10. Setiap temuan keamanan menghasilkan satu uji regresi.
+5. Tidak ada rahasia di client.
+6. Respons terautentikasi tidak di-cache bersama.
+7. DOM hanya ditulis lewat `textContent`/`setAttribute`/binding aman.
+8. Dependensi runtime minimum dan di-pin.
+9. Konfigurasi aman secara default.
+10. Setiap temuan keamanan menghasilkan uji regresi.
 
-Selain itu: tidak ada klaim performa tanpa harness benchmark yang bisa diulang.
+## Sumber kebenaran
 
-## Belum ada di repo ini
+Yang mengikat implementasi adalah [`spec/`](spec/README.md). Dokumen di `docs/google-docs/` adalah arsip/riwayat, bukan hukum. Jika menemukan pertentangan antara spec dan implementasi, catat dan putuskan — jangan diam-diam mengikuti implementasi.
 
-Sengaja tidak dibuat karena keputusannya masih terbuka, atau karena isinya belum tersedia:
+## Test
 
-- `LICENSE` — lisensi `[TERBUKA]`, tenggat sebelum rilis 1.0.
-- `CONTRIBUTING.md`, `SECURITY.md` — menunggu kebijakan versi dan pelaporan.
-- `spec/ir.md` — sudah disusun di `spec/ir.md`.
-- `spec/errors.md` — sudah disusun di `spec/errors.md`.
-- Seluruh isi `packages/` — belum ada baris kode.
+```bash
+pnpm test          # build + unit test compiler/runtime
+pnpm test:examples # build + e2e demo counter
+php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/AdapterTest.php
+```

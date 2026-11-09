@@ -2,18 +2,18 @@
 
 Dokumentasi pengguna. Bukan tempat spesifikasi — spesifikasi ada di `spec/`.
 
-```
-tutorial/     jalur dari nol ke komponen pertama
-guide/        tugas sehari-hari: form, list, aksi server, deployment
-reference/    referensi API, kode error, konfigurasi
+```text
+tutorial/     jalur dari nol ke komponen pertama (belum ada)
+guide/        tugas harian: form, list, aksi server, deployment (belum ada)
+reference/    referensi API dan kode error
 decisions/    ADR: keputusan arsitektur beserta alasannya
+handoff/      status operasional proyek
 ```
 
-**Aturan dari dokumen 6:** hanya contoh quick start yang diuji di CI. Dokumentasi lain diverifikasi saat rilis, dan setiap klaim harus bisa dilacak ke kode atau ke `spec/`.
+Aturan: hanya contoh quick start yang diuji di CI. Dokumentasi lain diverifikasi saat rilis; setiap klaim harus bisa dilacak ke kode atau `spec/`.
 
-**Struktur & Status:**
-- `tutorial/` — panduan jalur dari nol ke komponen pertama *(belum ada, menunggu fase 0)*
-- `guide/` — panduan praktis: form, list, aksi server, deployment *(belum ada, menunggu fase 1)*
-- [`reference/errors.md`](reference/errors.md) — referensi kode galat dan panduan perbaikan (menaut ke `spec/errors.md`)
-- [`decisions/README.md`](decisions/README.md) — register keputusan arsitektur (ADR KEP-01 s/d KEP-33 dan prinsip P1–P12)
+- [`reference/errors.md`](reference/errors.md) — referensi kode galat.
+- [`decisions/README.md`](decisions/README.md) — register ADR.
+- [`handoff/STATUS.md`](handoff/STATUS.md) — status implementasi terkini.
 
+Mulai dari [README utama](../README.md) untuk perintah `make:component`, `check`, `build`, dan format single-file `*.kylat.php`.
