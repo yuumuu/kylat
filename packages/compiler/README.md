@@ -1,17 +1,16 @@
 # `@kylat/compiler`
 
-Mem-parse komponen Kylat (subset PHP + markup), menganalisis tipe, membangun IR, lalu menghasilkan JavaScript dan manifest.
+Mem-parse komponen Kylat (PHP subset + template), menganalisis aturan, membangun IR, lalu menghasilkan JavaScript signals untuk `@kylat/runtime`.
 
-| Direktori | Isi |
+| Berkas | Isi |
 |---|---|
-| `src/parse/` | Parser PHP subset dan parser templat |
-| `src/analyze/` | Analisis tipe, resolusi sinyal, penegakan KIL-1xx |
-| `src/ir/` | Bentuk IR yang bebas dari PHP |
-| `src/codegen/` | Emisi DOM langsung yang terikat ke signal, bukan virtual DOM |
-| `src/diagnostics/` | Kode KIL-xxx, lokasi, saran perbaikan |
-| `tests/golden/` | Snapshot keluaran compiler |
-| `tests/differential/` | PHP vs JS untuk ekspresi dan fungsi allowlist |
+| `src/parser.ts` | Inisialisasi web-tree-sitter WASM |
+| `src/analyzer.ts` | Analisis kelas, props, state, method, atribut |
+| `src/template-parser.ts` | AST template: teks, ekspresi, `@if`, `@foreach`, elemen |
+| `src/expression.ts` | Penerjemah ekspresi PHP subset ke JavaScript |
+| `src/codegen.ts` | Emisi DOM langsung + binding signals |
+| `src/diagnostics.ts` | Kode KIL dan pesan |
 
-**Bergantung pada:** `spec/php-subset.md`, `spec/template.md`, `spec/errors.md`.
+**Dependensi:** `spec/php-subset.md`, `spec/template.md`, `spec/errors.md`, `spec/ir.md`.
 
-**Belum diputuskan:** parser PHP (spike S1), apakah parser templat berbagi AST dengan parser PHP, dan bentuk IR final (`spec/ir.md` belum ditulis).
+**Test:** `node --test test/*.test.mjs` (setelah `pnpm build`).

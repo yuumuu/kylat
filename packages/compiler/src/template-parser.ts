@@ -1,22 +1,105 @@
 /**
  * @kylat/compiler - template-parser.ts
- * Parser template HTML/Blade subset v0 berbasis token stack sesuai spec/template.md.
- * Menangani tag void, komentar HTML, atribut berisi >, escape quote, tag self-closing,
- * tag bersarang nama sama, serta deteksi mismatched dan unclosed tag (fail-fast KIL-151).
+ * Parser template Kylat v0 (subset Blade) menjadi AST kecil yang deterministik.
+ *
+ * Aturan penting:
+ * - Semua konstruksi yang tidak dikenal gagal cepat dengan KIL-151, bukan diabaikan.
+ * - Karakter `<` yang bukan awal tag diperlakukan sebagai teks (tidak boleh hang).
+ * - Teks, interpolasi, @if, @foreach, dan elemen disimpan dalam urutan dokumen.
  */
+
+export interface SourceLocation {
+  line: number;
+  column: number;
+}
 
 export interface ParsedEvent {
   event: string;
   handlerCall: string;
+  loc: SourceLocation;
+}
+
+export interface ParsedText {
+  type: 'text';
+  value: string;
+  loc: SourceLocation;
+}
+
+export interface ParsedExpression {
+  type: 'expression';
+  expression: string;
+  loc: SourceLocation;
+}
+
+export interface ParsedIfBranch {
+  condition?: string;
+  children: ParsedNode[];
+  loc: SourceLocation;
+}
+
+export interface ParsedIf {
+  type: 'if';
+  branches: ParsedIfBranch[];
+  loc: SourceLocation;
+}
+
+export interface ParsedForEach {
+  type: 'foreach';
+  collection: string;
+  item: string;
+  keyVar?: string;
+  keyExpression?: string;
+  children: ParsedNode[];
+  emptyChildren: ParsedNode[];
+  loc: SourceLocation;
 }
 
 export interface ParsedElement {
+  type: 'element';
   tag: string;
   attributes: Record<string, string>;
   events: ParsedEvent[];
-  textContent?: string;
-  expressionBinding?: string;
   children: ParsedElement[];
+  nodes: ParsedNode[];
+  bindings: Record<string, string>;
+  dynamicAttributes: Record<string, string>;
+  keyExpression?: string;
+  errorPath?: string;
+  /** Kompatibilitas parser lama: teks statis pada elemen daun. */
+  textContent?: string;
+  /** Kompatibilitas parser lama: `$state` pada elemen daun. */
+  expressionBinding?: string;
+  loc: SourceLocation;
+}
+
+export type ParsedNode =
+  | ParsedElement
+  | ParsedText
+  | ParsedExpression
+  | ParsedIf
+  | ParsedForEach;
+
+type Stop =
+  | { kind: 'tag'; value: string }
+  | { kind: 'directive'; values: ReadonlySet<string> };
+
+interface SequenceResult {
+  nodes: ParsedNode[];
+  stop?: { kind: 'tag' | 'directive'; value: string };
+}
+
+export class TemplateError extends Error {
+  public readonly code: string;
+  public readonly line: number;
+  public readonly column: number;
+
+  constructor(code: string, message: string, loc: SourceLocation) {
+    super(`${code}: ${message}`);
+    this.name = 'TemplateError';
+    this.code = code;
+    this.line = loc.line;
+    this.column = loc.column;
+  }
 }
 
 const VOID_TAGS = new Set([
@@ -36,215 +119,540 @@ const VOID_TAGS = new Set([
   'wbr',
 ]);
 
+const UNSUPPORTED_DIRECTIVES = new Set([
+  'for',
+  'while',
+  'switch',
+  'php',
+  'include',
+  'extends',
+  'yield',
+  'section',
+  'component',
+  'slot',
+]);
+
+function isNameStart(ch: string | undefined): boolean {
+  return ch !== undefined && /[A-Za-z_]/.test(ch);
+}
+
+function isNameChar(ch: string | undefined): boolean {
+  return ch !== undefined && /[A-Za-z0-9_:-]/.test(ch);
+}
+
 /**
- * Mem-parse template HTML string menjadi hirarki ParsedElement.
- * Melempar Error jika terdapat sintaks rusak, penutup tidak cocok, atau tag tak tertutup.
+ * Mem-parse template menjadi AST. Melempar TemplateError dengan kode KIL-15x.
  */
 export function parseTemplate(templateSource: string): ParsedElement[] {
-  const rootElements: ParsedElement[] = [];
-  const stack: { element: ParsedElement; textBuffer: string }[] = [];
+  const parser = new TemplateParser(templateSource);
+  const nodes = parser.parseRoot();
 
-  let i = 0;
-  const len = templateSource.length;
+  // Kompatibilitas API lama: root harus berupa elemen. Teks root yang tidak
+  // kosong tetap dipertahankan sebagai teks dan akan ditangani codegen.
+  return nodes.filter((node): node is ParsedElement => node.type === 'element');
+}
 
-  while (i < len) {
-    // 1. Lewati Komentar HTML <!-- ... -->
-    if (templateSource.startsWith('<!--', i)) {
-      const endComment = templateSource.indexOf('-->', i + 4);
-      if (endComment === -1) {
-        throw new Error('KIL-151: Komentar HTML tidak ditutup dengan -->');
-      }
-      i = endComment + 3;
-      continue;
+/**
+ * Versi lengkap yang mempertahankan node teks/ekspresi/direktif di root.
+ * Dipakai compiler dan codegen.
+ */
+export function parseTemplateNodes(templateSource: string): ParsedNode[] {
+  return new TemplateParser(templateSource).parseRoot();
+}
+
+class TemplateParser {
+  private readonly src: string;
+  private readonly len: number;
+  private readonly lineStarts: number[] = [0];
+  private i = 0;
+
+  constructor(src: string) {
+    this.src = src;
+    this.len = src.length;
+    for (let index = 0; index < src.length; index++) {
+      if (src[index] === '\n') this.lineStarts.push(index + 1);
     }
+  }
 
-    // 2. Tag Penutup: </tagName>
-    if (templateSource.startsWith('</', i)) {
-      const endTag = templateSource.indexOf('>', i + 2);
-      if (endTag === -1) {
-        throw new Error('KIL-151: Tag penutup tidak memiliki karakter penutup >');
+  public parseRoot(): ParsedNode[] {
+    const result = this.parseSequence(undefined);
+    return this.mergeText(result.nodes);
+  }
+
+  private loc(index: number): SourceLocation {
+    let low = 0;
+    let high = this.lineStarts.length - 1;
+    while (low <= high) {
+      const mid = (low + high) >> 1;
+      const start = this.lineStarts[mid] ?? 0;
+      if (start <= index) {
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+    const lineIndex = Math.max(0, high);
+    const start = this.lineStarts[lineIndex] ?? 0;
+    return { line: lineIndex + 1, column: index - start + 1 };
+  }
+
+  private error(code: string, message: string, index = this.i): never {
+    throw new TemplateError(code, message, this.loc(index));
+  }
+
+  private parseSequence(stop: Stop | undefined): SequenceResult {
+    const nodes: ParsedNode[] = [];
+
+    while (this.i < this.len) {
+      // Komentar HTML
+      if (this.src.startsWith('<!--', this.i)) {
+        const end = this.src.indexOf('-->', this.i + 4);
+        if (end === -1) {
+          this.error('KIL-151', 'Komentar HTML tidak ditutup dengan -->');
+        }
+        this.i = end + 3;
+        continue;
       }
 
-      const closingTag = templateSource.slice(i + 2, endTag).trim().toLowerCase();
-      i = endTag + 1;
-
-      if (stack.length === 0) {
-        throw new Error(`KIL-151: Tag penutup </${closingTag}> tidak memiliki pasangan tag pembuka`);
-      }
-
-      const top = stack[stack.length - 1]!;
-      if (top.element.tag.toLowerCase() !== closingTag) {
-        throw new Error(
-          `KIL-151: Tag penutup </${closingTag}> tidak cocok dengan tag pembuka <${top.element.tag}>`
+      // Tag penutup
+      if (this.src.startsWith('</', this.i)) {
+        const start = this.i;
+        const end = this.src.indexOf('>', this.i + 2);
+        if (end === -1) {
+          this.error('KIL-151', 'Tag penutup tidak memiliki karakter penutup >');
+        }
+        const closing = this.src.slice(this.i + 2, end).trim().toLowerCase();
+        this.i = end + 1;
+        if (!closing) {
+          this.error('KIL-151', 'Tag penutup kosong tidak sah', start);
+        }
+        if (stop?.kind === 'tag' && stop.value.toLowerCase() === closing) {
+          return { nodes, stop: { kind: 'tag', value: closing } };
+        }
+        if (stop?.kind === 'tag') {
+          this.error(
+            'KIL-151',
+            `Tag penutup </${closing}> tidak cocok dengan tag pembuka <${stop.value}>`,
+            start
+          );
+        }
+        this.error(
+          'KIL-151',
+          `Tag penutup </${closing}> tidak memiliki pasangan tag pembuka`,
+          start
         );
       }
 
-      const popped = stack.pop()!;
-      const elem = popped.element;
-      const rawContent = popped.textBuffer;
-
-      // Elemen kontainer yang memiliki anak DILARANG KERAS mengikat bindText/textContent
-      if (elem.children.length === 0) {
-        const exprMatch = rawContent.match(/{{\s*\$([a-zA-Z0-9_]+)\s*}}/);
-        if (exprMatch && exprMatch[1]) {
-          elem.expressionBinding = exprMatch[1];
-        } else if (rawContent.trim().length > 0) {
-          elem.textContent = rawContent.trim();
+      // Direktif
+      if (this.src[this.i] === '@') {
+        const directiveStart = this.i;
+        const name = this.peekDirectiveName();
+        if (name) {
+          if (stop?.kind === 'directive' && stop.values.has(name)) {
+            this.i += name.length + 1;
+            return { nodes, stop: { kind: 'directive', value: name } };
+          }
+          if (name === 'if') {
+            nodes.push(this.parseIf());
+            continue;
+          }
+          if (name === 'foreach') {
+            nodes.push(this.parseForEach());
+            continue;
+          }
+          if (UNSUPPORTED_DIRECTIVES.has(name)) {
+            this.error(
+              'KIL-151',
+              `Direktif @${name} tidak didukung di Kylat v0. Gunakan @if, @foreach, atau <x-nama>.`,
+              directiveStart
+            );
+          }
+          this.error('KIL-151', `Direktif @${name} tidak dikenal.`, directiveStart);
         }
       }
 
-      if (stack.length > 0) {
-        stack[stack.length - 1]!.element.children.push(elem);
-      } else {
-        rootElements.push(elem);
+      // Tag pembuka
+      if (this.src[this.i] === '<' && isNameStart(this.src[this.i + 1])) {
+        nodes.push(this.parseElement());
+        continue;
       }
-      continue;
+
+      // Teks / interpolasi
+      const textNode = this.parseText();
+      if (textNode) {
+        nodes.push(textNode);
+        continue;
+      }
+
+      // Jangan pernah membiarkan i tidak maju.
+      const ch = this.src[this.i];
+      if (ch !== undefined) {
+        this.i++;
+        nodes.push({
+          type: 'text',
+          value: ch,
+          loc: this.loc(this.i - 1),
+        });
+      }
     }
 
-    // 3. Tag Pembuka atau Self-Closing: <tagName ... > atau <tagName ... />
-    if (templateSource[i] === '<' && i + 1 < len && /[a-zA-Z0-9_-]/.test(templateSource[i + 1]!)) {
-      i++; // Lewati '<'
+    if (stop?.kind === 'tag') {
+      this.error('KIL-151', `Tag <${stop.value}> tidak ditutup`);
+    }
+    if (stop?.kind === 'directive') {
+      this.error('KIL-151', `Direktif ${Array.from(stop.values).join('/')} tidak ditutup`);
+    }
+    return { nodes };
+  }
 
-      // Baca nama tag
-      let tagName = '';
-      while (i < len && /[a-zA-Z0-9_-]/.test(templateSource[i]!)) {
-        tagName += templateSource[i];
-        i++;
+  private peekDirectiveName(): string | null {
+    // @ dianggap direktif hanya bila berada di awal baris atau didahului
+    // whitespace/penutup tag, agar email seperti a@b.com tetap teks biasa.
+    const previous = this.i > 0 ? this.src[this.i - 1] : undefined;
+    if (previous !== undefined && !/[\s>}]/.test(previous)) {
+      return null;
+    }
+    const match = /^@([A-Za-z][A-Za-z0-9_]*)/.exec(this.src.slice(this.i));
+    return match?.[1] ?? null;
+  }
+
+  private parseText(): ParsedNode | null {
+    const start = this.i;
+    let value = '';
+
+    while (this.i < this.len) {
+      if (this.src.startsWith('{{', this.i)) {
+        if (value.length > 0) {
+          return { type: 'text', value, loc: this.loc(start) };
+        }
+        return this.parseExpression();
       }
-
-      const attributes: Record<string, string> = {};
-      const events: ParsedEvent[] = [];
-
-      // Baca atribut sampai '>' atau '/>'
-      let isSelfClosing = false;
-
-      while (i < len) {
-        // Lewati whitespace
-        while (i < len && /\s/.test(templateSource[i]!)) {
-          i++;
-        }
-
-        if (i >= len) {
-          throw new Error(`KIL-151: Tag <${tagName}> tidak selesai (kehilangan >)`);
-        }
-
-        // Akhir tag pembuka
-        if (templateSource[i] === '>') {
-          i++;
-          break;
-        }
-
-        if (templateSource[i] === '/' && i + 1 < len && templateSource[i + 1] === '>') {
-          isSelfClosing = true;
-          i += 2;
-          break;
-        }
-
-        // Baca nama atribut
-        let attrName = '';
-        while (i < len && /[a-zA-Z0-9:_-]/.test(templateSource[i]!)) {
-          attrName += templateSource[i];
-          i++;
-        }
-
-        if (!attrName) {
-          // Karakter tidak terduga di atribut
-          if (templateSource[i] !== '>' && !(templateSource[i] === '/' && templateSource[i + 1] === '>')) {
-            i++;
-          }
+      if (this.src.startsWith('{!!', this.i)) {
+        this.error('KIL-152', "HTML mentah '{!! !!}' dilarang. Gunakan interpolasi aman '{{ }}'.");
+      }
+      if (this.src[this.i] === '<') {
+        break;
+      }
+      if (this.src[this.i] === '@') {
+        if (this.src[this.i + 1] === '@') {
+          value += '@';
+          this.i += 2;
           continue;
         }
-
-        // Lewati whitespace sebelum '=' jika ada
-        while (i < len && /\s/.test(templateSource[i]!)) {
-          i++;
+        if (this.peekDirectiveName()) {
+          break;
         }
+      }
+      value += this.src[this.i];
+      this.i++;
+      if (this.src[this.i] === '<' || this.src[this.i] === '@' || this.src.startsWith('{{', this.i)) {
+        break;
+      }
+    }
 
-        let attrVal = '';
-        if (i < len && templateSource[i] === '=') {
-          i++; // Lewati '='
-          while (i < len && /\s/.test(templateSource[i]!)) {
-            i++;
-          }
+    if (value.length === 0) return null;
+    return { type: 'text', value, loc: this.loc(start) };
+  }
 
-          if (i < len && (templateSource[i] === '"' || templateSource[i] === "'")) {
-            const quoteChar = templateSource[i]!;
-            i++; // Lewati quote pembuka
-            let valBuf = '';
-            while (i < len) {
-              if (templateSource[i] === '\\' && i + 1 < len) {
-                // Karakter escape di dalam atribut
-                valBuf += templateSource[i + 1];
-                i += 2;
-              } else if (templateSource[i] === quoteChar) {
-                i++; // Lewati quote penutup
-                break;
-              } else {
-                valBuf += templateSource[i];
-                i++;
-              }
-            }
-            attrVal = valBuf;
-          } else {
-            // Atribut tanpa quotes
-            let valBuf = '';
-            while (i < len && !/\s|>/.test(templateSource[i]!)) {
-              valBuf += templateSource[i];
-              i++;
-            }
-            attrVal = valBuf;
-          }
+  private parseExpression(): ParsedExpression {
+    const start = this.i;
+    const end = this.src.indexOf('}}', this.i + 2);
+    if (end === -1) {
+      this.error('KIL-151', 'Interpolasi {{ }} tidak ditutup dengan }}', start);
+    }
+    const expression = this.src.slice(this.i + 2, end).trim();
+    if (!expression) {
+      this.error('KIL-151', 'Interpolasi {{ }} kosong tidak sah', start);
+    }
+    this.i = end + 2;
+    return { type: 'expression', expression, loc: this.loc(start) };
+  }
+
+  private parseDirectiveParams(name: string): string {
+    const start = this.i;
+    this.skipWhitespace();
+    if (this.src[this.i] !== '(') {
+      this.error('KIL-151', `Direktif @${name} wajib memiliki tanda kurung.`, start);
+    }
+    const open = this.i;
+    let depth = 0;
+    let quote: string | null = null;
+    this.i++;
+    const contentStart = this.i;
+    while (this.i < this.len) {
+      const ch = this.src[this.i]!;
+      if (quote) {
+        if (ch === '\\') {
+          this.i += 2;
+          continue;
         }
+        if (ch === quote) quote = null;
+        this.i++;
+        continue;
+      }
+      if (ch === "'" || ch === '"') {
+        quote = ch;
+        this.i++;
+        continue;
+      }
+      if (ch === '(') depth++;
+      if (ch === ')') {
+        if (depth === 0) {
+          const content = this.src.slice(contentStart, this.i).trim();
+          this.i++;
+          return content;
+        }
+        depth--;
+      }
+      this.i++;
+    }
+    this.error('KIL-151', `Tanda kurung direktif @${name} tidak ditutup.`, open);
+  }
 
-        if (attrName.startsWith('on:')) {
-          events.push({
-            event: attrName.slice(3),
-            handlerCall: attrVal,
-          });
+  private parseIf(): ParsedIf {
+    const start = this.i;
+    this.i += 3; // @if
+    const condition = this.parseDirectiveParams('if');
+    const branches: ParsedIfBranch[] = [];
+
+    let result = this.parseSequence({
+      kind: 'directive',
+      values: new Set(['elseif', 'else', 'endif']),
+    });
+    branches.push({ condition, children: result.nodes, loc: this.loc(start) });
+
+    while (result.stop?.value === 'elseif') {
+      const branchStart = this.i - 'elseif'.length;
+      const nextCondition = this.parseDirectiveParams('elseif');
+      result = this.parseSequence({
+        kind: 'directive',
+        values: new Set(['elseif', 'else', 'endif']),
+      });
+      branches.push({
+        condition: nextCondition,
+        children: result.nodes,
+        loc: this.loc(branchStart),
+      });
+    }
+
+    if (result.stop?.value === 'else') {
+      const elseStart = this.i - 'else'.length;
+      result = this.parseSequence({
+        kind: 'directive',
+        values: new Set(['endif']),
+      });
+      branches.push({ children: result.nodes, loc: this.loc(elseStart) });
+    }
+
+    if (result.stop?.value !== 'endif') {
+      this.error('KIL-151', 'Direktif @if tidak ditutup dengan @endif', start);
+    }
+    return { type: 'if', branches, loc: this.loc(start) };
+  }
+
+  private parseForEach(): ParsedForEach {
+    const start = this.i;
+    this.i += 8; // @foreach
+    const header = this.parseDirectiveParams('foreach');
+
+    const match = /^\s*(\$[A-Za-z_][A-Za-z0-9_]*)\s+as\s+(?:(\$[A-Za-z_][A-Za-z0-9_]*)\s*=>\s*)?(\$[A-Za-z_][A-Za-z0-9_]*)\s*$/.exec(
+      header
+    );
+    if (!match) {
+      this.error(
+        'KIL-151',
+        'Sintaks @foreach wajib: @foreach ($items as $item) atau @foreach ($items as $key => $item).',
+        start
+      );
+    }
+    const collection = match[1]!;
+    const keyVar = match[2] ? match[2].slice(1) : undefined;
+    const item = match[3]!.slice(1);
+
+    let result = this.parseSequence({
+      kind: 'directive',
+      values: new Set(['empty', 'endforeach']),
+    });
+    const children = result.nodes;
+    let emptyChildren: ParsedNode[] = [];
+
+    if (result.stop?.value === 'empty') {
+      result = this.parseSequence({
+        kind: 'directive',
+        values: new Set(['endforeach']),
+      });
+      emptyChildren = result.nodes;
+    }
+
+    if (result.stop?.value !== 'endforeach') {
+      this.error('KIL-151', 'Direktif @foreach tidak ditutup dengan @endforeach', start);
+    }
+
+    return {
+      type: 'foreach',
+      collection,
+      item,
+      keyVar,
+      children,
+      emptyChildren,
+      loc: this.loc(start),
+    };
+  }
+
+  private parseElement(): ParsedElement {
+    const start = this.i;
+    this.i++; // <
+    let tag = '';
+    while (this.i < this.len && isNameChar(this.src[this.i])) {
+      tag += this.src[this.i];
+      this.i++;
+    }
+    if (!tag) {
+      this.error('KIL-151', 'Nama tag kosong tidak sah', start);
+    }
+
+    const attributes: Record<string, string> = {};
+    const events: ParsedEvent[] = [];
+    const bindings: Record<string, string> = {};
+    const dynamicAttributes: Record<string, string> = {};
+    let keyExpression: string | undefined;
+    let errorPath: string | undefined;
+    let selfClosing = false;
+
+    while (this.i < this.len) {
+      this.skipWhitespace();
+      if (this.i >= this.len) {
+        this.error('KIL-151', `Tag <${tag}> tidak selesai (kehilangan >)`, start);
+      }
+      if (this.src[this.i] === '>') {
+        this.i++;
+        break;
+      }
+      if (this.src[this.i] === '/' && this.src[this.i + 1] === '>') {
+        selfClosing = true;
+        this.i += 2;
+        break;
+      }
+
+      const attrStart = this.i;
+      let attrName = '';
+      while (this.i < this.len && /[A-Za-z0-9_:@.-]/.test(this.src[this.i]!)) {
+        attrName += this.src[this.i];
+        this.i++;
+      }
+      if (!attrName) {
+        // Karakter tak terduga; maju agar tidak pernah berputar selamanya.
+        this.i++;
+        continue;
+      }
+
+      this.skipWhitespace();
+      let attrValue = '';
+      if (this.src[this.i] === '=') {
+        this.i++;
+        this.skipWhitespace();
+        if (this.src[this.i] === '"' || this.src[this.i] === "'") {
+          const quote = this.src[this.i]!;
+          this.i++;
+          while (this.i < this.len) {
+            if (this.src[this.i] === '\\' && this.i + 1 < this.len) {
+              attrValue += this.src[this.i + 1];
+              this.i += 2;
+            } else if (this.src[this.i] === quote) {
+              this.i++;
+              break;
+            } else {
+              attrValue += this.src[this.i];
+              this.i++;
+            }
+          }
         } else {
-          attributes[attrName] = attrVal;
+          while (this.i < this.len && !/[\s>]/.test(this.src[this.i]!)) {
+            if (this.src[this.i] === '/' && this.src[this.i + 1] === '>') break;
+            attrValue += this.src[this.i];
+            this.i++;
+          }
         }
       }
 
-      if (VOID_TAGS.has(tagName.toLowerCase())) {
-        isSelfClosing = true;
-      }
+      attributes[attrName] = attrValue;
 
-      const newElem: ParsedElement = {
-        tag: tagName,
-        attributes,
-        events,
-        children: [],
-      };
-
-      if (isSelfClosing) {
-        if (stack.length > 0) {
-          stack[stack.length - 1]!.element.children.push(newElem);
-        } else {
-          rootElements.push(newElem);
+      if (attrName.startsWith('on:')) {
+        const event = attrName.slice(3);
+        if (!event) {
+          this.error('KIL-151', 'Nama event pada on: tidak boleh kosong', attrStart);
         }
+        events.push({ event, handlerCall: attrValue.trim(), loc: this.loc(attrStart) });
+      } else if (attrName.startsWith('bind:')) {
+        bindings[attrName.slice(5)] = attrValue.trim();
+      } else if (attrName.startsWith(':')) {
+        dynamicAttributes[attrName.slice(1)] = attrValue.trim();
+      } else if (attrName === 'key') {
+        keyExpression = attrValue.trim();
+      } else if (attrName === 'error') {
+        errorPath = attrValue.trim();
+      }
+    }
+
+    if (VOID_TAGS.has(tag.toLowerCase())) selfClosing = true;
+
+    const element: ParsedElement = {
+      type: 'element',
+      tag,
+      attributes,
+      events,
+      children: [],
+      nodes: [],
+      bindings,
+      dynamicAttributes,
+      keyExpression,
+      errorPath,
+      loc: this.loc(start),
+    };
+
+    if (selfClosing) {
+      return element;
+    }
+
+    const result = this.parseSequence({ kind: 'tag', value: tag });
+    if (result.stop?.kind !== 'tag') {
+      this.error('KIL-151', `Tag <${tag}> tidak ditutup`, start);
+    }
+    element.nodes = this.mergeText(result.nodes);
+    element.children = element.nodes.filter(
+      (node): node is ParsedElement => node.type === 'element'
+    );
+
+    const meaningful = element.nodes.filter(
+      (node) => !(node.type === 'text' && node.value.trim() === '')
+    );
+    if (meaningful.length === 1) {
+      const only = meaningful[0]!;
+      if (only.type === 'text') {
+        element.textContent = only.value.trim();
+      } else if (only.type === 'expression') {
+        const simple = /^\$([A-Za-z_][A-Za-z0-9_]*)$/.exec(only.expression);
+        if (simple) element.expressionBinding = simple[1];
+      }
+    }
+
+    return element;
+  }
+
+  private mergeText(nodes: ParsedNode[]): ParsedNode[] {
+    const merged: ParsedNode[] = [];
+    for (const node of nodes) {
+      const previous = merged[merged.length - 1];
+      if (node.type === 'text' && previous?.type === 'text') {
+        previous.value += node.value;
       } else {
-        stack.push({ element: newElem, textBuffer: '' });
+        merged.push(node);
       }
-      continue;
     }
-
-    // 4. Karakter Teks
-    const nextTagIndex = templateSource.indexOf('<', i);
-    const textChunk =
-      nextTagIndex === -1 ? templateSource.slice(i) : templateSource.slice(i, nextTagIndex);
-    i = nextTagIndex === -1 ? len : nextTagIndex;
-
-    if (stack.length > 0) {
-      stack[stack.length - 1]!.textBuffer += textChunk;
-    }
+    return merged;
   }
 
-  // Jika setelah selesai masih ada tag yang belum ditutup
-  if (stack.length > 0) {
-    const unclosed = stack[stack.length - 1]!.element;
-    throw new Error(`KIL-151: Tag <${unclosed.tag}> tidak ditutup`);
+  private skipWhitespace(): void {
+    while (this.i < this.len && /\s/.test(this.src[this.i]!)) this.i++;
   }
-
-  return rootElements;
 }

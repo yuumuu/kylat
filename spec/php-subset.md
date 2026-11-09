@@ -16,11 +16,13 @@ Diturunkan dari Dokumen 2 §2–§5 (revisi P0, 25 Oktober 2026), dengan tiga pe
 - **Operator:** aritmetika, logika, perbandingan strict (`===`, `!==`, `<`, `>`, `<=`, `>=`), penggabungan string (`.`), null coalescing, ternary.
 
   > `.` adalah penggabungan string, bukan penjumlahan. Di JavaScript operatornya menjadi `+`, tetapi `+` antara string dan angka di JS melakukan koersi yang tidak ada di PHP — karena itu `+` **tidak** boleh dipakai untuk menggabungkan string, dan `1 + "2"` di PHP (`3`) tetap dihitung sebagai aritmetika. Kedua bahasa hanya sepakat bila kedua operand bertipe sama. Compiler wajib menolak `.` bila salah satu operand bukan `string` (KIL-131). Operator ini dibutuhkan oleh atribut dinamis `:href="'/produk/' . $id"` di `template.md` §4.
-- **Kontrol alur:** `if`/`else`, `match`, `foreach`, `for`, `return` dini.
+- **Kontrol alur:** `if`/`else`, `foreach`, `for`, `return` dini.
 - **Closure dan arrow function.**
 - **Fungsi bawaan (allowlist):** `count`, `str_contains`, `str_starts_with`, `mb_strlen`, `mb_substr`, `mb_strtolower`, `mb_strtoupper`, `array_map`, `array_filter`, `array_slice`, `array_values`, `usort`, `implode`, `explode`.
 
 `str_contains`, `str_starts_with`, `implode`, dan `explode` hanya diizinkan karena terbukti setara untuk UTF-8 valid lewat differential test. `trim`, `strtolower`, dan `strtoupper` sengaja tidak ada: semantiknya berbeda untuk karakter non-ASCII.
+
+> `match` **ditunda ke v0.1** berdasarkan PUTUSAN 9 November 2026. Komponen v0 yang memakai `match` tetap ditolak dengan **KIL-104**; jangan menambahkan dukungan parsial sebelum v0.1 dibuka.
 
 > `array_values` masuk allowlist sebagai konsekuensi langsung aturan `array_filter` di bagian 4. Tanpa fungsi itu, aturan tersebut tidak bisa dipatuhi. Keputusan 25 Oktober 2026: diterima, tanpa status sementara.
 

@@ -17,7 +17,7 @@ Setiap aturan wajib punya: kode stabil, lokasi di PHP, penjelasan satu kalimat, 
 | KIL-214 | Bagian PHP hanya boleh berisi `declare`, `namespace`, `use`, dan satu class | Struktur |
 | KIL-215 | Nama class harus sama dengan nama berkas dalam PascalCase | Struktur |
 | KIL-216 | `?>` wajib ada, dan tidak boleh ada kode PHP setelahnya | Struktur |
-| KIL-310 | Aksi dengan parameter ID wajib punya `authorize` | Keamanan |
+| KIL-310 | Setiap aksi `#[Server]` wajib punya `authorize()` eksplisit | Keamanan |
 | KIL-311 | Nama aksi unik per kontrak | Kontrak |
 | KIL-401 | Anggaran ukuran chunk per komponen (usulan 8 KB gzip) | Anggaran |
 
@@ -45,7 +45,7 @@ Rentang sah: `1xx` bahasa, `2xx` konvensi dan struktur, `3xx` keamanan dan kontr
 
 **KIL-311.** Kode ini menggantikan KIL-210. Keunikan nama aksi adalah masalah **kontrak**, bukan struktur file: dua komponen sah masing-masing dapat mendeklarasikan aksi bernama sama, dan bentrokannya baru terlihat saat kontrak digabung.
 
-**KIL-310.** Saat ini hanya berlaku untuk aksi yang punya parameter ID. Dokumen 3 §9.3 mewajibkan otorisasi eksplisit untuk **setiap** aksi. Selisih ini belum diputuskan (audit S-07); jangan perluas tanpa keputusan, karena memperluas berarti aksi yang sekarang lolos akan gagal di CI.
+**KIL-310.** Berlaku untuk **setiap** aksi `#[Server]`, bukan hanya aksi berparameter ID. PUTUSAN 9 November 2026 memilih threat model yang lebih ketat: aksi tanpa `authorize()` ditolak saat build, saat registrasi kontrak, dan saat runtime (default-deny). `kylat check` memeriksa kontrak/kelas aksi; adapter menolak registrasi kontrak yang tidak mendeklarasikan `authorize()`.
 
 **KIL-401.** Angka 8 KB masih usulan dan belum disetujui (audit S-10). Anggaran total runtime — yang di Dokumen 1 §2 disebut "diukur relatif terhadap inti signals" — belum punya angka sama sekali. Angka final menunggu spike S2.
 

@@ -25,5 +25,8 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.4"
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }

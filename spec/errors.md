@@ -157,7 +157,7 @@ final class Cart extends Component
 #### KIL-104
 - **Nama**: Fitur sintaks PHP di luar subset v0
 - **Klasifikasi**: Aturan Bahasa & Subset PHP
-- **Pemicu**: Penggunaan fitur sintaks bahasa PHP yang dilarang di v0, seperti ekspresi `match`, generator `yield`, pernyataan `goto`, atau evaluasi dinamis `eval()`.
+- **Pemicu**: Penggunaan fitur sintaks bahasa PHP yang dilarang di v0, seperti ekspresi `match` (ditunda ke v0.1), generator `yield`, pernyataan `goto`, atau evaluasi dinamis `eval()`.
 - **Pesan**: `Fitur sintaks PHP '{fitur}' tidak didukung di subset Kylat v0`
 - **Rujukan**: [`spec/php-subset.md` §1](php-subset.md)
 
@@ -869,16 +869,17 @@ final class Counter extends Component
 ### Rentang 3xx: Keamanan, Kontrak & Protokol RPC
 
 #### KIL-310
-- **Nama**: Aksi server berparameter ID wajib memiliki otorisasi
+- **Nama**: Setiap aksi server wajib memiliki otorisasi
 - **Klasifikasi**: Keamanan Server
-- **Pemicu**: Kelas aksi server yang mengimplementasikan `ServerAction` dan menerima parameter pengenal/ID (misal `string $id`) tidak mendeklarasikan method `authorize()`.
-- **Pesan**: `Aksi server '{aksi}' yang menerima parameter ID wajib mengimplementasikan method authorize()`
+- **Pemicu**: Kontrak/kelas aksi server yang mengekspos method `#[Server]` tidak mendeklarasikan method `authorize()`.
+- **Pesan**: `Aksi server '{aksi}' wajib mengimplementasikan method authorize() eksplisit`
 - **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md)
 
 ##### Contoh Salah
 ```php
 final class DeleteItemAction implements ServerAction
 {
+    #[Server]
     public function handle(string $itemId): void
     {
         // Tanpa method authorize()
@@ -895,6 +896,7 @@ final class DeleteItemAction implements ServerAction
         return $user->can('delete', Item::findOrFail($itemId));
     }
 
+    #[Server]
     public function handle(string $itemId): void
     {
         // ...

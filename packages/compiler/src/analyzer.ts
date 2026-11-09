@@ -5,6 +5,7 @@
 
 import type Parser from 'web-tree-sitter';
 import { type Diagnostic, createDiagnostic, ERROR_MESSAGES } from './diagnostics.js';
+import { camelToKebab } from './case-converter.js';
 import type {
   ComponentIR,
   PropDefinition,
@@ -13,6 +14,71 @@ import type {
   ChildComponentDefinition,
   ServerActionContract,
 } from './ir.js';
+
+const CLIENT_ALLOWED_FUNCTIONS = new Set([
+  'count',
+  'str_contains',
+  'str_starts_with',
+  'mb_strlen',
+  'mb_substr',
+  'mb_strtolower',
+  'mb_strtoupper',
+  'array_map',
+  'array_filter',
+  'array_slice',
+  'array_values',
+  'usort',
+  'implode',
+  'explode',
+]);
+
+const CLIENT_IO_FUNCTIONS = new Set([
+  'file_get_contents',
+  'file_put_contents',
+  'fopen',
+  'fwrite',
+  'fread',
+  'unlink',
+  'mkdir',
+  'rmdir',
+  'scandir',
+  'glob',
+  'exec',
+  'shell_exec',
+  'system',
+  'passthru',
+  'proc_open',
+  'curl_exec',
+  'mysqli_query',
+  'unserialize',
+]);
+
+const CLIENT_BYTE_STRING_FUNCTIONS = new Set([
+  'substr',
+  'strlen',
+  'strpos',
+  'strrpos',
+  'strtolower',
+  'strtoupper',
+  'trim',
+  'ltrim',
+  'rtrim',
+  'str_replace',
+  'str_repeat',
+  'ucfirst',
+  'ucwords',
+]);
+
+const CLIENT_SUPERGLOBALS = new Set([
+  '$_GET',
+  '$_POST',
+  '$_SESSION',
+  '$_COOKIE',
+  '$_SERVER',
+  '$_FILES',
+  '$_ENV',
+  '$_REQUEST',
+]);
 
 export interface AnalysisResult {
   ir: ComponentIR | null;
@@ -159,7 +225,7 @@ export function analyzePhpComponent(
       const childName = childMatch[1].trim();
       childComponents.push({
         className: childName,
-        tag: `x-${childName.toLowerCase()}`,
+        tag: `x-${camelToKebab(childName.split('\\').pop() ?? childName)}`,
       });
     }
   }
@@ -242,12 +308,17 @@ export function analyzePhpComponent(
       const typeStr = typeNode ? typeNode.text : 'mixed';
 
       // Cek apakah memiliki atribut #[Prop]
-      const hasPropAttr = p.descendantsOfType('attribute_group').some((a) => a.text.includes('Prop'));
-      if (hasPropAttr) {
+      const propAttribute = p
+        .descendantsOfType('attribute_group')
+        .find((attribute) => attribute.text.includes('Prop'));
+      if (propAttribute) {
+        const explicitlyRequired =
+          /required\s*:\s*true/.test(propAttribute.text) ||
+          /#\[Prop\s*\(\s*true\s*\)\]/.test(propAttribute.text);
         propDefinitions.push({
           name: propName,
           type: typeStr,
-          isRequired: defaultValue === undefined,
+          isRequired: explicitlyRequired || defaultValue === undefined,
           defaultValue,
         });
       } else {
@@ -267,7 +338,20 @@ export function analyzePhpComponent(
   const methodDecls = classNode.descendantsOfType('method_declaration');
   for (const m of methodDecls) {
     const mName = m.childForFieldName('name')?.text || '';
-    const returnType = m.childForFieldName('return_type')?.text || 'void';
+    const returnTypeNode = m.childForFieldName('return_type');
+    const returnType = returnTypeNode?.text || 'void';
+    if (!returnTypeNode) {
+      diagnostics.push(
+        createDiagnostic(
+          'KIL-131',
+          filename,
+          m.startPosition.row + 1,
+          m.startPosition.column + 1,
+          'Method wajib memiliki tipe kembali eksplisit.',
+          'Tambahkan tipe kembali seperti : void atau : int.'
+        )
+      );
+    }
 
     const serverAttrs = m.descendantsOfType('attribute_group').filter((a) => a.text.includes('Server'));
     const clientAttrs = m.descendantsOfType('attribute_group').filter((a) => a.text.includes('Client'));
@@ -317,6 +401,109 @@ export function analyzePhpComponent(
     }
 
     if (bodyNode && kind === 'client') {
+      // KIL-110 / KIL-120 / KIL-140: panggilan fungsi dan konstruksi berbahaya.
+      for (const call of bodyNode.descendantsOfType('function_call_expression')) {
+        const functionNode = call.childForFieldName('function');
+        const functionName = functionNode?.text ?? '';
+        const loc = {
+          line: call.startPosition.row + 1,
+          column: call.startPosition.column + 1,
+        };
+
+        if (CLIENT_IO_FUNCTIONS.has(functionName)) {
+          diagnostics.push(
+            createDiagnostic(
+              'KIL-120',
+              filename,
+              loc.line,
+              loc.column,
+              `Fungsi I/O '${functionName}' tidak boleh dipanggil di method client.`,
+              'Pindahkan akses data ke aksi server.'
+            )
+          );
+        } else if (CLIENT_BYTE_STRING_FUNCTIONS.has(functionName)) {
+          diagnostics.push(
+            createDiagnostic(
+              'KIL-140',
+              filename,
+              loc.line,
+              loc.column,
+              `Fungsi string byte-level '${functionName}' tidak diizinkan. Gunakan fungsi mb_* yang setara.`
+            )
+          );
+        } else if (!CLIENT_ALLOWED_FUNCTIONS.has(functionName)) {
+          diagnostics.push(
+            createDiagnostic(
+              'KIL-110',
+              filename,
+              loc.line,
+              loc.column,
+              `Fungsi '${functionName}' tidak ada di allowlist v0.`,
+              'Gunakan allowlist fungsi di spec/php-subset.md atau pindahkan ke aksi server.'
+            )
+          );
+        }
+      }
+
+      for (const creation of bodyNode.descendantsOfType('object_creation_expression')) {
+        diagnostics.push(
+          createDiagnostic(
+            'KIL-110',
+            filename,
+            creation.startPosition.row + 1,
+            creation.startPosition.column + 1,
+            `Instansiasi kelas 'new' tidak diizinkan di client: '${creation.text}'.`,
+            'Gunakan nilai dari props/state atau pindahkan ke aksi server.'
+          )
+        );
+      }
+
+      for (const inclusion of [
+        ...bodyNode.descendantsOfType('include_expression'),
+        ...bodyNode.descendantsOfType('require_expression'),
+        ...bodyNode.descendantsOfType('include_once_expression'),
+        ...bodyNode.descendantsOfType('require_once_expression'),
+      ]) {
+        diagnostics.push(
+          createDiagnostic(
+            'KIL-120',
+            filename,
+            inclusion.startPosition.row + 1,
+            inclusion.startPosition.column + 1,
+            'Include/require tidak diizinkan di method client.'
+          )
+        );
+      }
+
+      for (const variable of bodyNode.descendantsOfType('variable_name')) {
+        if (CLIENT_SUPERGLOBALS.has(variable.text)) {
+          diagnostics.push(
+            createDiagnostic(
+              'KIL-120',
+              filename,
+              variable.startPosition.row + 1,
+              variable.startPosition.column + 1,
+              `Superglobal '${variable.text}' tidak boleh diakses di method client.`,
+              'Kirim data melalui props atau aksi server.'
+            )
+          );
+        }
+      }
+
+      if (bodyNode.descendantsOfType('eval_expression').length > 0) {
+        for (const evalNode of bodyNode.descendantsOfType('eval_expression')) {
+          diagnostics.push(
+            createDiagnostic(
+              'KIL-104',
+              filename,
+              evalNode.startPosition.row + 1,
+              evalNode.startPosition.column + 1,
+              'eval() dilarang di seluruh Kylat.'
+            )
+          );
+        }
+      }
+
       // Traversal AST statements di dalam compound_statement
       for (const stmt of bodyNode.children) {
         if (stmt.type === '{' || stmt.type === '}' || stmt.type === 'comment') continue;
@@ -325,20 +512,48 @@ export function analyzePhpComponent(
           const expr = stmt.children[0];
           if (!expr) continue;
 
-          // 1. $this->count += 1 atau $this->count -= 1
-          if (expr.type === 'augmented_assignment_expression') {
+          // 1. $this->count += 1, -= 1, atau = ekspresi
+          if (expr.type === 'augmented_assignment_expression' || expr.type === 'assignment_expression') {
             const lhs = expr.childForFieldName('left')?.text || '';
-            const op = expr.children.find((c) => c.text === '+=' || c.text === '-=')?.text as '+=' | '-=' | undefined;
-            const rhs = expr.childForFieldName('right')?.text || '1';
+            const augmented = expr.type === 'augmented_assignment_expression';
+            const op = augmented
+              ? (expr.children.find((c) => c.text === '+=' || c.text === '-=')?.text as '+=' | '-=' | undefined)
+              : '=';
+            const rhs = expr.childForFieldName('right')?.text || 'null';
 
             const propMatch = lhs.match(/^\$this->([a-zA-Z0-9_]+)$/);
             if (propMatch && propMatch[1] && op) {
-              operations.push({
-                type: 'mutate_state',
-                target: propMatch[1],
-                operator: op,
-                operand: rhs,
-              });
+              const target = propMatch[1];
+              if (propDefinitions.some((p) => p.name === target)) {
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-104',
+                    filename,
+                    expr.startPosition.row + 1,
+                    expr.startPosition.column + 1,
+                    `Prop '\${target}' tidak boleh dimutasi dari client. Gunakan state lokal.`,
+                    'Salin prop ke state saat inisialisasi jika nilainya perlu berubah.'
+                  )
+                );
+              } else if (!stateDefinitions.some((s) => s.name === target)) {
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-104',
+                    filename,
+                    expr.startPosition.row + 1,
+                    expr.startPosition.column + 1,
+                    `Properti '\${target}' tidak dideklarasikan sebagai state komponen.`,
+                    'Deklarasikan properti state di kelas komponen.'
+                  )
+                );
+              } else {
+                operations.push({
+                  type: 'mutate_state',
+                  target,
+                  operator: op,
+                  operand: rhs,
+                });
+              }
               continue;
             }
           }
@@ -349,27 +564,72 @@ export function analyzePhpComponent(
             const op = expr.children.find((c) => c.text === '++' || c.text === '--')?.text;
             const propMatch = arg.match(/^\$this->([a-zA-Z0-9_]+)$/);
             if (propMatch && propMatch[1] && op) {
-              operations.push({
-                type: 'mutate_state',
-                target: propMatch[1],
-                operator: op === '++' ? '+=' : '-=',
-                operand: '1',
-              });
+              const target = propMatch[1];
+              if (propDefinitions.some((p) => p.name === target)) {
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-104',
+                    filename,
+                    expr.startPosition.row + 1,
+                    expr.startPosition.column + 1,
+                    `Prop '\${target}' tidak boleh dimutasi dari client.`,
+                    'Gunakan state lokal.'
+                  )
+                );
+              } else if (!stateDefinitions.some((s) => s.name === target)) {
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-104',
+                    filename,
+                    expr.startPosition.row + 1,
+                    expr.startPosition.column + 1,
+                    `Properti '\${target}' tidak dideklarasikan sebagai state komponen.`
+                  )
+                );
+              } else {
+                operations.push({
+                  type: 'mutate_state',
+                  target,
+                  operator: op === '++' ? '+=' : '-=',
+                  operand: '1',
+                });
+              }
               continue;
             }
           }
 
-          // Jika statement ekspresi tidak didukung di subset v0: fail fast (KIL-104)
-          diagnostics.push(
-            createDiagnostic(
-              'KIL-104',
-              filename,
-              stmt.startPosition.row + 1,
-              stmt.startPosition.column + 1,
-              `Ekspresi statement '${stmt.text.trim()}' tidak didukung dalam method client di subset v0.`,
-              'Gunakan operasi mutasi state yang didukung ($this->state += 1 atau assignment).'
-            )
-          );
+          // Jika pelanggaran sudah punya kode spesifik (KIL-110/120/140),
+          // jangan tambah KIL-104 generik yang hanya membuat noise.
+          const callsInStatement = stmt.descendantsOfType('function_call_expression');
+          const hasSpecificViolation =
+            callsInStatement.some((call) => {
+              const functionName = call.childForFieldName('function')?.text ?? '';
+              return (
+                CLIENT_IO_FUNCTIONS.has(functionName) ||
+                CLIENT_BYTE_STRING_FUNCTIONS.has(functionName) ||
+                !CLIENT_ALLOWED_FUNCTIONS.has(functionName)
+              );
+            }) ||
+            stmt.descendantsOfType('object_creation_expression').length > 0 ||
+            stmt.descendantsOfType('include_expression').length > 0 ||
+            stmt.descendantsOfType('require_expression').length > 0 ||
+            stmt.descendantsOfType('eval_expression').length > 0 ||
+            stmt
+              .descendantsOfType('variable_name')
+              .some((variable) => CLIENT_SUPERGLOBALS.has(variable.text));
+
+          if (!hasSpecificViolation) {
+            diagnostics.push(
+              createDiagnostic(
+                'KIL-104',
+                filename,
+                stmt.startPosition.row + 1,
+                stmt.startPosition.column + 1,
+                `Ekspresi statement '${stmt.text.trim()}' tidak didukung dalam method client di subset v0.`,
+                'Gunakan operasi mutasi state yang didukung ($this->state += 1 atau assignment).'
+              )
+            );
+          }
         } else {
           // Statement tak dikenal di method client
           diagnostics.push(
@@ -475,9 +735,34 @@ export function analyzePhpComponent(
       }
     }
 
+    const params: Array<{ name: string; type: string }> = [];
+    const paramsNode = m.childForFieldName('parameters');
+    if (paramsNode) {
+      for (const child of paramsNode.children) {
+        if (child.type !== 'simple_parameter' && child.type !== 'property_promotion_parameter') continue;
+        const nameNode = child.childForFieldName('name');
+        const typeNode = child.childForFieldName('type');
+        const paramName = nameNode?.text.replace('$', '') ?? '';
+        if (!paramName) continue;
+        params.push({ name: paramName, type: typeNode?.text ?? 'mixed' });
+        if (!typeNode) {
+          diagnostics.push(
+            createDiagnostic(
+              'KIL-131',
+              filename,
+              child.startPosition.row + 1,
+              child.startPosition.column + 1,
+              'Parameter $' + paramName + ' wajib memiliki tipe eksplisit.',
+              'Tambahkan tipe seperti int, string, atau list<T>.'
+            )
+          );
+        }
+      }
+    }
+
     methodDefinitions.push({
       name: mName,
-      params: [],
+      params,
       returnType,
       kind,
       isAction,
@@ -500,4 +785,51 @@ export function analyzePhpComponent(
   };
 
   return { ir, diagnostics };
+}
+
+/**
+ * KIL-310: kontrak/kelas aksi yang mengekspos method #[Server] wajib
+ * mendeklarasikan authorize(). Komponen (extends Component) dilewati karena
+ * method #[Server] di komponen hanyalah proxy ke kontrak aksi.
+ */
+export function analyzeActionContract(tree: Parser.Tree, filename: string): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+  const declarations = [
+    ...tree.rootNode.descendantsOfType('interface_declaration'),
+    ...tree.rootNode.descendantsOfType('class_declaration'),
+  ];
+
+  for (const declaration of declarations) {
+    if (declaration.type === 'class_declaration' && /extends\s+(\\?[A-Za-z_][A-Za-z0-9_\\]*)*Component\b/.test(declaration.text)) {
+      continue;
+    }
+
+    const methods = declaration.descendantsOfType('method_declaration');
+    const serverMethods = methods.filter((method) =>
+      method
+        .descendantsOfType('attribute_group')
+        .some((attribute) => /#\[\s*(?:Kylat\\Attributes\\)?Server\b/.test(attribute.text))
+    );
+    if (serverMethods.length === 0) continue;
+
+    const hasAuthorize = methods.some(
+      (method) => method.childForFieldName('name')?.text === 'authorize'
+    );
+    if (hasAuthorize) continue;
+
+    const first = serverMethods[0]!;
+    const name = declaration.childForFieldName('name')?.text ?? 'Unknown';
+    diagnostics.push(
+      createDiagnostic(
+        'KIL-310',
+        filename,
+        first.startPosition.row + 1,
+        first.startPosition.column + 1,
+        `Kontrak aksi '${name}' memiliki method #[Server] tetapi tidak mendeklarasikan authorize().`,
+        'Tambahkan public function authorize(): bool dengan default-deny ke kontrak aksi.'
+      )
+    );
+  }
+
+  return diagnostics;
 }

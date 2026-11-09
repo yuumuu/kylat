@@ -76,7 +76,7 @@ Aturan struktur berkas, hierarki komponen, dan konvensi:
 ### 4. Keamanan & Kontrak Aksi (`3xx`)
 Aturan RPC dan otorisasi:
 
-- [KIL-310 (Aksi Berparameter ID Wajib Otorisasi)](../../spec/errors.md#kil-310): Aksi server berparameter ID wajib memiliki method `authorize()`.
+- [KIL-310 (Setiap Aksi Wajib Otorisasi)](../../spec/errors.md#kil-310): Setiap aksi `#[Server]` wajib memiliki method `authorize()` eksplisit.
 - [KIL-311 (Nama Aksi Bentrok)](../../spec/errors.md#kil-311): Nama aksi server wajib unik di dalam satu kontrak gabungan.
 
 ### 5. Aksesibilitas & Anggaran Performa (`4xx`)
