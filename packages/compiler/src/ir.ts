@@ -39,6 +39,7 @@ export interface MethodDefinition {
   params: Array<{ name: string; type: string }>;
   returnType: string;
   kind: 'client' | 'server';
+  isAction?: boolean;
   body: string;
   operations?: ClientOperation[];
   serverCall?: ServerCallDefinition;

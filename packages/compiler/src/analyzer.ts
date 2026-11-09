@@ -270,7 +270,11 @@ export function analyzePhpComponent(
     const returnType = m.childForFieldName('return_type')?.text || 'void';
 
     const serverAttrs = m.descendantsOfType('attribute_group').filter((a) => a.text.includes('Server'));
+    const clientAttrs = m.descendantsOfType('attribute_group').filter((a) => a.text.includes('Client'));
+    const isPrivate = m.descendantsOfType('visibility_modifier').some((v) => v.text === 'private');
     const isServer = serverAttrs.length > 0;
+    const isClient = clientAttrs.length > 0;
+    const isAction = !isPrivate && (isServer || isClient || (!serverAttrs.length && !clientAttrs.length));
     const isExplicitRead = serverAttrs.some((a) => /read\s*:\s*true/.test(a.text));
     const kind = isServer ? 'server' : 'client';
 
@@ -295,6 +299,22 @@ export function analyzePhpComponent(
     const bodyText = bodyNode ? bodyNode.text : '{}';
     const operations: import('./ir.js').ClientOperation[] = [];
     let serverCall: import('./ir.js').ServerCallDefinition | undefined;
+
+    const isEffect = m.descendantsOfType('attribute_group').some((a) => a.text.includes('Effect'));
+    if (isEffect) {
+      if (bodyText.includes('->server(') || isServer) {
+        diagnostics.push(
+          createDiagnostic(
+            'KIL-157',
+            filename,
+            m.startPosition.row + 1,
+            m.startPosition.column + 1,
+            ERROR_MESSAGES.KIL_157,
+            'Pindahkan pemanggilan aksi server ke #[OnMount] atau aksi yang dipicu interaksi pengguna langsung.'
+          )
+        );
+      }
+    }
 
     if (bodyNode && kind === 'client') {
       // Traversal AST statements di dalam compound_statement
@@ -460,6 +480,7 @@ export function analyzePhpComponent(
       params: [],
       returnType,
       kind,
+      isAction,
       body: bodyText,
       operations,
       serverCall,
