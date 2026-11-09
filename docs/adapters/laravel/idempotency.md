@@ -4,6 +4,8 @@
 
 Dokumen ini mendokumentasikan desain teknis, status kesesuaian saat ini, dan rencana migrasi implementasi idempotensi mutasi pada `packages/adapter-laravel`.
 
+> **PUTUSAN 9 November 2026:** jalur produksi wajib memakai **transaksi database + unique index + outbox**. Implementasi Cache saat ini adalah interim Fase 0/2 dan tidak boleh dianggap memenuhi §3.1. Migrasi penuh masuk **Fase 3**, bukan Fase 0. Redis CAS/Lua saja tidak dipakai karena efek samping database dan catatan idempotensi dapat terpisah. Detail keputusan dicatat sebagai ADR baru oleh AG.
+
 ---
 
 ## 1. Status Kepatuhan Saat Ini terhadap §3.1
@@ -41,7 +43,11 @@ Migrasi database Laravel (`packages/adapter-laravel/database/migrations/`) akan 
 - `PRIMARY KEY (user_id, key)` — Mencegah replay lintas pengguna.
 - `INDEX idx_expires_at (expires_at)` — Untuk kebutuhan job pembersihan (*pruning*).
 
-### B. Prosedur Transaksi Per-Panggilan
+### B. Outbox
+
+Mutasi yang memanggil sistem eksternal atau efek samping non-database wajib menulis event ke outbox **dalam transaksi yang sama** dengan baris idempotensi dan perubahan database lokal. Worker terpisah memproses outbox; replay mengembalikan hasil tanpa memicu efek samping ulang. Ini menutup celah crash setelah commit lokal tetapi sebelum respons terkirim.
+
+### C. Prosedur Transaksi Per-Panggilan
 1. **Satu Transaksi Per Panggilan**: Setiap elemen dalam array `calls` dieksekusi dalam transaksi DB terpisah. Batch tidak atomik sebagai satu unit.
 2. **Koneksi Database Sama**: Handler aksi dan operasi tabel `kylat_idempotency_keys` wajib menggunakan instance koneksi database (PDO) yang sama persis.
 3. **Lock Timeout Ter-scope**: Timeout kunci (`lock_timeout` pada PostgreSQL atau `innodb_lock_wait_timeout` pada MySQL) diatur di awal transaksi (misal 5 detik) dan dikembalikan ke nilai semula pada blok `finally`.

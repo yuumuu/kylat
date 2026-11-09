@@ -7,6 +7,10 @@ namespace Kylat\Laravel\Support;
 /**
  * Pengelola idempotensi RPC Kylat dengan dukungan kanonikalisasi JSON, atomic locking,
  * deteksi in-progress (anti race-condition), isolasi retry pasca-kegagalan, dan TTL 24 jam.
+ *
+ * CATATAN KEPUTUSAN 9 November 2026: implementasi Cache ini adalah interim.
+ * Jalur produksi wajib memakai transaksi database + unique index + outbox
+ * (Fase 3). Lihat docs/adapters/laravel/idempotency.md.
  */
 class IdempotencyStore
 {
@@ -37,12 +41,6 @@ class IdempotencyStore
      */
     private static array $memoryStore = [];
 
-    /**
-     * Driver eksternal opsional (misal instance Cache repository Laravel).
-     * @var object|null
-     */
-    private static ?object $customDriver = null;
-
     public static function setLeaseSeconds(float|int $seconds): void
     {
         self::$inProgressLeaseSeconds = $seconds;
@@ -63,11 +61,6 @@ class IdempotencyStore
     {
         self::$currentActiveKey = null;
         self::$currentActiveHash = null;
-    }
-
-    public static function setDriver(?object $driver): void
-    {
-        self::$customDriver = $driver;
     }
 
     public static function resetMemory(): void
@@ -109,7 +102,16 @@ class IdempotencyStore
             'args' => $args,
         ]);
 
-        return hash('sha256', (string) json_encode($canonicalData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        try {
+            $encoded = json_encode(
+                $canonicalData,
+                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR
+            );
+        } catch (\JsonException $exception) {
+            throw new \InvalidArgumentException('Payload argumen tidak dapat dikanonikalisasi.', 0, $exception);
+        }
+
+        return hash('sha256', $encoded);
     }
 
     /**
@@ -130,7 +132,7 @@ class IdempotencyStore
         $cacheKey = "kylat:idemp:{$key}";
         $now = microtime(true);
 
-        if (class_exists('Illuminate\\Support\\Facades\\Cache') && self::$customDriver === null) {
+        if (class_exists('Illuminate\\Support\\Facades\\Cache')) {
             $record = \Illuminate\Support\Facades\Cache::get($cacheKey);
             if (!is_array($record) || ($record['hash'] ?? null) !== $payloadHash || ($record['status'] ?? null) !== 'in_progress') {
                 return false;
@@ -166,7 +168,7 @@ class IdempotencyStore
         $lease = self::$inProgressLeaseSeconds;
 
         // 1. Integrasi Laravel Cache dengan Atomic Lock (Cache::add set-if-absent)
-        if (class_exists('Illuminate\\Support\\Facades\\Cache') && self::$customDriver === null) {
+        if (class_exists('Illuminate\\Support\\Facades\\Cache')) {
             // Coba peroleh lock secara atomik
             $locked = \Illuminate\Support\Facades\Cache::add($cacheKey, [
                 'status' => 'in_progress',
@@ -262,7 +264,7 @@ class IdempotencyStore
         $cacheKey = "kylat:idemp:{$key}";
         $now = microtime(true);
 
-        if (class_exists('Illuminate\\Support\\Facades\\Cache') && self::$customDriver === null) {
+        if (class_exists('Illuminate\\Support\\Facades\\Cache')) {
             $record = \Illuminate\Support\Facades\Cache::get($cacheKey);
             if (!is_array($record) || ($record['hash'] ?? null) !== $payloadHash || ($record['status'] ?? null) !== 'in_progress') {
                 return false;
@@ -310,7 +312,7 @@ class IdempotencyStore
         $cacheKey = "kylat:idemp:{$key}";
         $now = microtime(true);
 
-        if (class_exists('Illuminate\\Support\\Facades\\Cache') && self::$customDriver === null) {
+        if (class_exists('Illuminate\\Support\\Facades\\Cache')) {
             $record = \Illuminate\Support\Facades\Cache::get($cacheKey);
             $attempt = is_array($record) ? ((int) ($record['attempt'] ?? 1)) : 1;
 
@@ -348,7 +350,7 @@ class IdempotencyStore
     {
         $cacheKey = "kylat:idemp:{$key}";
 
-        if (class_exists('Illuminate\\Support\\Facades\\Cache') && self::$customDriver === null) {
+        if (class_exists('Illuminate\\Support\\Facades\\Cache')) {
             $record = \Illuminate\Support\Facades\Cache::get($cacheKey);
             if (is_array($record) && isset($record['attempt'])) {
                 $attempt = (int) $record['attempt'];

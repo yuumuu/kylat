@@ -4,37 +4,32 @@ declare(strict_types=1);
 
 namespace Kylat\Laravel;
 
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\ServiceProvider;
 use Kylat\Laravel\Blade\KylatDirective;
 use Kylat\Laravel\Http\Controllers\KylatBatchCallController;
 
 /**
- * Service Provider integrasi Kylat ke ekosistem Laravel.
+ * Service provider integrasi Kylat ke Laravel.
+ *
+ * Mendaftarkan direktif Blade, route RPC, dan auto-discovery melalui
+ * extra.laravel.providers di composer.json.
  */
-class KylatServiceProvider
+final class KylatServiceProvider extends ServiceProvider
 {
-    /**
-     * Mendaftarkan direktif Blade jika Illuminate\Support\Facades\Blade tersedia.
-     */
     public function boot(): void
     {
-        if (class_exists(\Illuminate\Support\Facades\Blade::class)) {
-            \Illuminate\Support\Facades\Blade::directive('kylat', function (string $expression) {
-                return "<?php echo \\Kylat\\Laravel\\Blade\\KylatDirective::renderIsland({$expression}); ?>";
-            });
+        Blade::directive('kylat', function (string $expression): string {
+            return "<?php echo \\Kylat\\Laravel\\Blade\\KylatDirective::renderIsland({$expression}); ?>";
+        });
 
-            \Illuminate\Support\Facades\Blade::directive('kylatScripts', function () {
-                return "<?php echo \\Kylat\\Laravel\\Blade\\KylatDirective::renderScripts(); ?>";
-            });
-        }
+        Blade::directive('kylatScripts', function (): string {
+            return "<?php echo \\Kylat\\Laravel\\Blade\\KylatDirective::renderScripts(); ?>";
+        });
 
-        if (class_exists(\Illuminate\Support\Facades\Route::class)) {
-            \Illuminate\Support\Facades\Route::post('/_kylat/call', [KylatBatchCallController::class, 'handle'])
-                ->middleware(['web']);
-        }
-    }
-
-    public function register(): void
-    {
-        // Bindings container jika diperlukan
+        Route::post('/_kylat/call', [KylatBatchCallController::class, 'handleRequest'])
+            ->middleware(['web'])
+            ->name('kylat.call');
     }
 }

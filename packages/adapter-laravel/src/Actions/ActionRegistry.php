@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace Kylat\Laravel\Actions;
 
 use Closure;
+use InvalidArgumentException;
 
 /**
- * Registri pemetaan kontrak aksi server ke resolver implementasi konkresi.
+ * Registri kontrak aksi server.
+ *
+ * Keamanan: hanya kontrak yang didaftarkan secara eksplisit yang dapat
+ * di-resolve. Tidak ada fallback `new $contract()` dari input wire.
  */
 final class ActionRegistry
 {
@@ -25,11 +29,23 @@ final class ActionRegistry
      */
     public static function register(string $contract, object $resolver): void
     {
+        if (interface_exists($contract) && !method_exists($contract, 'authorize')) {
+            throw new InvalidArgumentException(
+                sprintf("KIL-310: kontrak aksi '%s' wajib mendeklarasikan authorize().", $contract)
+            );
+        }
+
+        if (!$resolver instanceof Closure && interface_exists($contract) && !$resolver instanceof $contract) {
+            throw new InvalidArgumentException(
+                sprintf("Resolver untuk kontrak '%s' wajib mengimplementasikan interface tersebut.", $contract)
+            );
+        }
+
         self::$bindings[$contract] = $resolver;
     }
 
     /**
-     * Menyelesaikan instance aksi berdasarkan kontrak.
+     * Menyelesaikan instance aksi yang sudah terdaftar. Null bila tidak ada.
      *
      * @template T of object
      * @param class-string<T> $contract
@@ -38,20 +54,14 @@ final class ActionRegistry
     public static function resolve(string $contract): ?object
     {
         $binding = self::$bindings[$contract] ?? null;
-
         if ($binding === null) {
-            // Coba instantiate langsung jika class konkret dan ada
-            if (class_exists($contract)) {
-                /** @var T $instance */
-                $instance = new $contract();
-                return $instance;
-            }
             return null;
         }
 
         if ($binding instanceof Closure) {
             /** @var T $resolved */
             $resolved = $binding();
+
             return $resolved;
         }
 

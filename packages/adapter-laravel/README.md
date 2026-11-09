@@ -1,14 +1,16 @@
 # `kylat/laravel`
 
-Adapter backend. Satu aksi satu kelas. Komponen di frontend hanya mendeklarasikan aksi; implementasi, otorisasi, dan DTO ada di sini.
+Adapter backend Laravel untuk Kylat.
 
-| Direktori | Isi |
+| Bagian | Isi |
 |---|---|
-| `src/Http/` | Endpoint `/_kylat/*`, kernel minimal PSR-15, middleware |
-| `src/Policies/` | Integrasi otorisasi dan pemeriksaan per objek |
-| `src/Contract/` | Generator kontrak, pemakaian `nikic/PHP-Parser` untuk membaca signature aksi |
-| `tests/` | Test konformansi protokol + test integrasi Laravel |
+| `src/Http/Controllers/KylatBatchCallController.php` | `handleRequest(Request)`, validasi batch, batas body/depth, error RFC 9457 |
+| `src/Actions/ActionRegistry.php` | Registry kontrak aksi; tidak ada fallback kelas arbitrer |
+| `src/Support/IdempotencyStore.php` | Lease/idempotensi dengan cache Laravel atau memory |
+| `src/Blade/KylatDirective.php` | `@kylat` dan `@kylatScripts`, serialisasi data-props aman |
+| `src/Attributes/` | `Prop`, `Client`, `Server`, `Uses`, `Child` |
+| `src/Component.php` | Base class komponen |
 
-**Aturan:** inti server bergantung pada PSR-7/15/17, bukan pada Laravel. Laravel adalah adapter pertama, bukan satu-satunya.
+**Keamanan:** hanya kontrak terdaftar; method wajib `#[Server]` pada kontrak/implementasi; `authorize()` wajib dan default-deny; error internal tidak dibocorkan.
 
-**Belum diputuskan:** jalur boot (route via service provider yang mem-boot framework, atau kernel minimal terpisah — audit S-08) dan versi PHP minimum yang ditegakkan `kylat doctor`.
+**Dipasang otomatis** lewat `extra.laravel.providers` di `composer.json`. Route `POST /_kylat/call` memakai middleware `web` (CSRF).
