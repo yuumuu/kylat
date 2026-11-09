@@ -46,6 +46,8 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 | **KEP-32** | **Pemisahan Atribut `#[Uses]` dan `#[Child]`**: `#[Uses(CartActions::class)]` khusus kontrak aksi server; `#[Child(Counter::class)]` khusus izin render komponen anak `<x-counter>`. Quickstart counter tidak perlu `#[Child]`. | **PUTUSAN** | — | Pemilik proyek |
 | **KEP-33** | **Allowlist `array_values`**: `array_values` disahkan masuk allowlist fungsi PHP v0 tanpa syarat sementara, sebagai prasyarat teknis pemenuhan aturan `array_filter` (D5). | **PUTUSAN** | — | Pemilik proyek |
 | **KEP-34** | **Format Komponen Single-File (`*.kylat.php`)**: Menetapkan berkas tunggal `*.kylat.php` dengan bagian PHP (`<?php ... ?>`) dan bagian templat HTML/Kylat setelahnya ([`0004-single-file-component.md`](0004-single-file-component.md)). | **PUTUSAN** | Akhir fase 0 | Pemilik proyek |
+| **KEP-35** | **Reaktivitas Prop Komponen Anak**: Menetapkan semantik signal accessor getter untuk komposisi `<x-child :prop="$state">` ([`0006-reaktivitas-prop-komponen-anak.md`](0006-reaktivitas-prop-komponen-anak.md)). | `[KANDIDAT]` | Fase 1 | Arsitek Toolchain |
+| **KEP-36** | **Idempotensi Atomik Database & Outbox**: Menetapkan skema tabel transaksi database untuk menggantikan cache interim pada produksi ([`0007-idempotensi-atomik-database-outbox.md`](0007-idempotensi-atomik-database-outbox.md)). | `[KANDIDAT]` | Fase 3 | Arsitek Backend |
 
 ---
 

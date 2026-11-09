@@ -39,6 +39,24 @@ describe('@kylat/compiler - aturan bahasa client (KIL-110/120/140)', () => {
     );
   });
 
+  it('menolak tipe properti closure atau callable dengan KIL-110', async () => {
+    const result = await compile(
+      `<?php
+declare(strict_types=1);
+namespace App\\Components;
+use Kylat\\Component;
+use Closure;
+final class BadClosure extends Component {
+    public Closure $fn;
+}
+?>
+<div></div>`,
+      'BadClosure.kylat.php'
+    );
+    assert.equal(result.success, false);
+    assert.ok(result.diagnostics.some((d) => d.code === 'KIL-110'));
+  });
+
   it('menolak superglobal dengan KIL-120', async () => {
     assert.ok(
       (await codes(`    public function bad(): void { $this->name = $_GET['x']; }`)).includes('KIL-120')

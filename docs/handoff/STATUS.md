@@ -20,7 +20,12 @@ Prototipe sudah melewati tahap "belum ada kode". Compiler, runtime, CLI, dan ada
 - RPC batch dengan retry transient/in-progress, timeout, CSRF meta/cookie, idempotency key unik.
 - Adapter Laravel: registry-only, method wajib `#[Server]`, `authorize()` wajib/default-deny, validasi bentuk batch, batas body/kedalaman, Problem Details, cache-control.
 - CLI: `make:component`, `check`, `build` (manifest), `doctor`.
-- Test Node: compiler/runtime/template/single-file; test PHP adapter dan cache; e2e demo counter.
+- Pengujian komprehensif (120 tes lulus di CI):
+  - Unit tests Node: 99 tes (Compiler: 72 [70 pass, 2 skipped P8/P10], Runtime: 17, CLI: 7, Protocol: 3).
+  - Integrasi E2E: 6 tes (`01-counter` kompilasi SFC, DOM signals, batch RPC, idempotensi).
+  - Security audit PHP: 15 tes (Adapter: 11, Cache driver idempotensi: 4).
+  - Audit konsistensi kode galat KIL: 35/35 pemeriksaan lulus 100%.
+- Pemisahan fixture: seluruh golden master dan fixture pengujian tersimpan terisolasi di `packages/compiler/test/fixtures/`; direktori `examples/01-counter` murni percontohan SFC.
 
 ## Masalah terbuka (prioritas)
 
