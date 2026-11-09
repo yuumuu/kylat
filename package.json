@@ -13,7 +13,9 @@
     "typecheck": "pnpm --filter \"./packages/*\" run typecheck",
     "test": "pnpm --filter \"./packages/*\" run test",
     "lint:errors": "node scripts/verify-error-codes.mjs",
-    "lint": "pnpm lint:errors"
+    "lint": "pnpm lint:errors",
+    "pretest": "pnpm build",
+    "test:examples": "pnpm build && pnpm --filter @kylat/example-counter-app test"
   },
   "workspaces": [
     "packages/*",
