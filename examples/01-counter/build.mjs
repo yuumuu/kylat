@@ -1,6 +1,6 @@
 /**
- * build.mjs - Build script untuk demo counter-app
- * Mengompilasi Counter.php dan counter.blade.php ke dist/Counter.js menggunakan @kylat/compiler.
+ * build.mjs - Build script untuk demo 01-counter
+ * Mengompilasi Counter.kylat.php ke dist/Counter.js menggunakan @kylat/compiler.
  */
 
 import fs from 'node:fs';
@@ -11,16 +11,14 @@ import { compile } from '../../packages/compiler/dist/index.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function main() {
-  const phpPath = path.resolve(__dirname, 'Counter.php');
-  const bladePath = path.resolve(__dirname, 'counter.blade.php');
+  const componentPath = path.resolve(__dirname, 'Counter.kylat.php');
   const outDir = path.resolve(__dirname, 'dist');
   const outPath = path.resolve(outDir, 'Counter.js');
 
-  const phpSource = fs.readFileSync(phpPath, 'utf-8');
-  const bladeSource = fs.readFileSync(bladePath, 'utf-8');
+  const source = fs.readFileSync(componentPath, 'utf-8');
 
-  console.log('⚡ Mengompilasi Counter.php dengan template Blade...');
-  const result = await compile(phpSource, 'Counter.php', { template: bladeSource });
+  console.log('⚡ Mengompilasi Counter.kylat.php (Single-File Component)...');
+  const result = await compile(source, 'Counter.kylat.php');
 
   if (!result.success) {
     console.error('❌ Gagal mengompilasi Counter:');

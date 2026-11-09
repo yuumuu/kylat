@@ -1,11 +1,12 @@
 # examples/
 
-Daftar contoh aplikasi dan komponen referensi Kylat:
+Daftar contoh aplikasi referensi Kylat:
 
 | Direktori | Deskripsi | Format & Pengujian |
 |---|---|---|
-| `01-counter/` | Aplikasi Counter lengkap (E2E) | Format Single-File (`Counter.kylat.php`, KEP-34) + format legacy dua-berkas (`Counter.php` + `counter.blade.php`). Diuji lewat `pnpm test:examples`. |
-| `04-cart/` | Komponen CartCounter dengan Aksi Server | Aksi server RPC `CartActions::add`, verifikasi prop wajib non-null, dan golden master contract. |
+| `01-counter/` | Aplikasi Counter Single-File (E2E) | Komponen Single-File resmi (`Counter.kylat.php`, KEP-34), aksi server RPC, dan pengujian end-to-end (`pnpm test:examples`). |
+
+Fixture pengujian internal compiler (golden master, regression guard, dan kontrak legacy) disimpan secara terpisah di `packages/compiler/test/fixtures/`.
 
 Untuk membuat komponen baru dengan format single-file standar:
 

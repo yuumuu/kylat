@@ -46,15 +46,12 @@ describe('Counter App - End-to-End Test Suite', () => {
     await new Promise((resolve) => serverInstance.close(resolve));
   });
 
-  it('Langkah 1: Mengompilasi Counter.php dan counter.blade.php secara deterministik', async () => {
-    const phpPath = path.resolve(__dirname, 'Counter.php');
-    const bladePath = path.resolve(__dirname, 'counter.blade.php');
+  it('Langkah 1: Mengompilasi Counter.kylat.php secara deterministik (Single-File Component)', async () => {
+    const componentPath = path.resolve(__dirname, 'Counter.kylat.php');
+    const source = fs.readFileSync(componentPath, 'utf-8');
 
-    const phpSource = fs.readFileSync(phpPath, 'utf-8');
-    const bladeSource = fs.readFileSync(bladePath, 'utf-8');
-
-    const res = await compile(phpSource, 'Counter.php', { template: bladeSource });
-    assert.equal(res.success, true, 'Kompilasi komponen Counter wajib berhasil');
+    const res = await compile(source, 'Counter.kylat.php');
+    assert.equal(res.success, true, 'Kompilasi komponen Counter.kylat.php wajib berhasil');
     assert.ok(res.code.includes('export function createCounter'), 'Wajib mengekspor createCounter');
     assert.ok(res.code.includes('CounterActions::saveCount'), 'Wajib memetakan aksi server saveCount');
   });
