@@ -1,14 +1,16 @@
 # `@kylat/cli`
 
-Perintah pengguna. Dipasang lewat npm; Node 20 ke atas. Mesin frontend tidak perlu PHP terpasang.
+Perintah pengguna. Node 20+.
 
 | Perintah | Fungsi |
 |---|---|
-| `npm create kylat@latest` | Scaffold repo frontend |
-| `kylat dev` | Dev server + HMR |
-| `kylat build` | Build produksi, opsional artefak CDN |
-| `kylat check` | Lint subset PHP, tipe, KIL-xxx |
-| `kylat doctor` | Cek keamanan dan konfigurasi; gagal di CI bila tidak aman |
-| `kylat sync-contract` | Sinkronkan kontrak dengan backend |
+| `kylat make:component <Nama> [--dir path]` | Membuat komponen single-file `*.kylat.php` |
+| `kylat check [path]` | Lint komponen dan template |
+| `kylat build [path] [--out-dir dir]` | Preflight KIL-310, kompilasi ke modul JS + `manifest.json` + `client.js` |
+| `kylat doctor` | Cek Node, PHP patch minimum, Composer |
 
-**Belum diputuskan / belum selaras:** `make:component`, `make:action`, dan `migrate:livewire` dipakai di Dokumen 5 tetapi belum masuk struktur package di Dokumen 4 (audit T-05). Apakah `doctor` juga tersedia sejak fase 0 (audit T-06).
+Output build berisi modul per komponen, `manifest.json`, dan `client.js` (registrasi island + `hydrateAll`). `client.js` mengimpor `@kylat/runtime`; gunakan bundler/import map di aplikasi host.
+
+```html
+<script type="module" src="/dist/kylat/client.js"></script>
+```

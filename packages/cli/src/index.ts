@@ -6,6 +6,7 @@
 import { runCheckCommand } from './commands/check.js';
 import { runBuildCommand } from './commands/build.js';
 import { runDoctorCommand } from './commands/doctor.js';
+import { runMakeComponentCommand } from './commands/make.js';
 
 export async function runCli(args: string[]): Promise<void> {
   const command = args[0] || 'help';
@@ -33,6 +34,16 @@ export async function runCli(args: string[]): Promise<void> {
       break;
     }
 
+    case 'make:component':
+    case 'make': {
+      const name = args[1];
+      const dirIndex = args.indexOf('--dir');
+      const dir = dirIndex !== -1 && args[dirIndex + 1] ? args[dirIndex + 1] : undefined;
+      const code = runMakeComponentCommand(name, { dir });
+      process.exitCode = code;
+      break;
+    }
+
     case 'help':
     case '--help':
     case '-h':
@@ -43,12 +54,10 @@ Frontend subset PHP yang dikompilasi ke JavaScript reaktivitas sinyal.
 Penggunaan: kylat <perintah> [opsi]
 
 Perintah:
-  check [path]                  Periksa aturan bahasa dan template (KIL-101..KIL-311)
-  build [input] [--out-dir dir] Kompilasi komponen PHP ke modul JavaScript
-  doctor                        Audit kesehatan konfigurasi lingkungan (Node, PHP, Composer)
-  dev                           Jalankan dev server dengan HMR (segera)
-  make:component [nama]         Buat boilerplate komponen baru (segera)
-  make:action [nama]            Buat boilerplate kelas aksi server (segera)
+  make:component <Nama> [--dir path]  Buat komponen single-file *.kylat.php
+  check [path]                       Periksa aturan bahasa dan template (KIL-101..KIL-311)
+  build [input] [--out-dir dir]      Kompilasi komponen ke modul JavaScript + manifest
+  doctor                             Audit ringan Node, PHP, dan Composer
 `);
       break;
   }

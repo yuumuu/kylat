@@ -23,5 +23,8 @@
   "dependencies": {
     "@kylat/compiler": "workspace:*",
     "@kylat/protocol": "workspace:*"
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }

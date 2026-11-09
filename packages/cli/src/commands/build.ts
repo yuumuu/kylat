@@ -1,17 +1,27 @@
 /**
  * @kylat/cli - commands/build.ts
- * Perintah `kylat build` untuk mengompilasi komponen PHP ke JavaScript modules.
+ * Perintah `kylat build`: kompilasi komponen single-file *.kylat.php
+ * (dan format dua-berkas legacy) menjadi modul JavaScript.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { compile } from '@kylat/compiler';
+import { analyzeActionContract, compile, initPhpParser } from '@kylat/compiler';
 
 export interface BuildOptions {
   outDir?: string;
 }
 
-export async function runBuildCommand(inputPath: string = 'resources/views/components', options?: BuildOptions): Promise<number> {
+interface ManifestEntry {
+  name: string;
+  file: string;
+  output: string;
+}
+
+export async function runBuildCommand(
+  inputPath: string = 'resources/views/components',
+  options?: BuildOptions
+): Promise<number> {
   const outDir = options?.outDir ?? 'public/dist/kylat';
   const resolvedInput = path.resolve(process.cwd(), inputPath);
   const resolvedOutDir = path.resolve(process.cwd(), outDir);
@@ -26,7 +36,7 @@ export async function runBuildCommand(inputPath: string = 'resources/views/compo
   }
 
   const phpFiles: string[] = [];
-  function collect(dir: string) {
+  function collect(dir: string): void {
     for (const item of fs.readdirSync(dir)) {
       if (item === 'node_modules' || item === 'vendor' || item === '.git') continue;
       const full = path.join(dir, item);
@@ -49,45 +59,127 @@ export async function runBuildCommand(inputPath: string = 'resources/views/compo
 
   let compiledCount = 0;
   let errorCount = 0;
+
+  // KIL-310: preflight kontrak/kelas aksi di direktori input.
+  for (const file of phpFiles) {
+    const content = fs.readFileSync(file, 'utf-8');
+    if (content.includes('extends Component') || !/#\[\s*(?:Kylat\\Attributes\\)?Server\b/.test(content)) {
+      continue;
+    }
+    const parser = await initPhpParser();
+    const actionDiagnostics = analyzeActionContract(parser.parse(content), path.relative(process.cwd(), file));
+    for (const diagnostic of actionDiagnostics) {
+      errorCount++;
+      console.error(
+        `\x1b[31m❌ [${diagnostic.code}] ${diagnostic.message} (${diagnostic.file}:${diagnostic.line}:${diagnostic.column})\x1b[0m`
+      );
+    }
+  }
+  const manifest: ManifestEntry[] = [];
+  const emittedNames = new Map<string, string>();
+
   for (const file of phpFiles) {
     const content = fs.readFileSync(file, 'utf-8');
     const relativeFile = path.relative(process.cwd(), file);
 
-    // Hanya kompilasi berkas yang merupakan kelas komponen Kylat
-    if (!content.includes('extends Component')) {
+    const isKylatSingleFile = file.endsWith('.kylat.php');
+    if (!isKylatSingleFile && !content.includes('extends Component')) {
+      continue;
+    }
+    if (isKylatSingleFile && !content.includes('extends Component')) {
       continue;
     }
 
-    const baseName = path.basename(file, '.php');
-    const dirName = path.dirname(file);
-
-    // Cari template blade pendamping (misal counter.blade.php atau Counter.blade.php)
     let templateSource: string | undefined;
-    const lowerBlade = path.join(dirName, `${baseName.toLowerCase()}.blade.php`);
-    const exactBlade = path.join(dirName, `${baseName}.blade.php`);
-    if (fs.existsSync(lowerBlade)) {
-      templateSource = fs.readFileSync(lowerBlade, 'utf-8');
-    } else if (fs.existsSync(exactBlade)) {
-      templateSource = fs.readFileSync(exactBlade, 'utf-8');
+    if (!content.includes('?>')) {
+      // Format legacy: template pendamping hanya untuk berkas .php lama.
+      const baseName = path.basename(file, '.php');
+      const dirName = path.dirname(file);
+      const candidates = [
+        path.join(dirName, `${baseName}.blade.php`),
+        path.join(dirName, `${baseName.toLowerCase()}.blade.php`),
+      ];
+      const found = candidates.find((candidate) => fs.existsSync(candidate));
+      if (found) templateSource = fs.readFileSync(found, 'utf-8');
     }
 
-    const result = await compile(content, relativeFile, { template: templateSource });
+    const result = await compile(
+      content,
+      relativeFile,
+      templateSource === undefined ? undefined : { template: templateSource }
+    );
     if (!result.success || !result.ir) {
       errorCount++;
       console.error(`\x1b[31m❌ Gagal mengompilasi ${relativeFile}:\x1b[0m`);
-      for (const d of result.diagnostics) {
-        console.error(`   [${d.code}] ${d.message} (${d.line}:${d.column})`);
+      for (const diagnostic of result.diagnostics) {
+        console.error(
+          `   [${diagnostic.code}] ${diagnostic.message} (${diagnostic.line}:${diagnostic.column})`
+        );
       }
       continue;
     }
 
     const outFilename = `${result.ir.name}.js`;
+    if (emittedNames.has(outFilename)) {
+      errorCount++;
+      console.error(
+        `\x1b[31m❌ Nama komponen '${result.ir.name}' bentrok dengan ${emittedNames.get(outFilename)}.\x1b[0m`
+      );
+      continue;
+    }
+    emittedNames.set(outFilename, relativeFile);
+
     const destPath = path.join(resolvedOutDir, outFilename);
     fs.writeFileSync(destPath, result.code, 'utf-8');
+    manifest.push({
+      name: result.ir.name,
+      file: relativeFile.replace(/\\/g, '/'),
+      output: outFilename,
+    });
     compiledCount++;
     console.log(`  \x1b[32m✓\x1b[0m ${result.ir.name} -> ${path.relative(process.cwd(), destPath)}`);
   }
 
-  console.log(`\n🎉 Selesai: ${compiledCount} komponen berhasil dikompilasi (${errorCount} gagal).`);
+  if (compiledCount > 0) {
+    const imports = manifest
+      .map((entry) => `import { create${entry.name} } from './${entry.name}.js';`)
+      .join('\n');
+    const registrations = manifest
+      .map((entry) => `registerIsland(${JSON.stringify(entry.name)}, create${entry.name});`)
+      .join('\n');
+
+    const clientEntry = `import { hydrateAll, registerIsland } from '@kylat/runtime';
+${imports}
+
+${registrations}
+
+function boot() {
+  hydrateAll();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot, { once: true });
+} else {
+  boot();
+}
+
+export { boot };
+`;
+    fs.writeFileSync(path.join(resolvedOutDir, 'client.js'), clientEntry, 'utf-8');
+  }
+
+  fs.writeFileSync(
+    path.join(resolvedOutDir, 'manifest.json'),
+    JSON.stringify(
+      { version: 1, entry: compiledCount > 0 ? 'client.js' : null, components: manifest },
+      null,
+      2
+    ),
+    'utf-8'
+  );
+
+  console.log(
+    `\n🎉 Selesai: ${compiledCount} komponen berhasil dikompilasi (${errorCount} gagal).`
+  );
   return errorCount > 0 ? 1 : 0;
 }
