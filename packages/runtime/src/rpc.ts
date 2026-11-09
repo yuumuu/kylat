@@ -18,6 +18,7 @@ export interface RpcClientConfig {
   endpoint?: string;
   buildId?: string;
   csrfToken?: string;
+  timeoutMs?: number;
   fetchFn?: typeof fetch;
 }
 
@@ -56,6 +57,11 @@ interface QueuedCall {
   retryDelayFn?: (attempt: number, type: 'transient_5xx' | 'in_progress') => number;
 }
 
+interface CsrfToken {
+  header: string;
+  value: string;
+}
+
 export class RpcBatcher {
   private queue: QueuedCall[] = [];
   private isFlushScheduled = false;
@@ -65,29 +71,39 @@ export class RpcBatcher {
   constructor(config?: RpcClientConfig) {
     this.config = {
       endpoint: '/_kylat/call',
+      timeoutMs: 30_000,
       ...config,
     };
   }
 
   /**
-   * Mengambil token CSRF Laravel secara otomatis dari meta tag atau cookie jika tersedia.
+   * Mengambil token CSRF Laravel secara otomatis dari meta tag atau cookie.
+   *
+   * Meta tag memakai header X-CSRF-Token. Cookie XSRF-TOKEN milik Laravel
+   * adalah nilai terenkripsi dan harus dikirim sebagai X-XSRF-TOKEN; mengirimnya
+   * sebagai X-CSRF-Token akan menghasilkan 419.
    */
-  private getCsrfToken(): string | undefined {
+  private getCsrfToken(): CsrfToken | undefined {
     if (this.config.csrfToken) {
-      return this.config.csrfToken;
+      return { header: PROTOCOL_HEADERS.CSRF_TOKEN, value: this.config.csrfToken };
     }
 
     if (typeof document !== 'undefined') {
       const meta = document.querySelector('meta[name="csrf-token"]');
       if (meta) {
         const content = meta.getAttribute('content');
-        if (content) return content;
+        if (content) {
+          return { header: PROTOCOL_HEADERS.CSRF_TOKEN, value: content };
+        }
       }
 
-      // Fallback: baca dari cookie XSRF-TOKEN Laravel
       const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
       if (match && match[1]) {
-        return decodeURIComponent(match[1]);
+        try {
+          return { header: 'X-XSRF-TOKEN', value: decodeURIComponent(match[1]) };
+        } catch {
+          return { header: 'X-XSRF-TOKEN', value: match[1] };
+        }
       }
     }
 
@@ -136,7 +152,6 @@ export class RpcBatcher {
     this.isFlushScheduled = false;
 
     while (this.queue.length > 0) {
-      // Potong batch maksimal 20 calls
       const batchChunk = this.queue.splice(0, PROTOCOL_LIMITS.MAX_CALLS_PER_BATCH);
       const requestPayload: BatchRequest = {
         calls: batchChunk.map((q) => ({
@@ -144,6 +159,10 @@ export class RpcBatcher {
           ...(q.idempotencyKey ? { idempotencyKey: q.idempotencyKey } : {}),
         })),
       };
+
+      const controller = new AbortController();
+      const timeoutMs = this.config.timeoutMs ?? 30_000;
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
         const fetchImplementation = this.config.fetchFn ?? fetch;
@@ -154,7 +173,7 @@ export class RpcBatcher {
 
         const csrf = this.getCsrfToken();
         if (csrf) {
-          headers[PROTOCOL_HEADERS.CSRF_TOKEN] = csrf;
+          headers[csrf.header] = csrf.value;
         }
 
         if (this.config.buildId) {
@@ -172,11 +191,10 @@ export class RpcBatcher {
           method: 'POST',
           headers,
           body: JSON.stringify(requestPayload),
+          signal: controller.signal,
         });
 
-        // Tangani Problem Details HTTP level (RFC 9457) dan kegagalan status HTTP
         if (!response.ok) {
-          // Hanya retry untuk status transient (502, 503, 504), hindari 500 error deterministik
           const isTransient = [502, 503, 504].includes(response.status);
           const contentType = response.headers.get('content-type') || '';
           let err: KylatRpcError;
@@ -193,7 +211,6 @@ export class RpcBatcher {
             });
           }
 
-          // Lakukan retry otomatis jika error transient dan memiliki sisa kuota retry 5xx
           for (const q of batchChunk) {
             if (isTransient && q.idempotencyKey && q.transientRetriesRemaining > 0) {
               q.transientRetriesRemaining--;
@@ -204,10 +221,7 @@ export class RpcBatcher {
 
               setTimeout(() => {
                 this.queue.push(q);
-                if (!this.isFlushScheduled) {
-                  this.isFlushScheduled = true;
-                  queueMicrotask(() => this.flush());
-                }
+                this.scheduleFlush();
               }, delay);
             } else {
               q.reject(err);
@@ -222,7 +236,6 @@ export class RpcBatcher {
           resultMap.set(res.id, res);
         }
 
-        // Resolusikan setiap call dalam chunk
         for (const queued of batchChunk) {
           const result = resultMap.get(queued.call.id);
           if (!result) {
@@ -230,7 +243,6 @@ export class RpcBatcher {
           } else if (result.ok) {
             queued.resolve(result.data);
           } else {
-            // Tangani kylat:in_progress menggunakan budget inProgress terpisah
             if (result.error.type === 'kylat:in_progress' && queued.idempotencyKey && queued.inProgressRetriesRemaining > 0) {
               queued.inProgressRetriesRemaining--;
               queued.inProgressAttempt++;
@@ -240,10 +252,7 @@ export class RpcBatcher {
 
               setTimeout(() => {
                 this.queue.push(queued);
-                if (!this.isFlushScheduled) {
-                  this.isFlushScheduled = true;
-                  queueMicrotask(() => this.flush());
-                }
+                this.scheduleFlush();
               }, delay);
             } else {
               queued.reject(
@@ -257,8 +266,9 @@ export class RpcBatcher {
         }
       } catch (networkError) {
         const error = networkError instanceof Error ? networkError : new Error(String(networkError));
+        const timedOut = controller.signal.aborted;
         for (const q of batchChunk) {
-          if (q.idempotencyKey && q.transientRetriesRemaining > 0) {
+          if (!timedOut && q.idempotencyKey && q.transientRetriesRemaining > 0) {
             q.transientRetriesRemaining--;
             q.transientAttempt++;
             const delay = q.retryDelayFn
@@ -267,16 +277,29 @@ export class RpcBatcher {
 
             setTimeout(() => {
               this.queue.push(q);
-              if (!this.isFlushScheduled) {
-                this.isFlushScheduled = true;
-                queueMicrotask(() => this.flush());
-              }
+              this.scheduleFlush();
             }, delay);
           } else {
-            q.reject(error);
+            q.reject(
+              timedOut
+                ? new KylatRpcError(`Permintaan Kylat melebihi batas waktu ${timeoutMs} ms.`, {
+                    code: 'kylat:timeout',
+                    rawError: error,
+                  })
+                : error
+            );
           }
         }
+      } finally {
+        clearTimeout(timer);
       }
+    }
+  }
+
+  private scheduleFlush(): void {
+    if (!this.isFlushScheduled) {
+      this.isFlushScheduled = true;
+      queueMicrotask(() => this.flush());
     }
   }
 }

@@ -4,18 +4,22 @@
  * Digunakan untuk merender dan memperbarui direktif @foreach ($items as $item).
  */
 
-import { effect } from 'alien-signals';
-import type { SignalGetter } from './signals.js';
+import { effect, effectScope, signal } from 'alien-signals';
+import { untrack, type SignalGetter } from './signals.js';
 
 export interface RenderedItemRecord<T> {
   key: string | number;
   item: T;
-  node: Node;
+  nodes: Node[];
   cleanup?: () => void;
+  setIndex: (index: number) => void;
 }
 
 export type KeySelector<T> = (item: T, index: number) => string | number;
-export type ItemRenderer<T> = (item: T, index: SignalGetter<number>) => { node: Node; cleanup?: () => void };
+export type ItemRenderer<T> = (
+  item: T,
+  index: SignalGetter<number>
+) => { node: Node; cleanup?: () => void };
 
 /**
  * Merekonsiliasi array data ke DOM children berdasarkan kunci unik (key).
@@ -27,97 +31,101 @@ export function reconcileKeyedList<T>(
   renderFn: ItemRenderer<T>,
   marker?: Node
 ): () => void {
-  // Gunakan marker comment jika belum ada anchor
   const anchor = marker ?? parent.appendChild(document.createComment('kylat-list-end'));
   let currentRecords: RenderedItemRecord<T>[] = [];
 
+  const createRecord = (item: T, index: number, key: string | number): RenderedItemRecord<T> => {
+    const indexSignal = signal(index);
+    let rendered: { node: Node; cleanup?: () => void } | undefined;
+    const stopScope = effectScope(() => {
+      rendered = untrack(() => renderFn(item, () => indexSignal()));
+    });
+    if (!rendered) throw new Error('[Kylat] render @foreach tidak mengembalikan node.');
+    const nodes =
+      rendered.node.nodeType === 11
+        ? Array.from((rendered.node as DocumentFragment).childNodes)
+        : [rendered.node];
+    if (nodes.length === 0) {
+      nodes.push(document.createComment('kylat-empty-item'));
+    }
+    return {
+      key,
+      item,
+      nodes,
+      cleanup: () => {
+        if (rendered?.cleanup) rendered.cleanup();
+        stopScope();
+      },
+      setIndex: (next) => indexSignal(next),
+    };
+  };
+
+  const insertRecord = (record: RenderedItemRecord<T>, before: Node): void => {
+    for (const node of record.nodes) {
+      parent.insertBefore(node, before);
+    }
+  };
+
+  const removeRecord = (record: RenderedItemRecord<T>): void => {
+    if (record.cleanup) record.cleanup();
+    for (const node of record.nodes) {
+      if (node.parentNode === parent) {
+        parent.removeChild(node);
+      }
+    }
+  };
+
   const unbindEffect = effect(() => {
     const nextItems = getter() ?? [];
-    const nextLength = nextItems.length;
-
-    // Jika list baru kosong, hapus semua record lama
-    if (nextLength === 0) {
-      for (const rec of currentRecords) {
-        if (rec.cleanup) rec.cleanup();
-        if (rec.node.parentNode === parent) {
-          parent.removeChild(rec.node);
-        }
-      }
-      currentRecords = [];
-      return;
-    }
-
-    // Jika list lama kosong, buat semua item baru
-    if (currentRecords.length === 0) {
-      const newRecords: RenderedItemRecord<T>[] = [];
-      for (let i = 0; i < nextLength; i++) {
-        const item = nextItems[i];
-        if (item === undefined) continue;
-        const key = keyFn(item, i);
-        const rendered = renderFn(item, () => i);
-        parent.insertBefore(rendered.node, anchor);
-        newRecords.push({
-          key,
-          item,
-          node: rendered.node,
-          cleanup: rendered.cleanup,
-        });
-      }
-      currentRecords = newRecords;
-      return;
-    }
-
-    // Algoritma diffing berbasis key map
     const oldMap = new Map<string | number, RenderedItemRecord<T>>();
-    for (const rec of currentRecords) {
-      oldMap.set(rec.key, rec);
+    for (const record of currentRecords) {
+      oldMap.set(record.key, record);
     }
 
     const nextRecords: RenderedItemRecord<T>[] = [];
     const retainedKeys = new Set<string | number>();
 
-    // 1. Identifikasi atau ciptakan item baru
-    for (let i = 0; i < nextLength; i++) {
+    for (let i = 0; i < nextItems.length; i++) {
       const item = nextItems[i];
       if (item === undefined) continue;
-
       const key = keyFn(item, i);
+      if (retainedKeys.has(key)) {
+        throw new Error(`[Kylat] key duplikat pada @foreach: ${String(key)}`);
+      }
       retainedKeys.add(key);
 
       const existing = oldMap.get(key);
-      if (existing) {
-        existing.item = item;
+      if (existing && existing.item === item) {
+        existing.setIndex(i);
         nextRecords.push(existing);
-      } else {
-        const rendered = renderFn(item, () => i);
-        nextRecords.push({
-          key,
-          item,
-          node: rendered.node,
-          cleanup: rendered.cleanup,
-        });
+        continue;
+      }
+
+      if (existing) {
+        removeRecord(existing);
+      }
+      const record = createRecord(item, i, key);
+      insertRecord(record, anchor);
+      nextRecords.push(record);
+    }
+
+    for (const record of currentRecords) {
+      if (!retainedKeys.has(record.key)) {
+        removeRecord(record);
       }
     }
 
-    // 2. Hapus node yang tidak ada di list baru
-    for (const rec of currentRecords) {
-      if (!retainedKeys.has(rec.key)) {
-        if (rec.cleanup) rec.cleanup();
-        if (rec.node.parentNode === parent) {
-          parent.removeChild(rec.node);
-        }
-      }
-    }
-
-    // 3. Susun ulang posisi node di DOM agar sesuai urutan nextRecords
+    // Susun ulang posisi node sesuai urutan list baru.
     let nextSibling: Node = anchor;
     for (let i = nextRecords.length - 1; i >= 0; i--) {
-      const rec = nextRecords[i];
-      if (!rec) continue;
-      if (rec.node.nextSibling !== nextSibling) {
-        parent.insertBefore(rec.node, nextSibling);
+      const record = nextRecords[i]!;
+      const lastNode = record.nodes[record.nodes.length - 1]!;
+      if (lastNode.nextSibling !== nextSibling) {
+        for (const node of record.nodes) {
+          parent.insertBefore(node, nextSibling);
+        }
       }
-      nextSibling = rec.node;
+      nextSibling = record.nodes[0]!;
     }
 
     currentRecords = nextRecords;
@@ -125,11 +133,8 @@ export function reconcileKeyedList<T>(
 
   return () => {
     unbindEffect();
-    for (const rec of currentRecords) {
-      if (rec.cleanup) rec.cleanup();
-      if (rec.node.parentNode === parent) {
-        parent.removeChild(rec.node);
-      }
+    for (const record of currentRecords) {
+      removeRecord(record);
     }
     currentRecords = [];
   };

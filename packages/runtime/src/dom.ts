@@ -3,8 +3,19 @@
  * Fine-grained DOM binding primitives tanpa virtual DOM.
  */
 
-import { effect } from 'alien-signals';
-import type { SignalGetter, SignalSetter } from './signals.js';
+import { effect, effectScope } from 'alien-signals';
+import { untrack, type SignalGetter, type SignalSetter } from './signals.js';
+
+const URL_ATTRIBUTES = new Set(['href', 'src', 'formaction', 'xlink:href']);
+
+function isSafeUrl(value: string): boolean {
+  const normalized = value.replace(/[\u0000-\u0020]+/g, '').toLowerCase();
+  return !(
+    normalized.startsWith('javascript:') ||
+    normalized.startsWith('vbscript:') ||
+    normalized.startsWith('data:')
+  );
+}
 
 /**
  * Mengikat nilai sinyal langsung ke node DOM (biasanya Text node) tanpa VDOM.
@@ -17,7 +28,7 @@ export function bindText(node: Node, getter: SignalGetter<unknown>): () => void 
 
 /**
  * Mengikat nilai sinyal ke atribut elemen HTML.
- * Menangani boolean attributes (cth: disabled, checked, hidden).
+ * Menangani boolean attributes dan sanitasi URL untuk href/src.
  */
 export function bindAttr(
   el: HTMLElement,
@@ -28,11 +39,18 @@ export function bindAttr(
     const val = getter();
     if (val === false || val === null || val === undefined) {
       el.removeAttribute(attrName);
-    } else if (val === true) {
-      el.setAttribute(attrName, '');
-    } else {
-      el.setAttribute(attrName, String(val));
+      return;
     }
+    if (val === true) {
+      el.setAttribute(attrName, '');
+      return;
+    }
+    const stringValue = String(val);
+    if (URL_ATTRIBUTES.has(attrName.toLowerCase()) && !isSafeUrl(stringValue)) {
+      el.removeAttribute(attrName);
+      return;
+    }
+    el.setAttribute(attrName, stringValue);
   });
 }
 
@@ -96,6 +114,90 @@ export function bindInput(
   return () => {
     unbindEffect();
     el.removeEventListener('input', onInput);
+  };
+}
+
+/**
+ * Two-way data binding untuk checkbox/radio (bind:checked).
+ */
+export function bindChecked(
+  el: HTMLInputElement,
+  getter: SignalGetter<boolean>,
+  setter: SignalSetter<boolean>
+): () => void {
+  const unbindEffect = effect(() => {
+    el.checked = Boolean(getter());
+  });
+
+  const onChange = () => {
+    setter(el.checked);
+  };
+
+  el.addEventListener('change', onChange);
+
+  return () => {
+    unbindEffect();
+    el.removeEventListener('change', onChange);
+  };
+}
+
+/**
+ * Render kondisional reaktif tanpa VDOM.
+ *
+ * `render` dipanggil hanya saat kondisi berubah dari false ke true. Isi yang
+ * dikembalikan boleh berupa Node tunggal atau DocumentFragment.
+ */
+export function bindIf(
+  parent: Node,
+  getter: SignalGetter<unknown>,
+  render: () => Node,
+  marker?: Node
+): () => void {
+  const anchor = marker ?? parent.appendChild(document.createComment('kylat-if-end'));
+  let current: Node[] = [];
+  let active = false;
+  let stopScope: (() => void) | undefined;
+
+  const unbindEffect = effect(() => {
+    const shouldRender = Boolean(getter());
+    if (shouldRender && !active) {
+      let rendered: Node | undefined;
+      stopScope = effectScope(() => {
+        rendered = untrack(render);
+      });
+      if (!rendered) return;
+      active = true;
+      const nodes =
+        rendered.nodeType === 11
+          ? Array.from((rendered as DocumentFragment).childNodes)
+          : [rendered];
+      current = nodes;
+      for (const node of nodes) {
+        parent.insertBefore(node, anchor);
+      }
+      return;
+    }
+    if (!shouldRender && active) {
+      for (const node of current) {
+        if (node.parentNode === parent) parent.removeChild(node);
+      }
+      current = [];
+      active = false;
+      if (stopScope) {
+        stopScope();
+        stopScope = undefined;
+      }
+    }
+  });
+
+  return () => {
+    unbindEffect();
+    if (stopScope) stopScope();
+    active = false;
+    for (const node of current) {
+      if (node.parentNode === parent) parent.removeChild(node);
+    }
+    current = [];
   };
 }
 

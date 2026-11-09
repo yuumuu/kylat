@@ -7,7 +7,7 @@ export interface IslandProps {
   [key: string]: unknown;
 }
 
-export type ComponentFactory = (props: IslandProps) => HTMLElement;
+export type ComponentFactory = (props: IslandProps) => Node;
 
 const islandRegistry = new Map<string, ComponentFactory>();
 
@@ -34,8 +34,11 @@ export function clearIslands(): void {
 
 /**
  * Hidrasi elemen DOM penampung island (elemen beratribut data-island="...").
+ * Idempoten: elemen yang sudah ditandai tidak dihidrasi dua kali.
  */
 export function hydrateIsland(el: HTMLElement): void {
+  if (el.getAttribute('data-kylat-hydrated') === 'true') return;
+
   const islandName = el.getAttribute('data-island');
   const propsRaw = el.getAttribute('data-props');
 
@@ -50,21 +53,29 @@ export function hydrateIsland(el: HTMLElement): void {
   let props: IslandProps = {};
   if (propsRaw) {
     try {
-      props = JSON.parse(propsRaw) as IslandProps;
-    } catch (e) {
-      console.error(`[Kylat] Gagal mengurai data-props untuk island '${islandName}':`, e);
+      const parsed: unknown = JSON.parse(propsRaw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        props = parsed as IslandProps;
+      }
+    } catch (error) {
+      console.error(`[Kylat] Gagal mengurai data-props untuk island '${islandName}':`, error);
       return;
     }
   }
 
-  const renderedEl = factory(props);
-  el.replaceChildren(renderedEl);
+  try {
+    const rendered = factory(props);
+    el.replaceChildren(rendered);
+    el.setAttribute('data-kylat-hydrated', 'true');
+  } catch (error) {
+    console.error(`[Kylat] Gagal menghidrasi island '${islandName}':`, error);
+  }
 }
 
 /**
  * Memindai seluruh subtree DOM dan menghidrasi semua elemen data-island yang belum terhidrasi.
  */
 export function hydrateAll(root: Document | HTMLElement = document): void {
-  const elements = root.querySelectorAll<HTMLElement>('[data-island]');
+  const elements = root.querySelectorAll<HTMLElement>('[data-island]:not([data-kylat-hydrated="true"])');
   elements.forEach((el) => hydrateIsland(el));
 }

@@ -20,5 +20,8 @@
   "dependencies": {
     "@kylat/protocol": "workspace:*",
     "alien-signals": "^3.2.1"
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }

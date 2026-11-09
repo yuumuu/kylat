@@ -10,12 +10,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./schema.json": "../../spec/protocol.schema.json"
+    }
   },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "node --test"
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }
