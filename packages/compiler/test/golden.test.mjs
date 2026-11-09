@@ -9,8 +9,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe('@kylat/compiler - Golden Master & Regression Guard', () => {
   it('menegaskan bahwa elemen kontainer yang memiliki anak TIDAK PERNAH dipasang bindText', async () => {
-    const counterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.php');
-    const counterBladePath = path.resolve(__dirname, '../../../examples/counter-app/counter.blade.php');
+    const counterPhpPath = path.resolve(__dirname, '../../../examples/01-counter/Counter.php');
+    const counterBladePath = path.resolve(__dirname, '../../../examples/01-counter/counter.blade.php');
 
     const phpSource = fs.readFileSync(counterPhpPath, 'utf-8');
     const bladeSource = fs.readFileSync(counterBladePath, 'utf-8');
@@ -33,9 +33,9 @@ describe('@kylat/compiler - Golden Master & Regression Guard', () => {
   });
 
   it('uji sabotase permanen: membuktikan mutasi terkendali pada output kompilasi wajib memicu AssertionError terhadap golden file', async () => {
-    const counterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.php');
-    const counterBladePath = path.resolve(__dirname, '../../../examples/counter-app/counter.blade.php');
-    const expectedJsPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.expected.js');
+    const counterPhpPath = path.resolve(__dirname, '../../../examples/01-counter/Counter.php');
+    const counterBladePath = path.resolve(__dirname, '../../../examples/01-counter/counter.blade.php');
+    const expectedJsPath = path.resolve(__dirname, '../../../examples/01-counter/Counter.expected.js');
 
     const phpSource = fs.readFileSync(counterPhpPath, 'utf-8');
     const bladeSource = fs.readFileSync(counterBladePath, 'utf-8');
@@ -119,8 +119,8 @@ final class EscapeTest extends Component
   });
 
   it('memverifikasi aria-busy, data-pending, dan disabled terpasang pada tombol pemicu aksi server', async () => {
-    const counterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.php');
-    const counterBladePath = path.resolve(__dirname, '../../../examples/counter-app/counter.blade.php');
+    const counterPhpPath = path.resolve(__dirname, '../../../examples/01-counter/Counter.php');
+    const counterBladePath = path.resolve(__dirname, '../../../examples/01-counter/counter.blade.php');
 
     const phpSource = fs.readFileSync(counterPhpPath, 'utf-8');
     const bladeSource = fs.readFileSync(counterBladePath, 'utf-8');
@@ -143,8 +143,8 @@ final class EscapeTest extends Component
   });
 
   it('memverifikasi bahwa aksi server mengelola state error dan mengirim Idempotency-Key untuk mutasi', async () => {
-    const counterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.php');
-    const counterBladePath = path.resolve(__dirname, '../../../examples/counter-app/counter.blade.php');
+    const counterPhpPath = path.resolve(__dirname, '../../../examples/01-counter/Counter.php');
+    const counterBladePath = path.resolve(__dirname, '../../../examples/01-counter/counter.blade.php');
 
     const phpSource = fs.readFileSync(counterPhpPath, 'utf-8');
     const bladeSource = fs.readFileSync(counterBladePath, 'utf-8');
@@ -158,9 +158,9 @@ final class EscapeTest extends Component
   });
 
   it('menghasilkan output yang identik dengan Counter.expected.js (Human-Authored Golden File)', async () => {
-    const counterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.php');
-    const counterBladePath = path.resolve(__dirname, '../../../examples/counter-app/counter.blade.php');
-    const expectedJsPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.expected.js');
+    const counterPhpPath = path.resolve(__dirname, '../../../examples/01-counter/Counter.php');
+    const counterBladePath = path.resolve(__dirname, '../../../examples/01-counter/counter.blade.php');
+    const expectedJsPath = path.resolve(__dirname, '../../../examples/01-counter/Counter.expected.js');
 
     const phpSource = fs.readFileSync(counterPhpPath, 'utf-8');
     const bladeSource = fs.readFileSync(counterBladePath, 'utf-8');
@@ -178,9 +178,9 @@ final class EscapeTest extends Component
   });
 
   it('menghasilkan output yang identik dengan CartCounter.expected.js (Human-Authored Golden File dengan Template & Button Attributes)', async () => {
-    const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.php');
-    const cartCounterBladePath = path.resolve(__dirname, '../../../examples/counter-app/cart-counter.blade.php');
-    const expectedJsPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.expected.js');
+    const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/04-cart/CartCounter.php');
+    const cartCounterBladePath = path.resolve(__dirname, '../../../examples/04-cart/cart-counter.blade.php');
+    const expectedJsPath = path.resolve(__dirname, '../../../examples/04-cart/CartCounter.expected.js');
 
     const phpSource = fs.readFileSync(cartCounterPhpPath, 'utf-8');
     const bladeSource = fs.readFileSync(cartCounterBladePath, 'utf-8');
@@ -197,9 +197,9 @@ final class EscapeTest extends Component
   });
 
   it('uji sabotase permanen CartCounter: mutasi atribut tombol atau null-check wajib menggagalkan pengujian golden', async () => {
-    const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.php');
-    const cartCounterBladePath = path.resolve(__dirname, '../../../examples/counter-app/cart-counter.blade.php');
-    const expectedJsPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.expected.js');
+    const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/04-cart/CartCounter.php');
+    const cartCounterBladePath = path.resolve(__dirname, '../../../examples/04-cart/cart-counter.blade.php');
+    const expectedJsPath = path.resolve(__dirname, '../../../examples/04-cart/CartCounter.expected.js');
 
     const phpSource = fs.readFileSync(cartCounterPhpPath, 'utf-8');
     const bladeSource = fs.readFileSync(cartCounterBladePath, 'utf-8');
@@ -248,7 +248,7 @@ final class EscapeTest extends Component
   });
 
   it('memastikan prop wajib tanpa default melempar TypeError saat diinisialisasi tanpa props atau bernilai null', async () => {
-    const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.php');
+    const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/04-cart/CartCounter.php');
     const phpSource = fs.readFileSync(cartCounterPhpPath, 'utf-8');
     const result = await compile(phpSource, 'CartCounter.php');
     assert.equal(result.success, true);

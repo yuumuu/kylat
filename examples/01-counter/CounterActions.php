@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use Kylat\Attributes\Server;
+
 /**
  * Interface kontrak aksi server untuk Counter.
  * Mengikuti prinsip Spike S3 dan keamanan default-deny.
@@ -18,5 +20,6 @@ interface CounterActions
     /**
      * Menyimpan nilai count ke backend.
      */
+    #[Server]
     public function saveCount(int $count): bool;
 }

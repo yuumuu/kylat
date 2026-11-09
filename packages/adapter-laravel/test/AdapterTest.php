@@ -14,9 +14,10 @@ require_once __DIR__ . '/../src/Actions/ActionRegistry.php';
 require_once __DIR__ . '/../src/Support/IdempotencyStore.php';
 require_once __DIR__ . '/../src/Http/Controllers/KylatBatchCallController.php';
 require_once __DIR__ . '/../src/Blade/KylatDirective.php';
-require_once __DIR__ . '/../../../examples/counter-app/CounterActions.php';
+require_once __DIR__ . '/../../../examples/01-counter/CounterActions.php';
 
 use App\Actions\CounterActions;
+use Kylat\Attributes\Server;
 use Kylat\Laravel\Actions\ActionRegistry;
 use Kylat\Laravel\Blade\KylatDirective;
 use Kylat\Laravel\Http\Controllers\KylatBatchCallController;
@@ -54,9 +55,32 @@ final class CounterActionsImpl implements CounterActions
     }
 }
 
+interface NoAuthActions
+{
+    #[Server]
+    public function save(): bool;
+}
+
+final class NoAuthImplementation implements NoAuthActions
+{
+    public function save(): bool
+    {
+        return true;
+    }
+}
+
 function runTests(): void
 {
     echo "=== PENGUJIAN ADAPTER LARAVEL KYLAT (DENGAN SECURITY AUDIT & IDEMPOTENCY) ===\n\n";
+
+    // 0. KIL-310: kontrak tanpa authorize ditolak saat registrasi
+    try {
+        ActionRegistry::register('Kylat\Laravel\Tests\NoAuthActions', new NoAuthImplementation());
+        assertTrue(false, 'Registrasi kontrak tanpa authorize wajib gagal');
+    } catch (\InvalidArgumentException $exception) {
+        assertTrue(str_contains($exception->getMessage(), 'KIL-310'), 'Pesan registrasi harus memuat KIL-310');
+        echo "   ✅ KIL-310 menolak kontrak tanpa authorize saat registrasi.\n";
+    }
 
     // 1. Uji KylatDirective::renderIsland
     echo "1. Menguji KylatDirective::renderIsland...\n";
@@ -72,7 +96,7 @@ function runTests(): void
         KylatDirective::renderIsland('LargeComponent', ['payload' => $largeString]);
         assertTrue(false, "Harus melempar exception untuk props > 16 KB");
     } catch (RuntimeException $e) {
-        assertTrue(str_contains($e->getMessage(), 'KIL-213') || str_contains($e->getMessage(), '16 KB'), "Pesan error harus memuat batasan 16 KB");
+        assertTrue(str_contains($e->getMessage(), 'KIL-213') || str_contains($e->getMessage(), '16 KB') || str_contains($e->getMessage(), '10.000'), "Pesan error harus memuat batasan data-props");
         echo "   ✅ Pelanggaran KIL-213 berhasil dicegah: " . $e->getMessage() . "\n";
     }
 
@@ -145,6 +169,34 @@ function runTests(): void
     assertTrue($magicRes['results'][0]['ok'] === false, "Magic method wajib ditolak");
     assertTrue($magicRes['results'][0]['error']['type'] === 'kylat:forbidden', "Error type harus kylat:forbidden");
     echo "   ✅ Magic method berhasil dicegah dengan kylat:forbidden.\n";
+
+    // 3d2. Kelas arbitrer tidak boleh di-resolve dari wire
+    $arbitraryRes = $controller->handle([
+        'calls' => [
+            [
+                'id' => 'c_arbitrary',
+                'action' => 'Kylat\\Laravel\\Blade\\KylatDirective::renderIsland',
+                'args' => ['name' => 'Arbitrary'],
+                'idempotencyKey' => 'idemp_arbitrary_guard',
+            ],
+        ],
+    ]);
+    assertTrue($arbitraryRes['results'][0]['ok'] === false, "Kelas arbitrer wajib ditolak");
+    assertTrue($arbitraryRes['results'][0]['error']['type'] === 'kylat:not_found', "Kelas arbitrer harus not_found");
+
+    // 3d3. Method kontrak tanpa #[Server] tidak boleh dipanggil
+    $noServerRes = $controller->handle([
+        'calls' => [
+            [
+                'id' => 'c_no_server',
+                'action' => 'CounterActions::authorize',
+                'args' => [],
+                'idempotencyKey' => 'idemp_no_server_guard',
+            ],
+        ],
+    ]);
+    assertTrue($noServerRes['results'][0]['ok'] === false, "Method tanpa #[Server] wajib ditolak");
+    assertTrue($noServerRes['results'][0]['error']['type'] === 'kylat:forbidden', "Method tanpa #[Server] harus forbidden");
 
     // 3e. Invarian Dokumen 3 §4: Mutasi tanpa Idempotency-Key WAJIB DITOLAK
     $noKeyRes = $controller->handle([

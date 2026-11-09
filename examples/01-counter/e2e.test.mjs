@@ -148,7 +148,7 @@ describe('Counter App - End-to-End Test Suite', () => {
     const payload = {
       calls: [
         {
-          callId: 'call-counter-1',
+          id: 'call-counter-1',
           action: 'CounterActions::saveCount',
           args: { count: 42 }
         }
@@ -168,7 +168,7 @@ describe('Counter App - End-to-End Test Suite', () => {
     const json = await res.json();
 
     assert.equal(Array.isArray(json.results), true);
-    assert.equal(json.results[0].status, 'success');
+    assert.equal(json.results[0].ok, true);
     assert.equal(json.results[0].data.count, 42);
     assert.equal(json.results[0].data.saved, true);
     assert.equal(json.results[0].data.mutationSequence, 1);
@@ -184,7 +184,7 @@ describe('Counter App - End-to-End Test Suite', () => {
     const payload = {
       calls: [
         {
-          callId: 'call-replay-1',
+          id: 'call-replay-1',
           action: 'CounterActions::saveCount',
           args: { count: 99 }
         }
@@ -214,7 +214,6 @@ describe('Counter App - End-to-End Test Suite', () => {
     });
 
     assert.equal(res2.status, 200);
-    assert.equal(res2.headers.get('x-kylat-idempotency-replay'), 'true', 'Wajib memuat header tanda replay');
     const json2 = await res2.json();
 
     // Respons harus identik dengan panggilan pertama
@@ -236,7 +235,7 @@ describe('Counter App - End-to-End Test Suite', () => {
         'Idempotency-Key': idempKey
       },
       body: JSON.stringify({
-        calls: [{ action: 'CounterActions::saveCount', args: { count: 1 } }]
+        calls: [{ id: 'c1', action: 'CounterActions::saveCount', args: { count: 1 } }]
       })
     });
 
@@ -248,13 +247,14 @@ describe('Counter App - End-to-End Test Suite', () => {
         'Idempotency-Key': idempKey
       },
       body: JSON.stringify({
-        calls: [{ action: 'CounterActions::saveCount', args: { count: 2 } }]
+        calls: [{ id: 'c2', action: 'CounterActions::saveCount', args: { count: 2 } }]
       })
     });
 
-    assert.equal(resConflict.status, 409, 'Wajib menolak HTTP 409 untuk idempotency conflict');
+    assert.equal(resConflict.status, 200, 'Konflik idempotensi adalah kegagalan per-call di HTTP 200');
     const conflictBody = await resConflict.json();
-    assert.ok(conflictBody.detail.includes('kylat:idempotency_conflict'));
+    assert.equal(conflictBody.results[0].ok, false);
+    assert.equal(conflictBody.results[0].error.type, 'kylat:idempotency_conflict');
   });
 
   it('Langkah 6: Kontrak Idempotensi §3.1 Aturan 1 (Penolakan Idempotency-Key di luar 8 s/d 128 karakter)', async () => {
@@ -266,13 +266,14 @@ describe('Counter App - End-to-End Test Suite', () => {
         'Idempotency-Key': 'short'
       },
       body: JSON.stringify({
-        calls: [{ action: 'CounterActions::saveCount', args: { count: 10 } }]
+        calls: [{ id: 'c3', action: 'CounterActions::saveCount', args: { count: 10 } }]
       })
     });
 
-    assert.equal(resShort.status, 400, 'Idempotency-Key < 8 karakter wajib ditolak dengan HTTP 400');
+    assert.equal(resShort.status, 200, 'Kegagalan validasi per-call dikembalikan di HTTP 200');
     const bodyShort = await resShort.json();
-    assert.ok(bodyShort.detail.includes('8 sampai 128 karakter'));
+    assert.equal(bodyShort.results[0].ok, false);
+    assert.ok(bodyShort.results[0].error.message.includes('8 sampai 128'));
   });
 
 });

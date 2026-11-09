@@ -3,7 +3,7 @@
  * Ditinjau dan diverifikasi secara independen sebagai kontrak uji output @kylat/compiler.
  */
 
-import { bindAttr, bindText, callServerAction, createSignal, on } from '@kylat/runtime';
+import { bindAttr, bindText, callServerAction, createIdempotencyKey, createSignal, on } from '@kylat/runtime';
 
 export function createCounter(props = {}) {
   // 1. Inisialisasi Props & State Sinyal
@@ -27,7 +27,7 @@ export function createCounter(props = {}) {
     try {
       const current_payload_syncToServer = JSON.stringify({ count: count() });
       if (current_idemp_syncToServer === null || last_args_syncToServer !== current_payload_syncToServer) {
-        current_idemp_syncToServer = "idemp_" + Date.now();
+        current_idemp_syncToServer = createIdempotencyKey();
         last_args_syncToServer = current_payload_syncToServer;
       }
       const res = await callServerAction("CounterActions::saveCount", { count: count() }, { idempotencyKey: current_idemp_syncToServer });

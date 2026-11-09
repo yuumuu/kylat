@@ -1,14 +1,14 @@
 # examples/
 
-Contoh yang harus selalu berjalan. Satu contoh per direktori.
+Daftar contoh aplikasi dan komponen referensi Kylat:
 
-| Direktori | Menguji |
-|---|---|
-| `01-counter/` | Signal dasar, event, render minimal |
-| `02-filter-table/` | List berkunci, computed, filter lokal tanpa request |
-| `03-form-validation/` | Validasi client dan server, error aksesibel (`aria-describedby`, `aria-invalid`) |
-| `04-cart/` | Aksi server, batch, optimistic update dan rollback |
+| Direktori | Deskripsi | Format & Pengujian |
+|---|---|---|
+| `01-counter/` | Aplikasi Counter lengkap (E2E) | Format Single-File (`Counter.kylat.php`, KEP-34) + format legacy dua-berkas (`Counter.php` + `counter.blade.php`). Diuji lewat `pnpm test:examples`. |
+| `04-cart/` | Komponen CartCounter dengan Aksi Server | Aksi server RPC `CartActions::add`, verifikasi prop wajib non-null, dan golden master contract. |
 
-Definisi selesai untuk setiap contoh: ada di CI, lolos `kylat check` dan `kylat doctor`, serta memenuhi target WCAG 2.2 AA.
+Untuk membuat komponen baru dengan format single-file standar:
 
-**Catatan:** Dokumen 5 §11 menyebut "lima komponen contoh", sedangkan pohon repo Dokumen 4 §9 memuat empat (audit S-02). Tambahkan contoh kelima atau perbaiki angkanya sebelum fase 5.
+```bash
+node packages/cli/bin/kylat.js make:component MyComponent
+```

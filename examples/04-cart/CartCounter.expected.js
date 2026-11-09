@@ -10,7 +10,7 @@
  * menguji output @kylat/compiler. Dilarang menyalin output compiler ke file ini.
  */
 
-import { bindAttr, bindText, callServerAction, createSignal, on } from '@kylat/runtime';
+import { bindAttr, bindText, callServerAction, createIdempotencyKey, createSignal, on } from '@kylat/runtime';
 
 export function createCartCounter(props = {}) {
   // 1. Inisialisasi Props & State Sinyal
@@ -34,7 +34,7 @@ export function createCartCounter(props = {}) {
     try {
       const current_payload_submitOrder = JSON.stringify({ productId: prop_productId, qty: qty() });
       if (current_idemp_submitOrder === null || last_args_submitOrder !== current_payload_submitOrder) {
-        current_idemp_submitOrder = "idemp_" + Date.now();
+        current_idemp_submitOrder = createIdempotencyKey();
         last_args_submitOrder = current_payload_submitOrder;
       }
       const res = await callServerAction("CartActions::add", { productId: prop_productId, qty: qty() }, { idempotencyKey: current_idemp_submitOrder });

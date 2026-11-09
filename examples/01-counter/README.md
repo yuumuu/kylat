@@ -12,9 +12,10 @@ Aplikasi contoh resmi untuk mendemonstrasikan alur kerja penuh (*end-to-end*) to
 ## Struktur Berkas
 
 ```text
-examples/counter-app/
-├── Counter.php             # Definisi kelas komponen PHP subset v0
-├── counter.blade.php       # Template Blade komponen
+examples/01-counter/
+├── Counter.kylat.php       # Komponen single-file modern Kylat (ADR 0004 / KEP-34)
+├── Counter.php             # Komponen PHP subset v0 (legacy format)
+├── counter.blade.php       # Template Blade komponen (legacy format)
 ├── CounterActions.php      # Kontrak interface aksi server (Spike S3)
 ├── dist/
 │   └── Counter.js          # Output JavaScript terkompilasi

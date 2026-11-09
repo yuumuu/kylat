@@ -54,7 +54,7 @@ namespace Kylat\Laravel\Tests {
     require_once __DIR__ . '/../src/Support/IdempotencyStore.php';
     require_once __DIR__ . '/../src/Http/Controllers/KylatBatchCallController.php';
     require_once __DIR__ . '/../src/Actions/ActionRegistry.php';
-    require_once __DIR__ . '/../../../examples/counter-app/CounterActions.php';
+    require_once __DIR__ . '/../../../examples/01-counter/CounterActions.php';
 
     use App\Actions\CounterActions;
     use Illuminate\Support\Facades\Cache;

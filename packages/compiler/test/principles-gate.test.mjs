@@ -170,8 +170,8 @@ final class SecureCart extends Component
 
   // --- GATE P6 ---
   it('P6 [perilaku]: Aman secara default (secure by default) — bebas evaluasi runtime dinamis (eval, new Function), escape ganda dihindari', async () => {
-    const counterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.php');
-    const counterBladePath = path.resolve(__dirname, '../../../examples/counter-app/counter.blade.php');
+    const counterPhpPath = path.resolve(__dirname, '../../../examples/01-counter/Counter.php');
+    const counterBladePath = path.resolve(__dirname, '../../../examples/01-counter/counter.blade.php');
     const phpSource = fs.readFileSync(counterPhpPath, 'utf-8');
     const bladeSource = fs.readFileSync(counterBladePath, 'utf-8');
 
@@ -193,15 +193,15 @@ final class SecureCart extends Component
   // --- GATE P7 ---
   it('P7 [struktur]: Protokol RPC netral bahasa (/_kylat/call) yang kompatibel dengan backend apa pun', async () => {
     // Periksa bahwa kode hasil kompilasi mengimpor dan memanggil protokol RPC netral bahasa
-    const cartPhpPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.php');
-    const cartBladePath = path.resolve(__dirname, '../../../examples/counter-app/cart-counter.blade.php');
+    const cartPhpPath = path.resolve(__dirname, '../../../examples/04-cart/CartCounter.php');
+    const cartBladePath = path.resolve(__dirname, '../../../examples/04-cart/cart-counter.blade.php');
     const phpSource = fs.readFileSync(cartPhpPath, 'utf-8');
     const bladeSource = fs.readFileSync(cartBladePath, 'utf-8');
 
     const res = await compile(phpSource, 'CartCounter.php', { template: bladeSource });
     assert.equal(res.success, true);
 
-    assert.ok(res.code.includes("import { bindAttr, bindText, callServerAction, createSignal, on } from '@kylat/runtime';"));
+    assert.ok(res.code.includes("import { bindAttr, bindText, callServerAction, createIdempotencyKey, createSignal, on } from '@kylat/runtime';"));
     assert.ok(res.code.includes('callServerAction("CartActions::add", { productId: prop_productId, qty: qty() }, { idempotencyKey: current_idemp_submitOrder })'));
 
     // Verifikasi skema protokol wire JSON
@@ -222,13 +222,13 @@ final class SecureCart extends Component
 
   // --- GATE P9 ---
   it('P9 [struktur]: Dokumentasi dan contoh kode selalu diverifikasi dan sejalan dengan implementasi aktual', async () => {
-    const counterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.php');
-    const counterBladePath = path.resolve(__dirname, '../../../examples/counter-app/counter.blade.php');
-    const counterExpectedPath = path.resolve(__dirname, '../../../examples/counter-app/Counter.expected.js');
+    const counterPhpPath = path.resolve(__dirname, '../../../examples/01-counter/Counter.php');
+    const counterBladePath = path.resolve(__dirname, '../../../examples/01-counter/counter.blade.php');
+    const counterExpectedPath = path.resolve(__dirname, '../../../examples/01-counter/Counter.expected.js');
 
-    const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.php');
-    const cartCounterBladePath = path.resolve(__dirname, '../../../examples/counter-app/cart-counter.blade.php');
-    const cartCounterExpectedPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.expected.js');
+    const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/04-cart/CartCounter.php');
+    const cartCounterBladePath = path.resolve(__dirname, '../../../examples/04-cart/cart-counter.blade.php');
+    const cartCounterExpectedPath = path.resolve(__dirname, '../../../examples/04-cart/CartCounter.expected.js');
 
     const stripBanner = (str) => str.replace(/^\/\*\*[\s\S]*?\*\/\s*/, '').trim().replace(/\r\n/g, '\n');
 
@@ -251,8 +251,8 @@ final class SecureCart extends Component
 
   // --- GATE P11 ---
   it('P11 [struktur]: Dukungan aksesibilitas (a11y) bawaan memenuhi standar WCAG 2.2 AA', async () => {
-    const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/counter-app/CartCounter.php');
-    const cartCounterBladePath = path.resolve(__dirname, '../../../examples/counter-app/cart-counter.blade.php');
+    const cartCounterPhpPath = path.resolve(__dirname, '../../../examples/04-cart/CartCounter.php');
+    const cartCounterBladePath = path.resolve(__dirname, '../../../examples/04-cart/cart-counter.blade.php');
 
     const res = await compile(
       fs.readFileSync(cartCounterPhpPath, 'utf-8'),
