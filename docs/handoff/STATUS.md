@@ -5,6 +5,7 @@ Diperbarui: 30 Oktober 2026. Status Fase 0: Belum Tuntas. Sumber kebenaran: spec
 ## Repo
 - Publik: https://github.com/yuumuu/kylat, branch main
 - HEAD terakhir terverifikasi: 2c76ff3
+- commit `fa1a19f` (konversi arsip) dibuang oleh reset dan dibuat ulang sebagai `3751625`. Tidak ada force push.
 
 ## Hierarki normatif (dari spec/README.md)
 1. spec/php-subset.md
