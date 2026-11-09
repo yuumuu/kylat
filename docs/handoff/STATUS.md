@@ -79,6 +79,7 @@ Diperbarui: 30 Oktober 2026. Status Fase 0: Belum Tuntas. Sumber kebenaran: spec
 3. **P8 dan P10 belum diukur secara formal**: Metrik waktu adopsi < 10 menit (P8) dan anggaran ukuran bundle minified+gzipped di benchmark harness resmi (P10) ditandai belum diukur pada Fase 0.
 4. **Review manusia CartCounter.expected.js**: Body golden file menunggu konfirmasi akhir reviewer manusia.
 5. **Jaminan transaksi atomik adapter Laravel**: Poin kritis 1–3 di atas harus diselesaikan di database nyata sebelum adapter dianggap siap produksi.
+6. **Pemisahan eksekusi spike-s1**: Berkas `spike-s1.mjs` sebelumnya ikut dihitung dalam suite compiler (total 44 tes). Sekarang dipisahkan ke skrip terpisah `pnpm --filter @kylat/compiler test:spike` dan tidak ikut dihitung dalam tes unit reguler (43 tes).
 
 ## Aturan kerja
 - Commit kecil, satu perubahan per commit.
