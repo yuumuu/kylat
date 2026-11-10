@@ -2,7 +2,7 @@
 
 - **ID Keputusan**: KEP-36 (0007)
 - **Topik**: Arsitektur Penyimpanan Idempotensi Tingkat Produksi pada Adapter Laravel
-- **Status**: DRAFT / KANDIDAT (Usulan untuk Fase 3)
+- **Status**: DITUNDA ke Fase 3. Arah keputusan Opsi A (transaksi database) disetujui sebagai rujukan Fase 3.
 - **Tanggal Usulan**: 10 November 2026
 - **Pemilik**: Arsitek Backend & Tim Adapter Laravel
 - **Target Tenggat**: Fase 3 (Produksi & Adapter Riil)
