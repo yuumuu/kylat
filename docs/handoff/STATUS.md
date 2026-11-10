@@ -4,7 +4,7 @@ Diperbarui: 10 November 2026. Sumber kebenaran: `spec/` di repo. File ini ringka
 
 ## Status Gerbang Rilis
 - **Status Fase 0**: **DITUTUP pada 10 November 2026**
-- **Tag Rilis**: `v0.0.0-p0`
+- **Tag Rilis**: `v0.0.0-p0` (menunjuk commit `819bcb4`)
 - **Pengesahan Golden Master**: `CartCounter.expected.js` telah DISAHKAN oleh pemilik proyek pada 10 November 2026.
 - **Keputusan Arsitektur Terkait**:
   - ADR 0006: Disetujui untuk Fase 1 (Opsi A: accessor getter).
