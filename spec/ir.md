@@ -290,7 +290,7 @@ export type KylatType =
    ```
 2. **Computed**: Setiap `ComputedNode` dikompilasi menjadi memo/computed signal:
    ```javascript
-   const total = createMemo(() => count() * 10);
+   const total = createComputed(() => count() * 10);
    ```
 3. **Template Cloning**: Elemen DOM statis di-render menggunakan template element cloning (`template.content.cloneNode(true)`) untuk performa maksimal.
 4. **Dynamic Binding**: Sinyal langsung dihubungkan ke `node.textContent` atau atribut elemen melalui reactive effect mikro tanpa virtual DOM overhead.
