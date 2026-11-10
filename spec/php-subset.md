@@ -93,4 +93,4 @@ Aturan di atas memilih hasil PHP sebagai sumber kebenaran: key dipertahankan, da
 
 - Templat dan direktif: `template.md` (KIL-151–158)
 - Aturan build di luar sintaks: `compiler-rules.md`
-- Daftar kode galat lengkap: `errors.md` (belum ditulis)
+- Daftar kode galat lengkap: [`spec/errors.md`](errors.md)
