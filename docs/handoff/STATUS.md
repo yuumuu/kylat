@@ -55,6 +55,9 @@ Fase 0 resmi ditutup. Baseline toolchain mencakup compiler, runtime sinyal, CLI,
 3. **Reset State Octane/FrankenPHP**: Penanganan siklus hidup worker long-running pada `IdempotencyStore`.
 
 ### Fase 4: Optimasi & Produksi Skala Penuh
-1. **Anggaran Bundle Size (P10 / KIL-401)**: Penegakan batas <= 8 KB gzipped per chunk.
+1. **Anggaran Bundle Size (P10 / KIL-401)**: Penegakan batas <= 8 KB gzipped per chunk (belum diukur di v0, status tes: skip, dipindah ke Fase 4).
 2. **Audit Aksesibilitas (P11 / WCAG 2.2 AA)**: Pengujian semantik ARIA dan navigasi keyboard.
 3. **Prerender & SSR**: Evaluasi rendering server untuk kecepatan muat awal.
+
+### Fase 5: Dokumentasi, Ekosistem & Adopsi
+1. **Target Waktu Adopsi 10 Menit (P8)**: Pengujian waktu dari instalasi hingga komponen pertama berfungsi (belum diukur di v0, status tes: skip, dipindah ke Fase 5).
