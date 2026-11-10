@@ -13,7 +13,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3010;
 const MAX_BODY_BYTES = 256 * 1024;
 
 let serverSavedCount = 0;
@@ -180,6 +180,17 @@ export function createDemoServer() {
     } else if (url.pathname.startsWith('/@kylat/runtime/')) {
       const relPath = url.pathname.replace('/@kylat/runtime/', '');
       filePath = path.resolve(__dirname, '../../packages/runtime/dist', relPath);
+      contentType = 'application/javascript; charset=utf-8';
+    } else if (url.pathname.startsWith('/@kylat/protocol/')) {
+      const relPath = url.pathname.replace('/@kylat/protocol/', '');
+      filePath = path.resolve(__dirname, '../../packages/protocol/dist', relPath);
+      contentType = 'application/javascript; charset=utf-8';
+    } else if (url.pathname.startsWith('/alien-signals/')) {
+      const relPath = url.pathname.replace('/alien-signals/', '');
+      filePath = path.resolve(__dirname, '../../packages/runtime/node_modules/alien-signals/esm', relPath);
+      contentType = 'application/javascript; charset=utf-8';
+    } else if (url.pathname === '/system.mjs') {
+      filePath = path.resolve(__dirname, '../../packages/runtime/node_modules/alien-signals/esm/system.mjs');
       contentType = 'application/javascript; charset=utf-8';
     }
 
