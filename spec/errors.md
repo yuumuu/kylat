@@ -996,6 +996,10 @@ packages/compiler/test/diagnostics/
 ├── KIL-205-complex-template-logic.phpt
 ├── KIL-211-circular-component-dependency.phpt
 ├── KIL-212-child-component-undeclared.phpt
+├── KIL-213-data-props-too-large.phpt
+├── KIL-214-php-statement-outside-class.phpt
+├── KIL-215-class-name-mismatch.phpt
+├── KIL-216-missing-closing-php-tag.phpt
 ├── KIL-310-action-missing-authorize.phpt
 ├── KIL-311-action-name-collision.phpt
 └── KIL-401-chunk-budget-exceeded.phpt
