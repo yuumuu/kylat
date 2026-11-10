@@ -1,12 +1,13 @@
 /**
- * Kontrak Golden Draf: CartCounter.expected.js (Belum Ditinjau Manusia)
+ * Kontrak Golden Master: CartCounter.expected.js
  * Disusun berdasarkan spesifikasi normatif:
  * - spec/template.md §4 (Atribut proteksi aksi server: aria-busy, data-pending, disabled)
  * - spec/ir.md §3 & §8 (Inisialisasi sinyal state, props non-nullable, DOM codegen langsung)
  * - spec/threat-model.md §3.1 (Mitigasi A4: Idempotensi mutasi dengan Idempotency-Key)
  * 
- * STATUS: BELUM DISAHKAN
- * File ini berstatus draf internal dan belum ditinjau manusia. Belum menjadi kontrak kebenaran resmi.
+ * STATUS: DISAHKAN oleh pemilik proyek pada 10 November 2026.
+ * File ini diverifikasi sebagai kontrak kebenaran resmi (source of truth) untuk
+ * pengujian output @kylat/compiler pada aksi server CartCounter.
  */
 
 import { bindAttr, bindText, callServerAction, createIdempotencyKey, createSignal, on } from '@kylat/runtime';

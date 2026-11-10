@@ -52,6 +52,12 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 
 ---
 
+## Pengesahan Berkas Golden Master (Fase 0)
+
+- `packages/compiler/test/fixtures/CartCounter.expected.js`: **DISAHKAN oleh pemilik proyek pada 10 November 2026** sebagai kontrak kebenaran resmi pengujian aksi server CartCounter.
+
+---
+
 ## Prinsip Non-Negosiasi (P1 – P12)
 
 1. **P1**: Sintaks PHP standar yang dikenal developer, tanpa DSL atau ekstensi compiler yang aneh.
