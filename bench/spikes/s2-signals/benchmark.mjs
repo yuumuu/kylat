@@ -1,54 +1,82 @@
 import fs from 'node:fs';
-import path from 'path';
+import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
+import * as esbuild from 'esbuild';
 
 // 1. Import kandidat A: alien-signals (v3.2.1)
-import { signal as alienSignal, computed as alienComputed, effect as alienEffect } from 'alien-signals';
+import {
+  signal as alienSignal,
+  computed as alienComputed,
+  effect as alienEffect,
+} from 'alien-signals';
 
-// 2. Import kandidat B: solid-js (v1.9.17 - Solid stable core)
+// 2. Import kandidat B: @solidjs/signals (v2.0.0-rc.0)
 import {
   createSignal as solidSignal,
   createMemo as solidMemo,
   createRenderEffect as solidRenderEffect,
   createRoot as solidRoot,
-} from 'solid-js';
+  flush as solidFlush,
+} from '@solidjs/signals';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function getPackageSize(pkgPath) {
-  const content = fs.readFileSync(pkgPath);
-  const rawSize = content.length;
-  const gzipSize = zlib.gzipSync(content).length;
-  return { rawSize, gzipSize };
-}
-
 console.log('================================================================');
-console.log('   SPIKE S2: BENCHMARK INTI SIGNALS (alien-signals vs solid-js)  ');
+console.log(' SPIKE S2: BENCHMARK INTI SIGNALS (alien-signals vs @solidjs/signals) ');
 console.log('================================================================\n');
 
 // -----------------------------------------------------------------------------
-// BAGIAN 1: PENGUKURAN UKURAN INTI (BUNDLE SIZE & GZIP)
+// BAGIAN 1: PENGUKURAN UKURAN INTI DENGAN BUNDLER YANG SAMA (esbuild minify + gzip)
 // -----------------------------------------------------------------------------
-console.log('--- 1. UKURAN INTI SIGNALS (DIST FILE GZIP) ---');
+console.log('--- 1. UKURAN BUNDLE GZIP INTI (esbuild minify ESM) ---');
 
-const alienDist = path.resolve(__dirname, 'node_modules/alien-signals/esm/index.mjs');
-const solidDist = path.resolve(__dirname, 'node_modules/solid-js/dist/solid.js');
+const buildAlien = esbuild.buildSync({
+  stdin: {
+    contents: "export { signal, computed, effect } from 'alien-signals';",
+    resolveDir: __dirname,
+    loader: 'js',
+  },
+  bundle: true,
+  minify: true,
+  format: 'esm',
+  write: false,
+});
 
-const alienSize = getPackageSize(alienDist);
-const solidSize = getPackageSize(solidDist);
+const buildSolid = esbuild.buildSync({
+  stdin: {
+    contents:
+      "export { createSignal, createMemo, createEffect, createRoot } from '@solidjs/signals';",
+    resolveDir: __dirname,
+    loader: 'js',
+  },
+  bundle: true,
+  minify: true,
+  format: 'esm',
+  write: false,
+});
 
-console.log(`alien-signals (v3.2.1): Raw: ${(alienSize.rawSize / 1024).toFixed(2)} KB | Gzip: ${(alienSize.gzipSize / 1024).toFixed(2)} KB (${alienSize.gzipSize} B)`);
-console.log(`solid-js (v1.9.17)   : Raw: ${(solidSize.rawSize / 1024).toFixed(2)} KB | Gzip: ${(solidSize.gzipSize / 1024).toFixed(2)} KB (${solidSize.gzipSize} B)`);
+const alienRaw = buildAlien.outputFiles[0].contents;
+const alienGzip = zlib.gzipSync(alienRaw);
 
-console.log(`\nPerbandingan Ukuran Gzip:`);
-console.log(`- alien-signals adalah ${(solidSize.gzipSize / alienSize.gzipSize).toFixed(1)}x LEBIH KECIL daripada solid-js core (1.8 KB vs 12.1 KB)\n`);
+const solidRaw = buildSolid.outputFiles[0].contents;
+const solidGzip = zlib.gzipSync(solidRaw);
+
+console.log(
+  `alien-signals (v3.2.1)   : Minified: ${alienRaw.length} B (${(alienRaw.length / 1024).toFixed(2)} KB) | Gzip: ${alienGzip.length} B (${(alienGzip.length / 1024).toFixed(2)} KB)`
+);
+console.log(
+  `@solidjs/signals (v2.0-rc): Minified: ${solidRaw.length} B (${(solidRaw.length / 1024).toFixed(2)} KB) | Gzip: ${solidGzip.length} B (${(solidGzip.length / 1024).toFixed(2)} KB)`
+);
+
+const sizeRatio = (solidGzip.length / alienGzip.length).toFixed(2);
+console.log(`Perbandingan Gzip: alien-signals ${sizeRatio}x lebih kecil daripada @solidjs/signals core.\n`);
 
 // -----------------------------------------------------------------------------
-// BAGIAN 2: BENCHMARK COUNTER (100.000 Iterasi Mutasi & Sinyal Turunan)
+// BAGIAN 2: BENCHMARK COUNTER (1.000.000 Iterasi / 1 Juta Update)
 // -----------------------------------------------------------------------------
-console.log('--- 2. BENCHMARK COUNTER (100.000 Iterasi) ---');
-const ITERATIONS = 100_000;
+console.log('--- 2. BENCHMARK COUNTER (1.000.000 Update) ---');
+const COUNTER_ITERATIONS = 1_000_000;
 
 // Test A: alien-signals
 let alienEffectCount = 0;
@@ -60,35 +88,44 @@ const startAlienCounter = performance.now();
     if (double() >= 0) alienEffectCount++;
   });
 
-  for (let i = 1; i <= ITERATIONS; i++) {
+  for (let i = 1; i <= COUNTER_ITERATIONS; i++) {
     count(i);
   }
   stop();
 }
 const timeAlienCounter = performance.now() - startAlienCounter;
-console.log(`alien-signals : ${timeAlienCounter.toFixed(2)} ms (${Math.round((ITERATIONS / timeAlienCounter) * 1000).toLocaleString()} ops/sec) | Effects run: ${alienEffectCount}`);
+const alienOps = Math.round((COUNTER_ITERATIONS / timeAlienCounter) * 1000).toLocaleString();
+console.log(
+  `alien-signals    : ${timeAlienCounter.toFixed(2)} ms (${alienOps} ops/sec) | Effects run: ${alienEffectCount}`
+);
 
-// Test B: solid-js
+// Test B: @solidjs/signals
 let solidEffectCount = 0;
 const startSolidCounter = performance.now();
 solidRoot((dispose) => {
   const [count, setCount] = solidSignal(0);
   const double = solidMemo(() => count() * 2);
-  solidRenderEffect(() => {
-    if (double() >= 0) solidEffectCount++;
-  });
+  solidRenderEffect(
+    () => double(),
+    (val) => {
+      if (val >= 0) solidEffectCount++;
+    }
+  );
 
-  for (let i = 1; i <= ITERATIONS; i++) {
+  for (let i = 1; i <= COUNTER_ITERATIONS; i++) {
     setCount(i);
+    solidFlush();
   }
   dispose();
 });
 const timeSolidCounter = performance.now() - startSolidCounter;
-console.log(`solid-js      : ${timeSolidCounter.toFixed(2)} ms (${Math.round((ITERATIONS / timeSolidCounter) * 1000).toLocaleString()} ops/sec) | Effects run: ${solidEffectCount}`);
+const solidOps = Math.round((COUNTER_ITERATIONS / timeSolidCounter) * 1000).toLocaleString();
+console.log(
+  `@solidjs/signals : ${timeSolidCounter.toFixed(2)} ms (${solidOps} ops/sec) | Effects run: ${solidEffectCount}`
+);
 
-const counterWinner = timeAlienCounter < timeSolidCounter ? 'alien-signals' : 'solid-js';
-const counterSpeedup = Math.max(timeAlienCounter, timeSolidCounter) / Math.min(timeAlienCounter, timeSolidCounter);
-console.log(`Pemenang Counter: ${counterWinner} (${counterSpeedup.toFixed(2)}x lebih cepat)\n`);
+const counterSpeedup = (timeSolidCounter / timeAlienCounter).toFixed(2);
+console.log(`Perbandingan Counter: alien-signals ${counterSpeedup}x lebih cepat daripada @solidjs/signals.\n`);
 
 // -----------------------------------------------------------------------------
 // BAGIAN 3: BENCHMARK TABEL 1.000 BARIS REAKTIF
@@ -114,7 +151,7 @@ const startAlienTable = performance.now();
     stops.push(stop);
   }
 
-  // Mutasi 1: Update seluruh teks 1.000 baris
+  // Mutasi 1: Update teks 1.000 baris (5 putaran)
   for (let round = 0; round < ROUNDS; round++) {
     for (let i = 0; i < ROWS; i++) {
       rows[i].text(`Baris #${i} Putaran ${round}`);
@@ -130,9 +167,11 @@ const startAlienTable = performance.now();
   stops.forEach((s) => s());
 }
 const timeAlienTable = performance.now() - startAlienTable;
-console.log(`alien-signals : ${timeAlienTable.toFixed(2)} ms | Total updates: ${alienTableUpdates}`);
+console.log(
+  `alien-signals    : ${timeAlienTable.toFixed(2)} ms | Total updates: ${alienTableUpdates}`
+);
 
-// Test B: solid-js
+// Test B: @solidjs/signals
 let solidTableUpdates = 0;
 const startSolidTable = performance.now();
 solidRoot((dispose) => {
@@ -141,44 +180,47 @@ solidRoot((dispose) => {
     const [text, setText] = solidSignal(`Baris #${i}`);
     const [selected, setSelected] = solidSignal(false);
     const rowSummary = solidMemo(() => `${text()} [${selected() ? 'X' : ' '}]`);
-    solidRenderEffect(() => {
-      if (rowSummary()) solidTableUpdates++;
-    });
+    solidRenderEffect(
+      () => rowSummary(),
+      (val) => {
+        if (val) solidTableUpdates++;
+      }
+    );
     rows.push({ setText, setSelected });
   }
 
+  // Mutasi 1: Update teks 1.000 baris (5 putaran)
   for (let round = 0; round < ROUNDS; round++) {
     for (let i = 0; i < ROWS; i++) {
       rows[i].setText(`Baris #${i} Putaran ${round}`);
+      solidFlush();
     }
   }
 
+  // Mutasi 2: Seleksi baris bergantian
   for (let i = 0; i < ROWS; i++) {
     rows[i].setSelected(true);
     if (i > 0) rows[i - 1].setSelected(false);
+    solidFlush();
   }
 
   dispose();
 });
 const timeSolidTable = performance.now() - startSolidTable;
-console.log(`solid-js      : ${timeSolidTable.toFixed(2)} ms | Total updates: ${solidTableUpdates}`);
+console.log(
+  `@solidjs/signals : ${timeSolidTable.toFixed(2)} ms | Total updates: ${solidTableUpdates}`
+);
 
-const tableWinner = timeAlienTable < timeSolidTable ? 'alien-signals' : 'solid-js';
-const tableSpeedup = Math.max(timeAlienTable, timeSolidTable) / Math.min(timeAlienTable, timeSolidTable);
-console.log(`Pemenang Tabel 1.000 Baris: ${tableWinner} (${tableSpeedup.toFixed(2)}x lebih cepat)\n`);
+const tableSpeedup = (timeSolidTable / timeAlienTable).toFixed(2);
+console.log(`Perbandingan Tabel: alien-signals ${tableSpeedup}x lebih cepat daripada @solidjs/signals.\n`);
 
 // -----------------------------------------------------------------------------
-// KEPUTUSAN & CATATAN STABILITAS API
+// RINGKASAN DATA
 // -----------------------------------------------------------------------------
 console.log('================================================================');
-console.log('                 KEPUTUSAN AKHIR SPIKE S2                       ');
+console.log('                     RINGKASAN DATA SPIKE S2                   ');
 console.log('================================================================');
-console.log('1. Ukuran Bundle (P10): alien-signals (1.81 KB gzip) vs solid-js (12.09 KB gzip).');
-console.log('   alien-signals unggul ~6.7x lebih kecil. Menjaga batas anggaran 8 KB chunk (KIL-401).');
-console.log('2. Kecepatan Operasi: alien-signals unggul dalam mutasi massal dan granular updates.');
-console.log('3. Stabilitas API:');
-console.log('   - alien-signals (v3.2) adalah pustaka murni push-pull signals yang stabil dan mandiri.');
-console.log('   - @solidjs/signals (v2.0-rc) masih berstatus release candidate dengan isu internal bug.');
-console.log('   - solid-js (v1.9) membawa overhead owner tree/context yang tidak dibutuhkan oleh compiler Kylat.');
-console.log('4. Rekomendasi Pemenang: alien-signals ditetapkan sebagai inti reaktif resmi @kylat/runtime.');
+console.log(`1. Bundle Gzip Inti   : alien-signals = ${alienGzip.length} B | @solidjs/signals = ${solidGzip.length} B (${sizeRatio}x lebih ramping)`);
+console.log(`2. Counter 1M Updates : alien-signals = ${timeAlienCounter.toFixed(2)} ms | @solidjs/signals = ${timeSolidCounter.toFixed(2)} ms (${counterSpeedup}x lebih cepat)`);
+console.log(`3. Tabel 1.000 Baris  : alien-signals = ${timeAlienTable.toFixed(2)} ms | @solidjs/signals = ${timeSolidTable.toFixed(2)} ms (${tableSpeedup}x lebih cepat)`);
 console.log('================================================================\n');
