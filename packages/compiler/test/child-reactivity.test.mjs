@@ -139,4 +139,27 @@ describe('@kylat/compiler - KEP-35 reaktivitas prop komponen anak', () => {
     // Verifikasi anak ikut ter-update secara reaktif
     assert.equal(valueSpan.textContent, '1', 'Nilai span anak wajib ikut berubah menjadi 1 saat induk berubah');
   });
+
+  it('3. menolak prop bertipe Closure atau callable dengan KIL-110 (fungsi tidak bisa dioper sebagai prop statis)', async () => {
+    const invalidChildSource = `<?php
+declare(strict_types=1);
+namespace App\\Components;
+use Kylat\\Component;
+use Kylat\\Attributes\\Prop;
+use Closure;
+
+final class ActionDisplay extends Component
+{
+    #[Prop]
+    public Closure $onClick;
+}
+?>
+<div></div>`;
+
+    const res = await compile(invalidChildSource, 'ActionDisplay.kylat.php');
+    assert.equal(res.success, false);
+    const kil110 = res.diagnostics.find((d) => d.code === 'KIL-110');
+    assert.ok(kil110, 'Prop dengan tipe Closure/callable wajib ditolak oleh KIL-110');
+  });
 });
+
