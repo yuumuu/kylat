@@ -48,6 +48,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 | **KEP-34** | **Format Komponen Single-File (`*.kylat.php`)**: Menetapkan berkas tunggal `*.kylat.php` dengan bagian PHP (`<?php ... ?>`) dan bagian templat HTML/Kylat setelahnya ([`0004-single-file-component.md`](0004-single-file-component.md)). | **PUTUSAN** | Akhir fase 0 | Pemilik proyek |
 | **KEP-35** | **Reaktivitas Prop Komponen Anak**: Menetapkan semantik signal accessor getter untuk komposisi `<x-child :prop="$state">` ([`0006-reaktivitas-prop-komponen-anak.md`](0006-reaktivitas-prop-komponen-anak.md)). | `[KANDIDAT]` | Fase 1 | Arsitek Toolchain |
 | **KEP-36** | **Idempotensi Atomik Database & Outbox**: Menetapkan skema tabel transaksi database untuk menggantikan cache interim pada produksi ([`0007-idempotensi-atomik-database-outbox.md`](0007-idempotensi-atomik-database-outbox.md)). | `[KANDIDAT]` | Fase 3 | Arsitek Backend |
+| **KEP-37** | **Penataan Status Kode Galat (KIL-130, 203..205) dan Semantik KIL-151**: Menunda KIL-130, 203..205 ke v0.1 dan memisahkan galat markup tak seimbang ke KIL-150 ([`0008-penataan-kode-galat-v0-dan-sintaks-templat.md`](0008-penataan-kode-galat-v0-dan-sintaks-templat.md)). | `[KANDIDAT]` | Fase 0 | Arsitek Compiler |
 
 ---
 
