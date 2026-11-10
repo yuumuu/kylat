@@ -208,7 +208,7 @@ class TemplateParser {
       if (this.src.startsWith('<!--', this.i)) {
         const end = this.src.indexOf('-->', this.i + 4);
         if (end === -1) {
-          this.error('KIL-151', 'Komentar HTML tidak ditutup dengan -->');
+          this.error('KIL-150', 'Komentar HTML tidak ditutup dengan -->');
         }
         this.i = end + 3;
         continue;
@@ -219,25 +219,25 @@ class TemplateParser {
         const start = this.i;
         const end = this.src.indexOf('>', this.i + 2);
         if (end === -1) {
-          this.error('KIL-151', 'Tag penutup tidak memiliki karakter penutup >');
+          this.error('KIL-150', 'Tag penutup tidak memiliki karakter penutup >');
         }
         const closing = this.src.slice(this.i + 2, end).trim().toLowerCase();
         this.i = end + 1;
         if (!closing) {
-          this.error('KIL-151', 'Tag penutup kosong tidak sah', start);
+          this.error('KIL-150', 'Tag penutup kosong tidak sah', start);
         }
         if (stop?.kind === 'tag' && stop.value.toLowerCase() === closing) {
           return { nodes, stop: { kind: 'tag', value: closing } };
         }
         if (stop?.kind === 'tag') {
           this.error(
-            'KIL-151',
+            'KIL-150',
             `Tag penutup </${closing}> tidak cocok dengan tag pembuka <${stop.value}>`,
             start
           );
         }
         this.error(
-          'KIL-151',
+          'KIL-150',
           `Tag penutup </${closing}> tidak memiliki pasangan tag pembuka`,
           start
         );
@@ -297,7 +297,7 @@ class TemplateParser {
     }
 
     if (stop?.kind === 'tag') {
-      this.error('KIL-151', `Tag <${stop.value}> tidak ditutup`);
+      this.error('KIL-150', `Tag <${stop.value}> tidak ditutup`);
     }
     if (stop?.kind === 'directive') {
       this.error('KIL-151', `Direktif ${Array.from(stop.values).join('/')} tidak ditutup`);
@@ -358,11 +358,11 @@ class TemplateParser {
     const start = this.i;
     const end = this.src.indexOf('}}', this.i + 2);
     if (end === -1) {
-      this.error('KIL-151', 'Interpolasi {{ }} tidak ditutup dengan }}', start);
+      this.error('KIL-150', 'Interpolasi {{ }} tidak ditutup dengan }}', start);
     }
     const expression = this.src.slice(this.i + 2, end).trim();
     if (!expression) {
-      this.error('KIL-151', 'Interpolasi {{ }} kosong tidak sah', start);
+      this.error('KIL-150', 'Interpolasi {{ }} kosong tidak sah', start);
     }
     this.i = end + 2;
     return { type: 'expression', expression, loc: this.loc(start) };
@@ -508,7 +508,7 @@ class TemplateParser {
       this.i++;
     }
     if (!tag) {
-      this.error('KIL-151', 'Nama tag kosong tidak sah', start);
+      this.error('KIL-150', 'Nama tag kosong tidak sah', start);
     }
 
     const attributes: Record<string, string> = {};
@@ -522,7 +522,7 @@ class TemplateParser {
     while (this.i < this.len) {
       this.skipWhitespace();
       if (this.i >= this.len) {
-        this.error('KIL-151', `Tag <${tag}> tidak selesai (kehilangan >)`, start);
+        this.error('KIL-150', `Tag <${tag}> tidak selesai (kehilangan >)`, start);
       }
       if (this.src[this.i] === '>') {
         this.i++;
@@ -616,7 +616,7 @@ class TemplateParser {
 
     const result = this.parseSequence({ kind: 'tag', value: tag });
     if (result.stop?.kind !== 'tag') {
-      this.error('KIL-151', `Tag <${tag}> tidak ditutup`, start);
+      this.error('KIL-150', `Tag <${tag}> tidak ditutup`, start);
     }
     element.nodes = this.mergeText(result.nodes);
     element.children = element.nodes.filter(

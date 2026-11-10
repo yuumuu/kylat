@@ -714,7 +714,7 @@ function parseAttributeParts(value: string): AttributePart[] {
     if (value.startsWith('{{', i)) {
       const end = value.indexOf('}}', i + 2);
       if (end === -1) {
-        throw new CodegenError('KIL-151', 'Interpolasi {{ }} pada atribut tidak ditutup.');
+        throw new CodegenError('KIL-150', 'Interpolasi {{ }} pada atribut tidak ditutup.');
       }
       if (text) {
         parts.push({ text });

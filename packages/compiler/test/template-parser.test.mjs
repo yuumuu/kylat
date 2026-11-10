@@ -65,7 +65,7 @@ describe('@kylat/compiler - Template Parser Edge Cases', () => {
     assert.equal(inner.children[0].textContent, 'Teks');
   });
 
-  it('6. mendeteksi penutup yang tidak cocok dan melempar KIL-151 (fail-fast)', () => {
+  it('6. mendeteksi penutup yang tidak cocok dan melempar KIL-150 (fail-fast)', () => {
     const template = `<div><span>Teks</div></span>`;
     assert.throws(
       () => {
@@ -74,15 +74,15 @@ describe('@kylat/compiler - Template Parser Edge Cases', () => {
       (err) => {
         return (
           err instanceof Error &&
-          err.message.includes('KIL-151') &&
+          err.message.includes('KIL-150') &&
           err.message.includes('tidak cocok')
         );
       },
-      'Wajib melempar galat KIL-151 jika tag penutup tidak cocok'
+      'Wajib melempar galat KIL-150 jika tag penutup tidak cocok'
     );
   });
 
-  it('7. mendeteksi tag yang tidak ditutup dan melempar KIL-151 (fail-fast)', () => {
+  it('7. mendeteksi tag yang tidak ditutup dan melempar KIL-150 (fail-fast)', () => {
     const template = `<div><span>Teks</div>`;
     assert.throws(
       () => {
@@ -91,11 +91,45 @@ describe('@kylat/compiler - Template Parser Edge Cases', () => {
       (err) => {
         return (
           err instanceof Error &&
-          err.message.includes('KIL-151') &&
+          err.message.includes('KIL-150') &&
           err.message.includes('tidak cocok')
         );
       },
-      'Wajib melempar galat KIL-151 jika tag tidak ditutup'
+      'Wajib melempar galat KIL-150 jika tag tidak ditutup'
+    );
+  });
+
+  it('8. mendeteksi tag pembuka yang tidak memiliki tag penutup dan melempar KIL-150', () => {
+    const template = `<div><p>Teks</p>`;
+    assert.throws(
+      () => {
+        parseTemplate(template);
+      },
+      (err) => {
+        return (
+          err instanceof Error &&
+          err.message.includes('KIL-150') &&
+          err.message.includes('tidak ditutup')
+        );
+      },
+      'Wajib melempar galat KIL-150 jika tag pembuka tidak ditutup'
+    );
+  });
+
+  it('9. mendeteksi interpolasi kurung kurawal yang tidak ditutup dan melempar KIL-150', () => {
+    const template = `<div>{{ $count</div>`;
+    assert.throws(
+      () => {
+        parseTemplate(template);
+      },
+      (err) => {
+        return (
+          err instanceof Error &&
+          err.message.includes('KIL-150') &&
+          err.message.includes('Interpolasi')
+        );
+      },
+      'Wajib melempar galat KIL-150 jika interpolasi tidak ditutup'
     );
   });
 });
