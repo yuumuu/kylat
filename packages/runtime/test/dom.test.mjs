@@ -72,4 +72,59 @@ describe('@kylat/runtime - DOM Binding & Semantik bindAttr', () => {
 
     unbind();
   });
+
+  it('semantik bindAttr untuk aria-busy, aria-invalid, dan aria-describedby: string set, null hapus, false hapus', () => {
+    const el = new MockElement('input');
+
+    // 1. aria-busy
+    const [busySignal, setBusySignal] = createSignal('true');
+    const unbindBusy = bindAttr(el, 'aria-busy', busySignal);
+    assert.equal(el.getAttribute('aria-busy'), 'true', 'aria-busy harus bernilai "true" saat sinyal "true"');
+
+    setBusySignal('false');
+    assert.equal(el.getAttribute('aria-busy'), 'false', 'aria-busy harus bernilai "false" saat sinyal string "false"');
+
+    setBusySignal(null);
+    assert.equal(el.hasAttribute('aria-busy'), false, 'aria-busy wajib dihapus saat sinyal null');
+
+    setBusySignal('true');
+    assert.equal(el.getAttribute('aria-busy'), 'true', 'aria-busy terpasang kembali');
+
+    setBusySignal(false);
+    assert.equal(el.hasAttribute('aria-busy'), false, 'aria-busy wajib dihapus saat sinyal boolean false');
+    unbindBusy();
+
+    // 2. aria-invalid
+    const [invalidSignal, setInvalidSignal] = createSignal('true');
+    const unbindInvalid = bindAttr(el, 'aria-invalid', invalidSignal);
+    assert.equal(el.getAttribute('aria-invalid'), 'true', 'aria-invalid harus bernilai "true" saat sinyal "true"');
+
+    setInvalidSignal('spelling');
+    assert.equal(el.getAttribute('aria-invalid'), 'spelling', 'aria-invalid harus bernilai "spelling"');
+
+    setInvalidSignal(null);
+    assert.equal(el.hasAttribute('aria-invalid'), false, 'aria-invalid wajib dihapus saat sinyal null');
+
+    setInvalidSignal('false');
+    assert.equal(el.getAttribute('aria-invalid'), 'false', 'aria-invalid harus bernilai "false" saat sinyal "false"');
+
+    setInvalidSignal(false);
+    assert.equal(el.hasAttribute('aria-invalid'), false, 'aria-invalid wajib dihapus saat sinyal boolean false');
+    unbindInvalid();
+
+    // 3. aria-describedby
+    const [describedSignal, setDescribedSignal] = createSignal('err-field-1');
+    const unbindDescribed = bindAttr(el, 'aria-describedby', describedSignal);
+    assert.equal(el.getAttribute('aria-describedby'), 'err-field-1', 'aria-describedby harus menunjuk ID elemen penjelas');
+
+    setDescribedSignal('err-field-1 help-field-2');
+    assert.equal(el.getAttribute('aria-describedby'), 'err-field-1 help-field-2', 'aria-describedby mendukung multiple token ID');
+
+    setDescribedSignal(null);
+    assert.equal(el.hasAttribute('aria-describedby'), false, 'aria-describedby wajib dihapus saat sinyal null');
+
+    setDescribedSignal(false);
+    assert.equal(el.hasAttribute('aria-describedby'), false, 'aria-describedby wajib dihapus saat sinyal boolean false');
+    unbindDescribed();
+  });
 });
