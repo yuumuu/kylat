@@ -43,7 +43,7 @@ final class Counter extends Component
 }
 ?>
 <div>
-    <button on:click="increment">+</button>
+    <button on:click="increment()">+</button>
     <span>{{ $count }}</span>
     @if($count > 0)
         <p>Positif</p>
