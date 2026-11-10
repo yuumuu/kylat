@@ -381,7 +381,9 @@ class ExpressionParser {
     const loop = this.context.loops.get(name);
     if (loop) return loop;
     if (this.context.state.has(name)) return `${name}()`;
-    if (this.context.props.has(name)) return `prop_${name}`;
+    if (this.context.props.has(name)) {
+      return `(typeof prop_${name} === 'function' ? prop_${name}() : prop_${name})`;
+    }
     throw new ExpressionError(
       'KIL-104',
       `Nama '$${name}' tidak merujuk state, prop, atau variabel loop yang dideklarasikan.`

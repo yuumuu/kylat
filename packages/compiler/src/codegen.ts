@@ -350,14 +350,14 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
                 : JSON.stringify(decodeEntities(part.text))
             )
             .join(' + ');
-          props.push(`${JSON.stringify(propName)}: ${getter}`);
+          props.push(`${JSON.stringify(propName)}: () => ${getter}`);
         } else {
           props.push(`${JSON.stringify(propName)}: ${JSON.stringify(attrVal)}`);
         }
       }
       for (const [attrName, expression] of Object.entries(el.dynamicAttributes)) {
         const propName = kebabToCamel(attrName);
-        props.push(`${JSON.stringify(propName)}: ${compile(expression, ctx, el.loc)}`);
+        props.push(`${JSON.stringify(propName)}: () => ${compile(expression, ctx, el.loc)}`);
       }
 
       bodyLines.push(`${pad(depth)}const ${elVar} = ${factory}({ ${props.join(', ')} });`);
