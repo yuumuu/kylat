@@ -2,7 +2,7 @@
 
 - **ID Keputusan**: KEP-35 (0006)
 - **Topik**: Mekanisme Reaktivitas Prop pada Komposisi Komponen Anak
-- **Status**: DRAFT / KANDIDAT (Usulan untuk Fase 1)
+- **Status**: DISETUJUI untuk Fase 1 (Opsi A: accessor getter). Belum diimplementasikan.
 - **Tanggal Usulan**: 10 November 2026
 - **Pemilik**: Arsitek Toolchain & Tim Reviewer
 - **Target Tenggat**: Fase 1 (Runtime)
