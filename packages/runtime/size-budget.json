@@ -1,0 +1,7 @@
+{
+  "name": "@kylat/runtime",
+  "entry": "./src/index.ts",
+  "measuredGzipBytes": 5178,
+  "maxGzipBytes": 5696,
+  "marginPercent": 10
+}
