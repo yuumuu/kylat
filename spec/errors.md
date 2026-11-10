@@ -245,6 +245,7 @@ public function loadProfile(): void
 ---
 
 #### KIL-130
+- **Status**: Ditunda ke v0.1
 - **Nama**: Tipe array ambigu antara list dan map
 - **Klasifikasi**: Sistem Tipe
 - **Pemicu**: Variabel atau properti bertipe `array` tanpa anotasi tipe generik yang jelas (`list<T>` vs `array<string, T>`), atau pemakaian langsung hasil `array_filter` sebagai list tanpa dibungkus `array_values()`.
@@ -330,6 +331,29 @@ $prefix = mb_substr($this->title, 0, 3);
 ---
 
 ### Rentang 15x–16x: Sintaks & Direktif Templat
+
+#### KIL-150
+- **Nama**: Sintaks markup atau tag templat tidak seimbang/tidak ditutup
+- **Klasifikasi**: Grammar Templat
+- **Pemicu**: Tag HTML atau komponen anak tidak memiliki tag penutup yang cocok, tag penutup kosong atau tidak berpasangan, atau kurung interpolasi `{{` tidak ditutup dengan `}}`.
+- **Pesan**: `Sintaks templat tidak seimbang: tag atau interpolasi tidak ditutup dengan benar`
+- **Rujukan**: [`spec/template.md`](template.md)
+
+##### Contoh Salah
+```html
+<div>
+    <button>Klik saya
+</div>
+```
+
+##### Contoh Benar
+```html
+<div>
+    <button>Klik saya</button>
+</div>
+```
+
+---
 
 #### KIL-151
 - **Nama**: Direktif templat tidak dikenal atau direktif Blade di dalam komponen
@@ -594,6 +618,7 @@ final class ShoppingCart extends Component {}
 ---
 
 #### KIL-203
+- **Status**: Ditunda ke v0.1
 - **Nama**: Urutan anggota kelas komponen tidak sesuai konvensi
 - **Klasifikasi**: Konvensi Kode
 - **Pemicu**: Anggota kelas komponen tidak disusun berurutan: konstanta → `#[Prop]` → state publik/privat → computed (`#[Computed]`) → `#[Client]` → `#[Server]`.
@@ -631,6 +656,7 @@ final class Counter extends Component
 ---
 
 #### KIL-204
+- **Status**: Ditunda ke v0.1
 - **Nama**: Method client melebihi batas kompleksitas
 - **Klasifikasi**: Konvensi Kode (Peringatan / Soft Limit)
 - **Pemicu**: Method beranotasi `#[Client]` melebihi batas lunak 40 baris kode atau memiliki kedalaman sarang (*nesting level*) lebih dari 3 tingkat.
@@ -646,6 +672,7 @@ Pecah logika menjadi method privat kecil atau pindahkan logika kalkulasi ke comp
 ---
 
 #### KIL-205
+- **Status**: Ditunda ke v0.1
 - **Nama**: Logika kompleks di dalam templat
 - **Klasifikasi**: Konvensi Templat
 - **Pemicu**: Templat memuat ekspresi kalkulasi atau transformasi data multi-langkah yang seharusnya disederhanakan melalui computed property.
