@@ -16,8 +16,8 @@ Prinsip P4 dan P10 Kylat menetapkan:
 - **P10**: Anggaran ukuran bundle JavaScript runtime minimal dan terukur ketat (target batas anggaran inti ~8 KB gzip).
 
 Untuk menggerakkan reaktivitas granular (*fine-grained reactivity*) pada `@kylat/runtime`, Spike S2 melakukan pengujian komparatif antara dua kandidat utama:
-1. **`alien-signals`** (v3.2.1) — mesin reaktivitas *push-pull* mandiri dengan memori monomorfik.
-2. **`@solidjs/signals`** (v2.0.0-rc.0) — inti reaktivitas Solid 2.0 generasi baru berbasis *reactive graph*.
+1. **`alien-signals`** (v3.2.1, Lisensi: **MIT**) — mesin reaktivitas *push-pull* mandiri dengan memori monomorfik.
+2. **`@solidjs/signals`** (v2.0.0-rc.0, Lisensi: **MIT**) — inti reaktivitas Solid 2.0 generasi baru berbasis *reactive graph*.
 
 Keduanya diuji dalam harness yang sama ([`bench/spikes/s2-signals/benchmark.mjs`](../../bench/spikes/s2-signals/benchmark.mjs)) dengan tiga metrik terukur:
 1. Ukuran bundle terkompresi (gzip) dari fungsi inti menggunakan bundler yang sama (`esbuild --minify --bundle --format=esm`).
@@ -34,10 +34,10 @@ Fungsi inti yang dibundel:
 - `alien-signals`: `{ signal, computed, effect }`
 - `@solidjs/signals`: `{ createSignal, createMemo, createEffect, createRoot }`
 
-| Pustaka | Versi | Ukuran Minified (Raw) | Ukuran Gzip | Rasio terhadap `alien-signals` |
-|---|---|---|---|---|
-| **`alien-signals`** | v3.2.1 | **4.533 B** (4,43 KB) | **1.712 B** (1,67 KB) | **Baseline (1,0x)** |
-| **`@solidjs/signals`** | v2.0.0-rc.0 | **19.763 B** (19,30 KB) | **7.929 B** (7,74 KB) | **4,63x lebih besar** |
+| Pustaka | Versi | Lisensi | Ukuran Minified (Raw) | Ukuran Gzip | Rasio terhadap `alien-signals` |
+|---|---|---|---|---|---|
+| **`alien-signals`** | **3.2.1** (Pinned) | **MIT** | **4.533 B** (4,43 KB) | **1.712 B** (1,67 KB) | **Baseline (1,0x)** |
+| **`@solidjs/signals`** | v2.0.0-rc.0 | MIT | **19.763 B** (19,30 KB) | **7.929 B** (7,74 KB) | **4,63x lebih besar** |
 
 > **Temuan Ukuran**: Inti `@solidjs/signals` (7,93 KB gzip) menghabiskan hampir 99% dari batas anggaran bundle runtime Kylat (~8 KB gzip) bahkan sebelum runtime primitives (`bindText`, `bindAttr`, `batchRpc`) dimasukkan. Sebaliknya, `alien-signals` hanya membutuhkan 1,71 KB gzip, menyisakan ruang anggaran yang sangat luas untuk kode runtime lainnya.
 
@@ -58,32 +58,25 @@ Fungsi inti yang dibundel:
 
 ---
 
-## 3. Opsi yang Dipertimbangkan
+## 3. Arah Rekomendasi (Opsi A: `alien-signals`)
 
-### Opsi A: Memilih `alien-signals` (Rekomendasi Spike S2)
-
-- **Deskripsi**: Menjadikan `alien-signals` sebagai fondasi tunggal untuk `@kylat/runtime`.
-- **Kelebihan**:
-  - Ukuran paling ramping (1,71 KB gzip vs 7,93 KB gzip).
-  - Kecepatan pembaruan mentah tertinggi pada kedua skenario pengujian (hingga 12,8x lebih cepat).
-  - Tidak mewajibkan abstraksi owner/root tree (`createRoot`), sehingga direct DOM bindings (`bindText`, `bindAttr`) dapat dipasang langsung pada node DOM dengan *cleanup* fungsi sederhana.
-  - API v3.2.1 sudah stabil dan bebas bug internal.
-- **Kelemahan**:
-  - Pustaka mandiri yang lebih muda dibanding ekosistem SolidJS.
-
-### Opsi B: Memilih `@solidjs/signals`
-
-- **Deskripsi**: Mengadopsi arsitektur reaktif Solid 2.0 untuk runtime Kylat.
-- **Kelebihan**:
-  - Didukung oleh komunitas dan pengembang inti SolidJS.
-- **Kelemahan**:
-  - Ukuran gzip inti (7,93 KB) sangat besar untuk kebutuhan runtime mikro Kylat.
-  - Masih berstatus Release Candidate (`v2.0.0-rc.0`) dengan perubahan API yang signifikan (misalnya pemisahan compute/effect pada `createEffect(compute, effectFn)`).
-  - Performa mutasi massal lebih lambat karena overhead pelacakan lane/owner graph.
+Berdasarkan tinjauan arsitektur dan data Spike S2, arah rekomendasi teknis mengarah ke **Opsi A (`alien-signals`)**:
+1. **Ukuran Inti Ultra-Ramping**: 1,71 KB gzip (vs 7,93 KB gzip), krusial untuk memenuhi batas anggaran bundle runtime ringan Kylat.
+2. **Kesesuaian dengan Direct DOM Binding**: Tidak membutuhkan pohon konteks/owner (`createRoot`), sangat cocok dengan model manipulasi langsung DOM node Kylat tanpa VDOM.
+3. **Stabilitas API**: Versi `3.2.1` stabil, teruji, dan bebas dari isu bug internal yang masih ditemui pada status Release Candidate `@solidjs/signals` v2.
+4. **Lisensi Terbuka**: Berlisensi **MIT** yang kompatibel penuh dengan lisensi proyek Kylat (**Apache-2.0**). Versi dipin secara ketat pada `3.2.1` di `packages/runtime/package.json`.
 
 ---
 
-## 4. Status Keputusan
+## 4. Batasan dan Hal yang Belum Terbukti
 
-**Status saat ini: USULAN (Menunggu Keputusan Pemilik Proyek)**.  
-Dokumen ini menyajikan data pengukuran empiris Spike S2 untuk ditinjau dan disahkan oleh pemilik proyek.
+1. **Lingkungan Pengujian**: Hasil benchmark di atas **hanya diukur pada engine V8 (Node.js v22) di platform desktop**.
+2. **Belum Teruji di Mobile / JavaScriptCore**: Kinerja memori, *garbage collection*, dan kecepatan eksekusi pada engine JavaScriptCore (Safari iOS) serta perangkat bergerak berspesifikasi rendah (*low-end mobile*) belum diukur.
+
+---
+
+## 5. Syarat Pengesahan Keputusan
+
+Status ADR ini **tetap "Usulan"** dan tidak diputuskan secara sepihak sampai syarat berikut terpenuhi:
+1. **Uji Komparatif Mobile / JSC**: Benchmark lanjutan dilakukan pada JavaScriptCore (Safari iOS) dan perangkat mobile *low-end*. Jika `alien-signals` kalah performa atau boros memori secara signifikan di lingkungan tersebut, arah keputusan ini wajib ditinjau ulang.
+2. **Pengesahan Pemilik Proyek**: Persetujuan resmi diberikan setelah hasil uji lintas-engine diverifikasi.

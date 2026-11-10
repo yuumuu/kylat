@@ -73,7 +73,7 @@ importers:
         specifier: workspace:*
         version: link:../protocol
       alien-signals:
-        specifier: ^3.2.1
+        specifier: 3.2.1
         version: 3.2.1
 
 packages:
