@@ -66,3 +66,4 @@ Hal ini berpotensi memutus rantai reaktivitas (*broken reactive chain*) pada hie
 ## 3. Rekomendasi Awal
 
 Memprioritaskan **Opsi A (Signal Accessor Getter)** pada **Fase 1 (Runtime)** melalui pengujian differential di `@kylat/compiler` dan `@kylat/runtime`, tanpa mengubah batasan subset PHP v0.
+

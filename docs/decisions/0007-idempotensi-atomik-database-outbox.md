@@ -60,3 +60,4 @@ Namun, terdapat risiko konsistensi data riil pada arsitektur dual-write (Databas
 1. Menyediakan migrasi database resmi di `@kylat/adapter-laravel` (`create_kylat_idempotency_table`).
 2. Menambahkan driver penyimpanan `DatabaseIdempotencyDriver` yang mengimplementasikan `IdempotencyDriverInterface`.
 3. Mempertahankan driver `Cache` sebagai opsi pengujian cepat atau lingkungan serverless ephemeral.
+
