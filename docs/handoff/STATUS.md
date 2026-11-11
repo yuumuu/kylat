@@ -14,6 +14,16 @@ Diperbarui: 11 November 2026. Sumber kebenaran: `spec/` di repo. File ini ringka
 
 ---
 
+## Aturan Proses Rilis & Integritas Main
+
+Mulai penutupan Fase 1, aturan perlindungan branch `main` ditegakkan secara ketat:
+- **Semua perubahan ke `main` wajib melalui Pull Request (PR)**: Push langsung ke branch `main` dilarang.
+- **Wajib Status Checks CI Hijau**: Seluruh matrix job `Verify Toolchain` (Node 20/22 dan PHP 8.2/8.3) wajib lulus 100% sebelum PR dapat digabungkan (*merged*).
+- **Tidak Ada Pengecualian Admin (*No Bypass*)**: Aturan `enforce_admins` diaktifkan (`enforce_admins: true`). Administrator sekalipun tidak dapat mem-bypass branch protection atau mem-push langsung ke `main`.
+- **Catatan Pengecualian Riwayat**: Penutupan Fase 1 pada commit `8dd2377` di-push langsung ke `main` menggunakan hak bypass admin pada 11 November 2026. Hal ini dicatat secara resmi sebagai pengecualian satu kali (*one-time exception*) sebelum penegakan proteksi tanpa bypass diaktifkan.
+
+---
+
 ## Ringkasan Penutupan Fase 1
 
 Fase 1 (Runtime & Reaktivitas Lanjutan) resmi ditutup pada 11 November 2026. Empat tugas utama Fase 1 telah tuntas dengan rincian hash commit:
