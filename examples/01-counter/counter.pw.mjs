@@ -10,9 +10,9 @@ test('Counter reaktif pada WebKit (klik + dua kali menghasilkan 2 tanpa pageerro
   const targetUrl = process.env.TEST_URL || 'http://localhost:3010';
   await page.goto(targetUrl);
 
-  // Tunggu island terpasang dan temukan tombol '+' serta span counter via data-testid
+  // Tunggu island terpasang dan temukan tombol '+' serta span counter
   const plusButton = page.locator('#island-mount button', { hasText: '+' });
-  const countSpan = page.locator('#island-mount [data-testid="count"]');
+  const countSpan = page.locator('#island-mount span');
 
   // Klik tombol "+" dua kali
   await plusButton.click();
