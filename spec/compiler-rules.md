@@ -64,3 +64,27 @@ Tiga kode yang melanggar rentang sudah dipindahkan. Tidak ada kode lama yang bol
 Kode yang **tidak** berubah: KIL-201, KIL-203, KIL-204, KIL-205, KIL-211, KIL-212, KIL-310, KIL-401. Rentang `1xx`, `2xx`, `3xx`, dan `4xx` kini konsisten dengan jenis masalahnya, sehingga nomor bisa dipakai untuk menebak kelas kesalahan sebelum pesan dibaca.
 
 Riwayat: keputusan ini diambil sebelum fase 0 dimulai, saat belum ada CI, pesan error, atau dokumentasi pengguna yang merujuk kode lama. Renumber setelah itu akan memutus rujukan dan tidak boleh dilakukan tanpa tabel migrasi di `errors.md`.
+
+---
+
+## Pemetaan konstruksi ke kode
+
+| Konstruksi PHP | Kode KIL | Nama Tes |
+|---|---|---|
+| Berkas tanpa `declare(strict_types=1)` | KIL-102 | mendeteksi KIL-102 jika declare(strict_types=1) tidak ada |
+| Pernyataan `global` / variabel global | KIL-103 | mendeteksi KIL-103 jika menggunakan global statement |
+| Properti `static` pada komponen | KIL-103 | belum ada |
+| Pola singleton pada kelas komponen | KIL-103 | belum ada |
+| Ekspresi `match` | KIL-104 | mendeteksi KIL-104 jika menggunakan ekspresi match |
+| Generator `yield` | KIL-104 | belum ada |
+| Pernyataan `goto` | KIL-104 | belum ada |
+| Evaluasi dinamis `eval()` | KIL-104 | belum ada |
+| Argumen aksi server non-state/non-prop | KIL-104 | mendeteksi KIL-104 jika argumen aksi server berupa literal angka atau string |
+| Instansiasi objek sembarang (`new X`) di method client | KIL-110 | menolak instansiasi kelas dengan KIL-110 |
+| Properti atau prop bertipe `Closure` / `callable` | KIL-110 | menolak tipe properti closure atau callable dengan KIL-110 |
+| Pemanggilan fungsi di luar allowlist | KIL-110 | belum ada |
+| Pemanggilan I/O filesystem di method `#[Client]` | KIL-120 | menolak I/O di client dengan KIL-120 |
+| Akses variabel superglobal di method `#[Client]` | KIL-120 | menolak superglobal dengan KIL-120 |
+| Akses database / ORM di method `#[Client]` | KIL-120 | belum ada |
+| Fungsi manipulasi string byte-level (`strlen`, `substr`, dll.) | KIL-140 | menolak fungsi string byte-level dengan KIL-140 |
+
