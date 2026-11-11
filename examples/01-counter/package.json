@@ -13,5 +13,8 @@
   "dependencies": {
     "@kylat/compiler": "workspace:*",
     "@kylat/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0"
   }
 }
