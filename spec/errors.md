@@ -283,7 +283,7 @@ public function removeInactive(): void
 #### KIL-131
 - **Nama**: Tipe data hilang atau operator titik tidak valid
 - **Klasifikasi**: Sistem Tipe
-- **Pemicu**: Properti, parameter method, atau return value tidak memiliki deklarasi tipe eksplisit. Kode ini juga dipicu jika operator penggabungan string `.` digunakan pada salah satu operand yang bukan bertipe `string`.
+- **Pemicu**: Properti, parameter method, atau return value tidak memiliki deklarasi tipe eksplisit; nilai return tidak kompatibel dengan tipe method; atau operator penggabungan string `.` digunakan pada salah satu operand yang bukan bertipe `string`.
 - **Pesan**: `Tipe data wajib dideklarasikan secara eksplisit, atau operand operator '.' bukan string`
 - **Rujukan**: [`spec/php-subset.md` §1, §3, §5](php-subset.md)
 

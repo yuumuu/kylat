@@ -54,6 +54,27 @@ Meskipun Fase 1 ditutup dan seluruh uji CI lulus 100%, hal-hal berikut secara ek
 
 Fase 0 dan Fase 1 resmi ditutup. Baseline toolchain mencakup compiler, runtime sinyal, CLI, contoh referensi (`01-counter` SFC dan `04-cart` server action), serta adapter Laravel yang seluruhnya diverifikasi 100% lulus CI di Node 20/22 dan PHP 8.2/8.3.
 
+### Fase 2 — Compiler (berjalan)
+
+Sudah diimplementasikan dan diuji:
+
+- **Analisis tipe v0**: property, parameter, return, nullable, `list<T>`, `array<string,T>`, serta KIL-131 untuk tipe hilang dan konkatenasi titik non-string.
+- **IR terketik**: `parsedType` pada prop/state/parameter/return, `bodyCode` + `bodyLocations` untuk method, computed, dan lifecycle.
+- **Kontrol alur**: `if`/`elseif`/`else`, `foreach` (termasuk key map dan `continue`), `for`, `return` dini.
+- **Closure/arrow function**: closure lokal, `use`, dan pemanggilan closure; `usort` tetap ditolak KIL-110.
+- **Computed/lifecycle**: `#[Computed]` menjadi `createComputed`; `#[OnMount]` dijalankan setelah DOM; `#[Effect]` menjadi `createEffect`.
+- **Differential test**: 10 kasus PHP vs JavaScript untuk aritmetika, konkatenasi, ternary, null coalescing, UTF-8, string, dan array.
+- **Source map v3**: `CompileResult.map` memetakan baris method/computed/lifecycle/templat ke baris `*.kylat.php`; template diagnostic diberi offset baris berkas.
+- **Golden master**: `Counter.expected.js` dan `CartCounter.expected.js` tetap identik; output lama tidak berubah.
+- **Verifikasi**: 126 tes compiler (124 lulus, 2 skip P8/P10); `pnpm typecheck` dan `pnpm test` monorepo lulus.
+
+Belum ditutup pada Fase 2:
+
+- KIL-130, KIL-203, KIL-204, dan KIL-205 masih ditunda ke v0.1 sesuai ADR 0008.
+- KIL-211 (siklus graf) dan KIL-401 (anggaran chunk) adalah pemeriksaan tingkat proyek, belum dijalankan compiler per berkas.
+- Risiko callback database dinamis (`array_map($this->callback, ...)`) masih terbuka dan tetap prioritas tinggi.
+- `match` ditunda (KIL-104); `usort` ditunda (KIL-110) sesuai ADR 0011.
+
 ## Repo
 
 - `origin/main` sinkron dengan commit lokal.

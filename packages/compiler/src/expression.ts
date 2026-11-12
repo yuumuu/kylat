@@ -13,6 +13,7 @@
 export interface ExpressionContext {
   state: ReadonlySet<string>;
   props: ReadonlySet<string>;
+  computed?: ReadonlySet<string>;
   /** Nama variabel loop PHP -> identifier JavaScript. */
   loops: ReadonlyMap<string, string>;
 }
@@ -240,10 +241,19 @@ class ExpressionParser {
   }
 
   private parseUnary(): string {
-    if (this.match('!')) return `!${this.parseUnary()}`;
-    if (this.match('-')) return `-${this.parseUnary()}`;
-    if (this.match('+')) return `+${this.parseUnary()}`;
+    if (this.matchOperator('!')) return `!${this.parseUnary()}`;
+    if (this.matchOperator('-')) return `-${this.parseUnary()}`;
+    if (this.matchOperator('+')) return `+${this.parseUnary()}`;
     return this.parsePostfix();
+  }
+
+  private matchOperator(value: string): boolean {
+    const token = this.peek();
+    if (!token || (token.type !== 'op' && token.type !== 'punct') || token.value !== value) {
+      return false;
+    }
+    this.index++;
+    return true;
   }
 
   private parsePostfix(): string {
@@ -381,6 +391,7 @@ class ExpressionParser {
     const loop = this.context.loops.get(name);
     if (loop) return loop;
     if (this.context.state.has(name)) return `${name}()`;
+    if (this.context.computed?.has(name)) return `${name}()`;
     if (this.context.props.has(name)) {
       return `(typeof prop_${name} === 'function' ? prop_${name}() : prop_${name})`;
     }

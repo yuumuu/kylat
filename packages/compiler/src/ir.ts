@@ -3,9 +3,12 @@
  * Representasi Intermediate Representation (IR) komponen Kylat sesuai spec/ir.md.
  */
 
+import type { KylatType } from './types.js';
+
 export interface PropDefinition {
   name: string;
   type: string;
+  parsedType?: KylatType;
   isRequired: boolean;
   defaultValue?: string;
 }
@@ -13,13 +16,17 @@ export interface PropDefinition {
 export interface StateDefinition {
   name: string;
   type: string;
+  parsedType?: KylatType;
   initialValue: string;
 }
 
 export interface ComputedDefinition {
   name: string;
   returnType: string;
+  parsedReturnType?: KylatType;
   body: string;
+  bodyCode?: string[];
+  bodyLocations?: Array<{ line: number; column: number }>;
   dependencies: string[];
 }
 
@@ -36,13 +43,25 @@ export interface ServerCallDefinition {
 
 export interface MethodDefinition {
   name: string;
-  params: Array<{ name: string; type: string }>;
+  params: Array<{ name: string; type: string; parsedType?: KylatType }>;
   returnType: string;
-  kind: 'client' | 'server';
+  parsedReturnType?: KylatType;
+  kind: 'client' | 'server' | 'computed' | 'onMount' | 'effect';
   isAction?: boolean;
   body: string;
+  bodyCode?: string[];
+  bodyLocations?: Array<{ line: number; column: number }>;
+  dependencies?: string[];
   operations?: ClientOperation[];
   serverCall?: ServerCallDefinition;
+}
+
+export interface LifecycleDefinition {
+  name: string;
+  kind: 'onMount' | 'effect';
+  bodyCode: string[];
+  bodyLocations?: Array<{ line: number; column: number }>;
+  dependencies: string[];
 }
 
 export interface ChildComponentDefinition {
@@ -126,6 +145,7 @@ export interface ComponentIR {
   state: StateDefinition[];
   computeds: ComputedDefinition[];
   methods: MethodDefinition[];
+  lifecycle?: LifecycleDefinition[];
   serverUses: ServerActionContract[];
   childComponents: ChildComponentDefinition[];
   template?: TemplateNode[];
