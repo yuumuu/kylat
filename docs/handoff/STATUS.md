@@ -45,7 +45,7 @@ Meskipun Fase 1 ditutup dan seluruh uji CI lulus 100%, hal-hal berikut secara ek
 - **JavaScriptCore fisik**: Belum diuji pada engine JavaScriptCore di atas perangkat keras fisik Apple.
 - **Perangkat low-end**: Karakteristik memori dan garbage collection `alien-signals` belum diuji pada perangkat mobile berspesifikasi rendah (*low-end device*).
 - **Screen reader**: Kepatuhan aksesibilitas baru sebatas validasi semantik atribut ARIA pada level DOM (`bindAttr`), belum diuji interaktif langsung dengan teknologi pembaca layar (*screen reader* seperti VoiceOver, NVDA, atau TalkBack).
-- **Deteksi database di `#[Client]` masih heuristik (risiko terbuka, PR #2)**: `User::find()` dan `$pdo->query()` sudah ditolak dengan KIL-120, tetapi scoped call dengan method di luar daftar, relasi/model Eloquent, dan variabel dengan nama tidak umum belum tentu tertangkap. Ini bukan jaminan keamanan penuh sampai aturan AST yang lebih kuat disepakati.
+- **Deteksi database di `#[Client]` memakai aturan AST (risiko terbuka prioritas tinggi)**: pemanggilan langsung `scoped_call_expression` (static/class call) dan `member_call_expression` ditolak KIL-120; callback literal berbentuk array (`array_map([$this, 'query'], ...)`), string (`array_map('DB::table', ...)`), dan first-class callable juga dideteksi pada `array_map`/`array_filter`/`usort`. Residual yang belum tertangkap: callback yang disimpan di state/prop/variabel (`array_map($this->callback, ...)`) atau dibentuk secara dinamis. Ini bukan jaminan keamanan penuh.
 
 ---
 
@@ -59,6 +59,7 @@ Fase 0 dan Fase 1 resmi ditutup. Baseline toolchain mencakup compiler, runtime s
 - Branch `main` bersih, tanpa penumpukan perubahan working tree.
 - Tag rilis Fase 0: `v0.0.0-p0`.
 - Tag rilis Fase 1: `v0.1.0-p1`.
+- PR #2 di-squash menjadi `cdf5f0f`; riwayat per-commit `30bc99b`..`90f3f26` hanya tersedia di PR #2 di GitHub, bukan di `git log main`.
 
 ## Komponen yang Berjalan dan Terverifikasi
 

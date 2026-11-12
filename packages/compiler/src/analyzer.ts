@@ -69,57 +69,10 @@ const CLIENT_BYTE_STRING_FUNCTIONS = new Set([
   'ucwords',
 ]);
 
-const CLIENT_DATABASE_SCOPES = new Set([
-  'DB',
-  'Schema',
-  'Model',
-  'Auth',
-  'Cache',
-  'Storage',
-  'Session',
-  'Http',
-  'Redis',
-  'Queue',
-  'Mail',
-  'Log',
-  'PDO',
-]);
-
-const CLIENT_DATABASE_METHODS = new Set([
-  'find',
-  'findOrFail',
-  'first',
-  'firstOrFail',
-  'all',
-  'get',
-  'where',
-  'query',
-  'prepare',
-  'execute',
-  'fetch',
-  'fetchAll',
-  'select',
-  'insert',
-  'update',
-  'delete',
-  'save',
-  'create',
-  'paginate',
-  'pluck',
-  'value',
-  'exists',
-  'count',
-]);
-
-const CLIENT_DATABASE_VARIABLES = new Set([
-  '$pdo',
-  '$db',
-  '$conn',
-  '$connection',
-  '$model',
-  '$repository',
-  '$stmt',
-  '$statement',
+const CLIENT_CALLBACK_ARGUMENT_INDEX = new Map([
+  ['array_map', 0],
+  ['array_filter', 1],
+  ['usort', 1],
 ]);
 
 const CLIENT_SUPERGLOBALS = new Set([
@@ -477,6 +430,84 @@ export function analyzePhpComponent(
           column: call.startPosition.column + 1,
         };
 
+        const callbackIndex = CLIENT_CALLBACK_ARGUMENT_INDEX.get(functionName);
+        if (callbackIndex !== undefined) {
+          const argsNode = call.childForFieldName('arguments');
+          const argumentNodes = (argsNode?.children ?? []).filter((child) => child.type === 'argument');
+          const callbackArgument = argumentNodes[callbackIndex]?.children[0];
+          if (callbackArgument) {
+            if (callbackArgument.type === 'array_creation_expression') {
+              diagnostics.push(
+                createDiagnostic(
+                  'KIL-120',
+                  filename,
+                  callbackArgument.startPosition.row + 1,
+                  callbackArgument.startPosition.column + 1,
+                  `Callback array pada '${functionName}' dapat menjalankan method database/objek dari client.`,
+                  'Pindahkan pemanggilan callback ke aksi server.'
+                )
+              );
+            } else if (callbackArgument.type === 'string') {
+              const callbackText = callbackArgument.text.replace(/^['"]|['"]$/g, '');
+              if (callbackText.includes('::')) {
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-120',
+                    filename,
+                    callbackArgument.startPosition.row + 1,
+                    callbackArgument.startPosition.column + 1,
+                    `Callback string '${callbackText}' mengarah ke static/class call yang tidak diizinkan di client.`,
+                    'Pindahkan pemanggilan callback ke aksi server.'
+                  )
+                );
+              } else if (CLIENT_BYTE_STRING_FUNCTIONS.has(callbackText)) {
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-140',
+                    filename,
+                    callbackArgument.startPosition.row + 1,
+                    callbackArgument.startPosition.column + 1,
+                    `Callback string byte-level '${callbackText}' tidak diizinkan di client.`
+                  )
+                );
+              } else if (!CLIENT_ALLOWED_FUNCTIONS.has(callbackText)) {
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-110',
+                    filename,
+                    callbackArgument.startPosition.row + 1,
+                    callbackArgument.startPosition.column + 1,
+                    `Callback string '${callbackText}' tidak ada di allowlist v0.`
+                  )
+                );
+              }
+            } else if (callbackArgument.type === 'function_call_expression') {
+              const callbackFunction = callbackArgument.childForFieldName('function')?.text ?? '';
+              if (CLIENT_BYTE_STRING_FUNCTIONS.has(callbackFunction)) {
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-140',
+                    filename,
+                    callbackArgument.startPosition.row + 1,
+                    callbackArgument.startPosition.column + 1,
+                    `First-class callable byte-level '${callbackFunction}' tidak diizinkan di client.`
+                  )
+                );
+              } else if (!CLIENT_ALLOWED_FUNCTIONS.has(callbackFunction)) {
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-110',
+                    filename,
+                    callbackArgument.startPosition.row + 1,
+                    callbackArgument.startPosition.column + 1,
+                    `First-class callable '${callbackFunction}' tidak ada di allowlist v0.`
+                  )
+                );
+              }
+            }
+          }
+        }
+
         if (functionName === 'eval') {
           diagnostics.push(
             createDiagnostic(
@@ -524,44 +555,32 @@ export function analyzePhpComponent(
 
       for (const scopedCall of bodyNode.descendantsOfType('scoped_call_expression')) {
         const scope = scopedCall.childForFieldName('scope')?.text ?? '';
-        const shortScope = scope.split('\\').pop() ?? scope;
         const scopedMethod = scopedCall.childForFieldName('name')?.text ?? '';
-        if (CLIENT_DATABASE_SCOPES.has(shortScope) || CLIENT_DATABASE_METHODS.has(scopedMethod)) {
-          diagnostics.push(
-            createDiagnostic(
-              'KIL-120',
-              filename,
-              scopedCall.startPosition.row + 1,
-              scopedCall.startPosition.column + 1,
-              `Akses database/facade '${shortScope}' tidak boleh dilakukan di method client.`,
-              'Pindahkan query ke aksi server.'
-            )
-          );
-        }
+        diagnostics.push(
+          createDiagnostic(
+            'KIL-120',
+            filename,
+            scopedCall.startPosition.row + 1,
+            scopedCall.startPosition.column + 1,
+            `Pemanggilan static '${scope}::${scopedMethod}()' tidak diizinkan di method client; akses kelas/ORM harus lewat aksi server.`,
+            'Pindahkan akses database/ORM ke aksi server.'
+          )
+        );
       }
 
       for (const memberCall of bodyNode.descendantsOfType('member_call_expression')) {
         const objectText = memberCall.childForFieldName('object')?.text ?? '';
         const methodName = memberCall.childForFieldName('name')?.text ?? '';
-        const looksLikeDatabaseVariable =
-          CLIENT_DATABASE_VARIABLES.has(objectText) ||
-          /(?:^|->)(?:pdo|db|conn|connection|model|repository|stmt|statement)$/i.test(objectText);
-        const looksLikeDatabaseMethod =
-          CLIENT_DATABASE_METHODS.has(methodName) &&
-          /(?:pdo|db|conn|connection|model|repository|stmt|statement)/i.test(objectText);
-
-        if (looksLikeDatabaseVariable || looksLikeDatabaseMethod) {
-          diagnostics.push(
-            createDiagnostic(
-              'KIL-120',
-              filename,
-              memberCall.startPosition.row + 1,
-              memberCall.startPosition.column + 1,
-              `Akses database melalui '${objectText}->${methodName}()' tidak boleh dilakukan di method client.`,
-              'Pindahkan query ke aksi server.'
-            )
-          );
-        }
+        diagnostics.push(
+          createDiagnostic(
+            'KIL-120',
+            filename,
+            memberCall.startPosition.row + 1,
+            memberCall.startPosition.column + 1,
+            `Pemanggilan method '${objectText}->${methodName}()' tidak diizinkan di method client; akses objek/ORM harus lewat aksi server.`,
+            'Pindahkan akses database/ORM ke aksi server.'
+          )
+        );
       }
 
       for (const creation of bodyNode.descendantsOfType('object_creation_expression')) {
@@ -734,21 +753,8 @@ export function analyzePhpComponent(
             stmt.descendantsOfType('require_expression').length > 0 ||
             stmt.descendantsOfType('eval_expression').length > 0 ||
             callsInStatement.some((call) => call.childForFieldName('function')?.text === 'eval') ||
-            stmt.descendantsOfType('scoped_call_expression').some((call) => {
-              const scope = call.childForFieldName('scope')?.text ?? '';
-              const method = call.childForFieldName('name')?.text ?? '';
-              return CLIENT_DATABASE_SCOPES.has((scope.split('\\').pop() ?? scope)) || CLIENT_DATABASE_METHODS.has(method);
-            }) ||
-            stmt.descendantsOfType('member_call_expression').some((call) => {
-              const objectText = call.childForFieldName('object')?.text ?? '';
-              const methodName = call.childForFieldName('name')?.text ?? '';
-              return (
-                CLIENT_DATABASE_VARIABLES.has(objectText) ||
-                /(?:^|->)(?:pdo|db|conn|connection|model|repository|stmt|statement)$/i.test(objectText) ||
-                (CLIENT_DATABASE_METHODS.has(methodName) &&
-                  /(?:pdo|db|conn|connection|model|repository|stmt|statement)/i.test(objectText))
-              );
-            }) ||
+            stmt.descendantsOfType('scoped_call_expression').length > 0 ||
+            stmt.descendantsOfType('member_call_expression').length > 0 ||
             stmt
               .descendantsOfType('variable_name')
               .some((variable) => CLIENT_SUPERGLOBALS.has(variable.text));
