@@ -42,6 +42,18 @@ describe('@kylat/compiler - penolakan konstruksi di luar subset v0', () => {
     assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'KIL-103'));
   });
 
+  it('mengizinkan static helper murni tanpa state', async () => {
+    const result = await compile(
+      component(`    public static function noop(): void
+    {
+    }`),
+      'Demo.kylat.php',
+      { template: '<div></div>' }
+    );
+    assert.equal(result.success, true, JSON.stringify(result.diagnostics));
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.code === 'KIL-103'), false);
+  });
+
   it('menolak generator yield dengan KIL-104', async () => {
     const diagnostics = await diagnosticsFor(`    public function values(): array
     {

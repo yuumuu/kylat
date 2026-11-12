@@ -181,22 +181,7 @@ export function analyzePhpComponent(
     );
   }
 
-  // KIL-103: static method / static local (pola singleton).
-  for (const method of root.descendantsOfType('method_declaration')) {
-    if (method.children.some((child) => child.type === 'static_modifier')) {
-      diagnostics.push(
-        createDiagnostic(
-          'KIL-103',
-          filename,
-          method.startPosition.row + 1,
-          method.startPosition.column + 1,
-          'Method static tidak diizinkan dalam komponen Kylat.',
-          'Gunakan instance method dan state komponen, bukan singleton.'
-        )
-      );
-    }
-  }
-
+  // KIL-103: static local (pola singleton) tetap ditolak; static helper murni tanpa state tidak.
   for (const staticDeclaration of root.descendantsOfType('function_static_declaration')) {
     diagnostics.push(
       createDiagnostic(
