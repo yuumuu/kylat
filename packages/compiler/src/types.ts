@@ -69,16 +69,16 @@ function parseAtomicType(value: string): KylatType {
   if (lower === 'mixed' || lower === 'void') return UNKNOWN;
   if (lower === 'callable' || lower === 'closure') return { kind: 'function', params: [], returnType: UNKNOWN };
 
-  const list = /^list\s*<\s*(.+)\s*>$/i.exec(value);
-  if (list?.[1]) {
-    return { kind: 'list', itemType: parseTypeExpression(list[1]) };
+  const list = parseGenericType(value, 'list');
+  if (list && list.length === 1) {
+    return { kind: 'list', itemType: parseTypeExpression(list[0]!) };
   }
 
-  const map = /^array\s*<\s*([^,]+)\s*,\s*(.+)\s*>$/i.exec(value);
-  if (map?.[2]) {
-    const keyType = map[1]!.trim().toLowerCase();
+  const map = parseGenericType(value, 'array');
+  if (map && map.length === 2) {
+    const keyType = map[0]!.trim().toLowerCase();
     if (keyType === 'string' || keyType === 'int' || keyType === 'integer') {
-      return { kind: 'map', keyType: 'string', valueType: parseTypeExpression(map[2]) };
+      return { kind: 'map', keyType: 'string', valueType: parseTypeExpression(map[1]!) };
     }
     return UNKNOWN;
   }
@@ -86,10 +86,45 @@ function parseAtomicType(value: string): KylatType {
   return UNKNOWN;
 }
 
+/**
+ * Parser generik tanpa regex berulang, untuk menghindari ReDoS pada input
+ * docblock yang panjang.
+ */
+function parseGenericType(value: string, prefix: string): string[] | null {
+  const trimmed = value.trim();
+  if (!trimmed.toLowerCase().startsWith(prefix)) return null;
+  const rest = trimmed.slice(prefix.length).trimStart();
+  if (!rest.startsWith('<')) return null;
+  const open = trimmed.indexOf('<');
+  if (open === -1 || !trimmed.endsWith('>')) return null;
+  const inner = trimmed.slice(open + 1, -1).trim();
+  if (!inner) return null;
+  return splitTopLevel(inner);
+}
+
+function splitTopLevel(value: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const char of value) {
+    if (char === '<' || char === '(' || char === '[') depth++;
+    if (char === '>' || char === ')' || char === ']') depth--;
+    if (char === ',' && depth === 0) {
+      parts.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  if (current.trim()) parts.push(current.trim());
+  return parts;
+}
+
 export function extractVarDocType(docblock: string): string | undefined {
   const match = /@var\s+([^\n]+)/i.exec(docblock);
   if (!match?.[1]) return undefined;
-  return match[1].replace(/\*\/.*$/, '').trim();
+  const end = match[1].indexOf('*/');
+  return (end === -1 ? match[1] : match[1].slice(0, end)).trim();
 }
 
 export function typeToString(type: KylatType): string {

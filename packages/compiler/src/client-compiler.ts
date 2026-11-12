@@ -1073,7 +1073,16 @@ export function decodePhpStringLiteral(text: string): string {
   const quote = text[0];
   const inner = text.slice(1, -1);
   if (quote === "'") {
-    return inner.replace(/\\\\/g, '\\').replace(/\\'/g, "'");
+    let result = '';
+    for (let i = 0; i < inner.length; i++) {
+      const ch = inner[i]!;
+      if (ch === '\\' && (inner[i + 1] === '\\' || inner[i + 1] === "'")) {
+        result += inner[++i]!;
+      } else {
+        result += ch;
+      }
+    }
+    return result;
   }
   let result = '';
   for (let i = 0; i < inner.length; i++) {
