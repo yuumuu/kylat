@@ -69,6 +69,22 @@ const CLIENT_BYTE_STRING_FUNCTIONS = new Set([
   'ucwords',
 ]);
 
+const CLIENT_DATABASE_SCOPES = new Set([
+  'DB',
+  'Schema',
+  'Model',
+  'Auth',
+  'Cache',
+  'Storage',
+  'Session',
+  'Http',
+  'Redis',
+  'Queue',
+  'Mail',
+  'Log',
+  'PDO',
+]);
+
 const CLIENT_SUPERGLOBALS = new Set([
   '$_GET',
   '$_POST',
@@ -161,6 +177,35 @@ export function analyzePhpComponent(
         node.startPosition.column + 1,
         ERROR_MESSAGES.KIL_103,
         'Gunakan dependency injection atau props untuk meneruskan data.'
+      )
+    );
+  }
+
+  // KIL-103: static method / static local (pola singleton).
+  for (const method of root.descendantsOfType('method_declaration')) {
+    if (method.children.some((child) => child.type === 'static_modifier')) {
+      diagnostics.push(
+        createDiagnostic(
+          'KIL-103',
+          filename,
+          method.startPosition.row + 1,
+          method.startPosition.column + 1,
+          'Method static tidak diizinkan dalam komponen Kylat.',
+          'Gunakan instance method dan state komponen, bukan singleton.'
+        )
+      );
+    }
+  }
+
+  for (const staticDeclaration of root.descendantsOfType('function_static_declaration')) {
+    diagnostics.push(
+      createDiagnostic(
+        'KIL-103',
+        filename,
+        staticDeclaration.startPosition.row + 1,
+        staticDeclaration.startPosition.column + 1,
+        'Variabel static lokal tidak diizinkan dalam komponen Kylat.',
+        'Gunakan state komponen atau props.'
       )
     );
   }
@@ -410,7 +455,17 @@ export function analyzePhpComponent(
           column: call.startPosition.column + 1,
         };
 
-        if (CLIENT_IO_FUNCTIONS.has(functionName)) {
+        if (functionName === 'eval') {
+          diagnostics.push(
+            createDiagnostic(
+              'KIL-104',
+              filename,
+              loc.line,
+              loc.column,
+              'eval() dilarang di seluruh Kylat.'
+            )
+          );
+        } else if (CLIENT_IO_FUNCTIONS.has(functionName)) {
           diagnostics.push(
             createDiagnostic(
               'KIL-120',
@@ -440,6 +495,23 @@ export function analyzePhpComponent(
               loc.column,
               `Fungsi '${functionName}' tidak ada di allowlist v0.`,
               'Gunakan allowlist fungsi di spec/php-subset.md atau pindahkan ke aksi server.'
+            )
+          );
+        }
+      }
+
+      for (const scopedCall of bodyNode.descendantsOfType('scoped_call_expression')) {
+        const scope = scopedCall.childForFieldName('scope')?.text ?? '';
+        const shortScope = scope.split('\\').pop() ?? scope;
+        if (CLIENT_DATABASE_SCOPES.has(shortScope)) {
+          diagnostics.push(
+            createDiagnostic(
+              'KIL-120',
+              filename,
+              scopedCall.startPosition.row + 1,
+              scopedCall.startPosition.column + 1,
+              `Akses database/facade '${shortScope}' tidak boleh dilakukan di method client.`,
+              'Pindahkan query ke aksi server.'
             )
           );
         }
@@ -614,6 +686,11 @@ export function analyzePhpComponent(
             stmt.descendantsOfType('include_expression').length > 0 ||
             stmt.descendantsOfType('require_expression').length > 0 ||
             stmt.descendantsOfType('eval_expression').length > 0 ||
+            callsInStatement.some((call) => call.childForFieldName('function')?.text === 'eval') ||
+            stmt.descendantsOfType('scoped_call_expression').some((call) => {
+              const scope = call.childForFieldName('scope')?.text ?? '';
+              return CLIENT_DATABASE_SCOPES.has((scope.split('\\').pop() ?? scope));
+            }) ||
             stmt
               .descendantsOfType('variable_name')
               .some((variable) => CLIENT_SUPERGLOBALS.has(variable.text));
