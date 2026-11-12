@@ -13,6 +13,7 @@ import {
   type ParsedNode,
 } from './template-parser.js';
 import { compileExpression, ExpressionError, type ExpressionContext } from './expression.js';
+import { SourceMapBuilder } from './source-map.js';
 import type { ComponentIR } from './ir.js';
 
 export * from './diagnostics.js';
@@ -22,6 +23,9 @@ export * from './analyzer.js';
 export * from './codegen.js';
 export * from './template-parser.js';
 export * from './expression.js';
+export * from './types.js';
+export * from './client-compiler.js';
+export * from './source-map.js';
 export * from './case-converter.js';
 
 export interface CompileOptions extends ParserOptions {
@@ -30,6 +34,7 @@ export interface CompileOptions extends ParserOptions {
 
 export interface CompileResult {
   code: string;
+  map?: string;
   ir: ComponentIR | null;
   diagnostics: Diagnostic[];
   success: boolean;
@@ -52,12 +57,14 @@ export async function compile(
   let phpSource = source;
   let templateSource = options?.template;
   let singleFile = filename.endsWith('.kylat.php');
+  let templateLineOffset = 0;
 
   const closeTag = findPhpCloseTag(source);
   if (closeTag !== -1) {
     singleFile = true;
     if (templateSource === undefined) {
       templateSource = source.slice(closeTag + 2);
+      templateLineOffset = (source.slice(0, closeTag + 2).match(/\n/g) ?? []).length;
     }
     phpSource = source.slice(0, closeTag + 2);
   }
@@ -100,7 +107,13 @@ export async function compile(
   }
 
   if (templateSource !== undefined) {
+    const templateDiagnosticsStart = diagnostics.length;
     validateTemplate(templateSource, ir, filename, diagnostics);
+    if (templateLineOffset > 0) {
+      for (let i = templateDiagnosticsStart; i < diagnostics.length; i++) {
+        diagnostics[i]!.line += templateLineOffset;
+      }
+    }
   }
 
   const hasErrors = diagnostics.length > 0;
@@ -115,9 +128,11 @@ export async function compile(
   }
 
   try {
-    const code = generateJavaScript(ir, templateSource);
+    const sourceMap = new SourceMapBuilder();
+    const code = generateJavaScript(ir, templateSource, sourceMap, templateLineOffset);
     return {
       code,
+      map: sourceMap.toJSON(filename, filename, source),
       ir,
       diagnostics,
       success: true,
@@ -220,6 +235,7 @@ function validateTemplate(
 
   const stateNames = new Set(ir?.state.map((s) => s.name) ?? []);
   const propNames = new Set(ir?.props.map((p) => p.name) ?? []);
+  const computedNames = new Set(ir?.computeds.map((c) => c.name) ?? []);
   const validMethods = new Set(ir?.methods.filter((m) => m.isAction).map((m) => m.name) ?? []);
   const childTags = new Set(ir?.childComponents.map((c) => c.tag) ?? []);
   const allowedEvents = new Set(['click', 'input', 'change', 'submit', 'keydown']);
@@ -228,6 +244,7 @@ function validateTemplate(
   const ctx: ExpressionContext = {
     state: stateNames,
     props: propNames,
+    computed: computedNames,
     loops: new Map(),
   };
 
@@ -251,6 +268,7 @@ function validateTemplate(
   const loopContext = (base: ExpressionContext, item: string): ExpressionContext => ({
     state: base.state,
     props: base.props,
+    computed: base.computed,
     loops: new Map(base.loops).set(item, 'item'),
   });
 

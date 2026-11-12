@@ -22,6 +22,7 @@ import {
 } from './expression.js';
 import { kebabToCamel } from './case-converter.js';
 import { compileDefaultValue } from './default-value.js';
+import type { SourceMapBuilder } from './source-map.js';
 
 export class CodegenError extends Error {
   public readonly code: string;
@@ -41,7 +42,12 @@ interface EmitContext extends ExpressionContext {
   loops: Map<string, string>;
 }
 
-export function generateJavaScript(ir: ComponentIR, templateSource?: string): string {
+export function generateJavaScript(
+  ir: ComponentIR,
+  templateSource?: string,
+  sourceMap?: SourceMapBuilder,
+  templateLineOffset = 0
+): string {
   const bodyLines: string[] = [];
   const usedImports = new Set<string>();
   const childImports = new Map<string, string>();
@@ -85,6 +91,17 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
     );
     const initialExpr = matchingProp ? `prop_${matchingProp.name}` : compileDefaultValue(s.initialValue);
     bodyLines.push(`  const [${s.name}, set_${s.name}] = createSignal(${initialExpr});`);
+  }
+
+  for (const computed of ir.computeds) {
+    usedImports.add('createComputed');
+    bodyLines.push(`  const ${computed.name} = createComputed(() => {`);
+    for (let i = 0; i < (computed.bodyCode ?? []).length; i++) {
+      bodyLines.push(`    ${computed.bodyCode![i]}`);
+      const location = computed.bodyLocations?.[i];
+      if (location) sourceMap?.add(bodyLines.length, location.line, location.column);
+    }
+    bodyLines.push('  });');
   }
 
   const templateNodes = templateSource?.trim() ? parseTemplateNodes(templateSource) : [];
@@ -134,6 +151,7 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
   bodyLines.push('  // 2. Definisi Aksi & Method');
 
   for (const m of ir.methods) {
+    if (m.kind === 'computed') continue;
     if (m.kind === 'server') {
       usedImports.add('callServerAction');
       usedImports.add('createIdempotencyKey');
@@ -193,9 +211,18 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
       bodyLines.push('    }');
       bodyLines.push('  }');
     } else {
-      bodyLines.push(`  function ${m.name}(${m.params.map((parameter) => parameter.name).join(', ')}) {`);
+      const parameterNames = m.bodyCode
+        ? m.params.map((parameter) => `l_${parameter.name}`)
+        : m.params.map((parameter) => parameter.name);
+      bodyLines.push(`  function ${m.name}(${parameterNames.join(', ')}) {`);
 
-      if (m.operations && m.operations.length > 0) {
+      if (m.bodyCode) {
+        for (let i = 0; i < m.bodyCode.length; i++) {
+          bodyLines.push(`  ${m.bodyCode[i]}`);
+          const location = m.bodyLocations?.[i];
+          if (location) sourceMap?.add(bodyLines.length, location.line, location.column);
+        }
+      } else if (m.operations && m.operations.length > 0) {
         for (const op of m.operations) {
           if (op.type === 'mutate_state') {
             const operand = compileMethodOperand(op.operand, m.params);
@@ -214,6 +241,16 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
     }
   }
 
+  for (const lifecycle of ir.lifecycle ?? []) {
+    bodyLines.push(`  function ${lifecycle.name}() {`);
+    for (let i = 0; i < lifecycle.bodyCode.length; i++) {
+      bodyLines.push(`  ${lifecycle.bodyCode[i]}`);
+      const location = lifecycle.bodyLocations?.[i];
+      if (location) sourceMap?.add(bodyLines.length, location.line, location.column);
+    }
+    bodyLines.push('  }');
+  }
+
   bodyLines.push('');
   bodyLines.push('  // 3. Konstruksi DOM Element & Binding');
 
@@ -221,9 +258,11 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
 
   const stateNames = new Set(ir.state.map((s) => s.name));
   const propNames = new Set(ir.props.map((p) => p.name));
+  const computedNames = new Set(ir.computeds.map((c) => c.name));
   const rootContext: EmitContext = {
     state: stateNames,
     props: propNames,
+    computed: computedNames,
     loops: new Map(),
   };
 
@@ -237,6 +276,7 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
   const expressionContext = (ctx: EmitContext, extra?: Map<string, string>): ExpressionContext => ({
     state: ctx.state,
     props: ctx.props,
+    computed: ctx.computed,
     loops: extra ?? ctx.loops,
   });
 
@@ -273,7 +313,7 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
     }
   };
 
-  const emitNode = (node: ParsedNode, parentVar: string, ctx: EmitContext, depth: number): void => {
+  const emitNodeBody = (node: ParsedNode, parentVar: string, ctx: EmitContext, depth: number): void => {
     if (node.type === 'text') {
       if (node.value.trim() === '') return;
       const id = ++temporaryCounter;
@@ -301,6 +341,14 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
 
     if (node.type === 'foreach') {
       emitForEach(node, parentVar, ctx, depth);
+    }
+  };
+
+  const emitNode = (node: ParsedNode, parentVar: string, ctx: EmitContext, depth: number): void => {
+    const start = bodyLines.length;
+    emitNodeBody(node, parentVar, ctx, depth);
+    for (let line = start; line < bodyLines.length; line++) {
+      sourceMap?.add(line + 1, node.loc.line + templateLineOffset, node.loc.column);
     }
   };
 
@@ -610,6 +658,14 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
   bodyLines.push(
     `  ${rootVar}.setAttribute("data-kylat-component", ${JSON.stringify(ir.name)});`
   );
+  for (const lifecycle of ir.lifecycle ?? []) {
+    if (lifecycle.kind === 'onMount') {
+      bodyLines.push(`  ${lifecycle.name}();`);
+    } else {
+      usedImports.add('createEffect');
+      bodyLines.push(`  createEffect(() => { ${lifecycle.name}(); });`);
+    }
+  }
   bodyLines.push(`  return ${rootVar};`);
   bodyLines.push('}');
   bodyLines.push('');
@@ -634,6 +690,8 @@ export function generateJavaScript(ir: ComponentIR, templateSource?: string): st
     headerLines.push(`import { create${childClass} } from '${importPath}';`);
   }
   if (childImports.size > 0) headerLines.push('');
+
+  sourceMap?.shift(headerLines.length);
 
   return [...headerLines, ...bodyLines].join('\n');
 }

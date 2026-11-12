@@ -73,18 +73,18 @@ Riwayat: keputusan ini diambil sebelum fase 0 dimulai, saat belum ada CI, pesan 
 |---|---|---|
 | Berkas tanpa `declare(strict_types=1)` | KIL-102 | mendeteksi KIL-102 jika declare(strict_types=1) tidak ada |
 | Pernyataan `global` / variabel global | KIL-103 | mendeteksi KIL-103 jika menggunakan global statement |
-| Properti `static` pada komponen | KIL-103 | belum ada |
-| Pola singleton pada kelas komponen | KIL-103 | belum ada |
-| Ekspresi `match` | KIL-104 | mendeteksi KIL-104 jika menggunakan ekspresi match |
-| Generator `yield` | KIL-104 | belum ada |
-| Pernyataan `goto` | KIL-104 | belum ada |
-| Evaluasi dinamis `eval()` | KIL-104 | belum ada |
+| Properti `static` pada komponen | KIL-103 | menolak property static dengan KIL-103 |
+| Pola singleton pada kelas komponen | KIL-103 | menolak pola singleton/static method dengan KIL-103 |
+| Ekspresi `match` | KIL-104 | menolak match dengan KIL-104 |
+| Generator `yield` | KIL-104 | menolak generator yield dengan KIL-104 |
+| Pernyataan `goto` | KIL-104 | menolak goto dengan KIL-104 |
+| Evaluasi dinamis `eval()` | KIL-104 | menolak eval dengan KIL-104, bukan KIL-110 |
 | Argumen aksi server non-state/non-prop | KIL-104 | mendeteksi KIL-104 jika argumen aksi server berupa literal angka atau string |
 | Instansiasi objek sembarang (`new X`) di method client | KIL-110 | menolak instansiasi kelas dengan KIL-110 |
 | Properti atau prop bertipe `Closure` / `callable` | KIL-110 | menolak tipe properti closure atau callable dengan KIL-110 |
-| Pemanggilan fungsi di luar allowlist | KIL-110 | belum ada |
+| Pemanggilan fungsi di luar allowlist | KIL-110 | menolak fungsi di luar allowlist dengan KIL-110 |
 | Pemanggilan I/O filesystem di method `#[Client]` | KIL-120 | menolak I/O di client dengan KIL-120 |
 | Akses variabel superglobal di method `#[Client]` | KIL-120 | menolak superglobal dengan KIL-120 |
-| Akses database / ORM di method `#[Client]` | KIL-120 | belum ada |
+| Akses database / ORM di method `#[Client]` | KIL-120 | menolak `User::find()`, `$pdo->query()`, `DB::table()`, dan callback database dengan KIL-120 |
 | Fungsi manipulasi string byte-level (`strlen`, `substr`, dll.) | KIL-140 | menolak fungsi string byte-level dengan KIL-140 |
 

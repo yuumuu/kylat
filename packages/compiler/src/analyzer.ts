@@ -6,8 +6,16 @@
 import type Parser from 'web-tree-sitter';
 import { type Diagnostic, createDiagnostic, ERROR_MESSAGES } from './diagnostics.js';
 import { camelToKebab } from './case-converter.js';
+import {
+  compileClientMethodBody,
+  ClientCompileError,
+  type MethodSymbols,
+} from './client-compiler.js';
+import { parsePhpType, UNKNOWN } from './types.js';
 import type {
   ComponentIR,
+  ComputedDefinition,
+  LifecycleDefinition,
   PropDefinition,
   StateDefinition,
   MethodDefinition,
@@ -27,7 +35,6 @@ const CLIENT_ALLOWED_FUNCTIONS = new Set([
   'array_filter',
   'array_slice',
   'array_values',
-  'usort',
   'implode',
   'explode',
 ]);
@@ -72,7 +79,6 @@ const CLIENT_BYTE_STRING_FUNCTIONS = new Set([
 const CLIENT_CALLBACK_ARGUMENT_INDEX = new Map([
   ['array_map', 0],
   ['array_filter', 1],
-  ['usort', 1],
 ]);
 
 const CLIENT_SUPERGLOBALS = new Set([
@@ -326,6 +332,7 @@ export function analyzePhpComponent(
       const initNode = elemNode.children.find((c) => c.type === 'property_initializer');
       const defaultValue = initNode ? initNode.text.replace(/^=\s*/, '').trim() : undefined;
       const typeStr = typeNode ? typeNode.text : 'mixed';
+      const parsedType = parsePhpType(typeStr, docblockBefore(p));
 
       // Cek apakah memiliki atribut #[Prop]
       const propAttribute = p
@@ -338,6 +345,7 @@ export function analyzePhpComponent(
         propDefinitions.push({
           name: propName,
           type: typeStr,
+          parsedType,
           isRequired: explicitlyRequired || defaultValue === undefined,
           defaultValue,
         });
@@ -345,6 +353,7 @@ export function analyzePhpComponent(
         stateDefinitions.push({
           name: propName,
           type: typeStr,
+          parsedType,
           initialValue: defaultValue ?? 'null',
         });
       }
@@ -356,10 +365,43 @@ export function analyzePhpComponent(
   const serverActionNames = new Set<string>();
 
   const methodDecls = classNode.descendantsOfType('method_declaration');
+
+  // Prepass: bangun tabel simbol sebelum body dikompilasi. Computed dan method
+  // client harus sudah diketahui agar pemanggilan `$this->method()` dapat
+  // diverifikasi tanpa melonggarkan aturan KIL-120 untuk objek/ORM.
+  const methodSymbols: MethodSymbols = {
+    props: new Map(propDefinitions.map((prop) => [prop.name, prop.parsedType ?? UNKNOWN])),
+    state: new Map(stateDefinitions.map((state) => [state.name, state.parsedType ?? UNKNOWN])),
+    computed: new Map(),
+    clientMethods: new Set(),
+  };
+  const computedDefinitions: ComputedDefinition[] = [];
+  const lifecycleDefinitions: LifecycleDefinition[] = [];
+
+  for (const method of methodDecls) {
+    const name = method.childForFieldName('name')?.text ?? '';
+    if (!name) continue;
+    const attributes = method.descendantsOfType('attribute_group');
+    const isServer = attributes.some((attribute) => attribute.text.includes('Server'));
+    const isComputed = attributes.some((attribute) => attribute.text.includes('Computed'));
+    const isOnMount = attributes.some((attribute) => attribute.text.includes('OnMount'));
+    const isEffect = attributes.some((attribute) => attribute.text.includes('Effect'));
+    const isPrivate = method.descendantsOfType('visibility_modifier').some((visibility) => visibility.text === 'private');
+    const returnType = method.childForFieldName('return_type')?.text ?? 'void';
+    const parsedReturnType = parsePhpType(returnType, docblockBefore(method));
+
+    if (isComputed) {
+      methodSymbols.computed.set(name, parsedReturnType);
+    } else if (!isServer && !isPrivate && !isOnMount && !isEffect) {
+      methodSymbols.clientMethods.add(name);
+    }
+  }
+
   for (const m of methodDecls) {
     const mName = m.childForFieldName('name')?.text || '';
     const returnTypeNode = m.childForFieldName('return_type');
     const returnType = returnTypeNode?.text || 'void';
+    const parsedReturnType = parsePhpType(returnType, docblockBefore(m));
     if (!returnTypeNode) {
       diagnostics.push(
         createDiagnostic(
@@ -375,12 +417,26 @@ export function analyzePhpComponent(
 
     const serverAttrs = m.descendantsOfType('attribute_group').filter((a) => a.text.includes('Server'));
     const clientAttrs = m.descendantsOfType('attribute_group').filter((a) => a.text.includes('Client'));
+    const computedAttrs = m.descendantsOfType('attribute_group').filter((a) => a.text.includes('Computed'));
+    const onMountAttrs = m.descendantsOfType('attribute_group').filter((a) => a.text.includes('OnMount'));
+    const effectAttrs = m.descendantsOfType('attribute_group').filter((a) => a.text.includes('Effect'));
     const isPrivate = m.descendantsOfType('visibility_modifier').some((v) => v.text === 'private');
     const isServer = serverAttrs.length > 0;
     const isClient = clientAttrs.length > 0;
-    const isAction = !isPrivate && (isServer || isClient || (!serverAttrs.length && !clientAttrs.length));
+    const isComputed = computedAttrs.length > 0;
+    const isOnMount = onMountAttrs.length > 0;
+    const isEffect = effectAttrs.length > 0;
+    const isAction = !isPrivate && !isComputed && !isOnMount && !isEffect && (isServer || isClient || (!serverAttrs.length && !clientAttrs.length));
     const isExplicitRead = serverAttrs.some((a) => /read\s*:\s*true/.test(a.text));
-    const kind = isServer ? 'server' : 'client';
+    const kind: 'client' | 'server' | 'computed' | 'onMount' | 'effect' = isServer
+      ? 'server'
+      : isComputed
+        ? 'computed'
+        : isOnMount
+          ? 'onMount'
+          : isEffect
+            ? 'effect'
+            : 'client';
 
     if (isServer) {
       if (serverActionNames.has(mName)) {
@@ -401,10 +457,10 @@ export function analyzePhpComponent(
 
     const bodyNode = m.childForFieldName('body');
     const bodyText = bodyNode ? bodyNode.text : '{}';
+    const needsStatementCompiler = methodNeedsStatementCompiler(bodyNode, kind);
     const operations: import('./ir.js').ClientOperation[] = [];
     let serverCall: import('./ir.js').ServerCallDefinition | undefined;
 
-    const isEffect = m.descendantsOfType('attribute_group').some((a) => a.text.includes('Effect'));
     if (isEffect) {
       if (bodyText.includes('->server(') || isServer) {
         diagnostics.push(
@@ -420,11 +476,16 @@ export function analyzePhpComponent(
       }
     }
 
-    if (bodyNode && kind === 'client') {
+    if (bodyNode && kind !== 'server') {
       // KIL-110 / KIL-120 / KIL-140: panggilan fungsi dan konstruksi berbahaya.
       for (const call of bodyNode.descendantsOfType('function_call_expression')) {
         const functionNode = call.childForFieldName('function');
         const functionName = functionNode?.text ?? '';
+        if (functionNode?.type === 'variable_name') {
+          // Pemanggilan closure lokal divalidasi oleh client-compiler; bukan
+          // pemanggilan fungsi global di allowlist.
+          continue;
+        }
         const loc = {
           line: call.startPosition.row + 1,
           column: call.startPosition.column + 1,
@@ -571,6 +632,9 @@ export function analyzePhpComponent(
       for (const memberCall of bodyNode.descendantsOfType('member_call_expression')) {
         const objectText = memberCall.childForFieldName('object')?.text ?? '';
         const methodName = memberCall.childForFieldName('name')?.text ?? '';
+        if (objectText === '$this' && methodSymbols.clientMethods.has(methodName)) {
+          continue;
+        }
         diagnostics.push(
           createDiagnostic(
             'KIL-120',
@@ -642,7 +706,10 @@ export function analyzePhpComponent(
         }
       }
 
-      // Traversal AST statements di dalam compound_statement
+      // Traversal AST statements di dalam compound_statement. Method yang
+      // memakai kontrol alur/lokal/closure dilewati di sini dan dikompilasi
+      // oleh client-compiler setelah metadata method lengkap.
+      if (kind === 'client' && !needsStatementCompiler) {
       for (const stmt of bodyNode.children) {
         if (stmt.type === '{' || stmt.type === '}' || stmt.type === 'comment') continue;
 
@@ -785,6 +852,7 @@ export function analyzePhpComponent(
           );
         }
       }
+      }
     } else if (bodyNode && kind === 'server') {
       // Traversal AST untuk panggilan server action
       const memberCalls = bodyNode.descendantsOfType('member_call_expression');
@@ -876,7 +944,7 @@ export function analyzePhpComponent(
       }
     }
 
-    const params: Array<{ name: string; type: string }> = [];
+    const params: Array<{ name: string; type: string; parsedType?: import('./types.js').KylatType }> = [];
     const paramsNode = m.childForFieldName('parameters');
     if (paramsNode) {
       for (const child of paramsNode.children) {
@@ -885,7 +953,11 @@ export function analyzePhpComponent(
         const typeNode = child.childForFieldName('type');
         const paramName = nameNode?.text.replace('$', '') ?? '';
         if (!paramName) continue;
-        params.push({ name: paramName, type: typeNode?.text ?? 'mixed' });
+        params.push({
+          name: paramName,
+          type: typeNode?.text ?? 'mixed',
+          parsedType: parsePhpType(typeNode?.text),
+        });
         if (!typeNode) {
           diagnostics.push(
             createDiagnostic(
@@ -901,13 +973,70 @@ export function analyzePhpComponent(
       }
     }
 
+    let compiledBody: import('./client-compiler.js').CompiledMethodBody | undefined;
+    if (bodyNode && kind !== 'server') {
+      try {
+        compiledBody = compileClientMethodBody(bodyNode, {
+          methodName: mName,
+          returnType: parsedReturnType,
+          params: params.map((parameter) => ({
+            name: parameter.name,
+            type: parameter.parsedType ?? UNKNOWN,
+          })),
+          symbols: methodSymbols,
+        });
+      } catch (error) {
+        if (error instanceof ClientCompileError) {
+          diagnostics.push(
+            createDiagnostic(
+              error.code,
+              filename,
+              error.line,
+              error.column,
+              error.message
+            )
+          );
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (kind === 'computed') {
+      computedDefinitions.push({
+        name: mName,
+        returnType,
+        parsedReturnType,
+        body: bodyText,
+        bodyCode: compiledBody?.lines,
+        bodyLocations: compiledBody?.locations,
+        dependencies: compiledBody?.dependencies ?? [],
+      });
+      continue;
+    }
+
+    if (kind === 'onMount' || kind === 'effect') {
+      lifecycleDefinitions.push({
+        name: mName,
+        kind,
+        bodyCode: compiledBody?.lines ?? [],
+        bodyLocations: compiledBody?.locations,
+        dependencies: compiledBody?.dependencies ?? [],
+      });
+      continue;
+    }
+
     methodDefinitions.push({
       name: mName,
       params,
       returnType,
+      parsedReturnType,
       kind,
       isAction,
       body: bodyText,
+      bodyCode: needsStatementCompiler ? compiledBody?.lines : undefined,
+      bodyLocations: needsStatementCompiler ? compiledBody?.locations : undefined,
+      dependencies: needsStatementCompiler ? compiledBody?.dependencies : undefined,
       operations,
       serverCall,
     });
@@ -919,8 +1048,9 @@ export function analyzePhpComponent(
     isFinal,
     props: propDefinitions,
     state: stateDefinitions,
-    computeds: [],
+    computeds: computedDefinitions,
     methods: methodDefinitions,
+    lifecycle: lifecycleDefinitions,
     serverUses,
     childComponents,
   };
@@ -973,4 +1103,55 @@ export function analyzeActionContract(tree: Parser.Tree, filename: string): Diag
   }
 
   return diagnostics;
+}
+
+function docblockBefore(node: Parser.SyntaxNode): string | undefined {
+  const sibling = node.previousNamedSibling;
+  return sibling?.type === 'comment' && sibling.text.startsWith('/**') ? sibling.text : undefined;
+}
+
+function methodNeedsStatementCompiler(
+  bodyNode: Parser.SyntaxNode | null,
+  kind: 'client' | 'server' | 'computed' | 'onMount' | 'effect'
+): boolean {
+  if (!bodyNode) return false;
+  if (kind !== 'client') return true;
+
+  for (const type of [
+    'if_statement',
+    'foreach_statement',
+    'for_statement',
+    'return_statement',
+    'arrow_function',
+    'anonymous_function',
+    'anonymous_function_creation_expression',
+    'cast_expression',
+    'member_call_expression',
+  ]) {
+    if (bodyNode.descendantsOfType(type).length > 0) return true;
+  }
+
+  for (const assignment of [
+    ...bodyNode.descendantsOfType('assignment_expression'),
+    ...bodyNode.descendantsOfType('augmented_assignment_expression'),
+  ]) {
+    const left = assignment.childForFieldName('left');
+    if (left?.type === 'variable_name') return true;
+  }
+
+  const simpleExpressionFunctions = new Set([
+    'count',
+    'mb_strlen',
+    'str_contains',
+    'str_starts_with',
+    'implode',
+    'explode',
+    'array_values',
+  ]);
+  for (const call of bodyNode.descendantsOfType('function_call_expression')) {
+    const name = call.childForFieldName('function')?.text.replace(/^\\/, '') ?? '';
+    if (!simpleExpressionFunctions.has(name)) return true;
+  }
+
+  return false;
 }
