@@ -1,6 +1,6 @@
 # STATUS — Kylat
 
-Diperbarui: 11 November 2026. Sumber kebenaran: `spec/` di repo. File ini ringkasan operasional, bukan spesifikasi.
+Diperbarui: 12 November 2026. Sumber kebenaran: `spec/` di repo. File ini ringkasan operasional, bukan spesifikasi.
 
 ## Status Gerbang Rilis
 - **Status Fase 0**: **DITUTUP pada 10 November 2026** (Tag: `v0.0.0-p0`, commit `819bcb4`)
@@ -45,6 +45,7 @@ Meskipun Fase 1 ditutup dan seluruh uji CI lulus 100%, hal-hal berikut secara ek
 - **JavaScriptCore fisik**: Belum diuji pada engine JavaScriptCore di atas perangkat keras fisik Apple.
 - **Perangkat low-end**: Karakteristik memori dan garbage collection `alien-signals` belum diuji pada perangkat mobile berspesifikasi rendah (*low-end device*).
 - **Screen reader**: Kepatuhan aksesibilitas baru sebatas validasi semantik atribut ARIA pada level DOM (`bindAttr`), belum diuji interaktif langsung dengan teknologi pembaca layar (*screen reader* seperti VoiceOver, NVDA, atau TalkBack).
+- **Deteksi database di `#[Client]` masih heuristik (risiko terbuka, PR #2)**: `User::find()` dan `$pdo->query()` sudah ditolak dengan KIL-120, tetapi scoped call dengan method di luar daftar, relasi/model Eloquent, dan variabel dengan nama tidak umum belum tentu tertangkap. Ini bukan jaminan keamanan penuh sampai aturan AST yang lebih kuat disepakati.
 
 ---
 
