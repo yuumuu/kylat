@@ -113,3 +113,8 @@ describe('@kylat/compiler - penolakan konstruksi di luar subset v0', () => {
     assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'KIL-120'));
   });
 });
+
+// KEPUTUSAN TERBUKA (review PR #2): spec/php-subset.md §2 masih menyebut
+// closure/arrow function dan allowlist usort, sedangkan konteks tugas menyatakan
+// keduanya di luar subset #[Client]/#[Computed]. Tidak ada tes penolakan untuk
+// keduanya sampai ADR/keputusan pemilik proyek; jangan mengubah spec di PR ini.
