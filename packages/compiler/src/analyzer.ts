@@ -85,6 +85,43 @@ const CLIENT_DATABASE_SCOPES = new Set([
   'PDO',
 ]);
 
+const CLIENT_DATABASE_METHODS = new Set([
+  'find',
+  'findOrFail',
+  'first',
+  'firstOrFail',
+  'all',
+  'get',
+  'where',
+  'query',
+  'prepare',
+  'execute',
+  'fetch',
+  'fetchAll',
+  'select',
+  'insert',
+  'update',
+  'delete',
+  'save',
+  'create',
+  'paginate',
+  'pluck',
+  'value',
+  'exists',
+  'count',
+]);
+
+const CLIENT_DATABASE_VARIABLES = new Set([
+  '$pdo',
+  '$db',
+  '$conn',
+  '$connection',
+  '$model',
+  '$repository',
+  '$stmt',
+  '$statement',
+]);
+
 const CLIENT_SUPERGLOBALS = new Set([
   '$_GET',
   '$_POST',
@@ -488,7 +525,8 @@ export function analyzePhpComponent(
       for (const scopedCall of bodyNode.descendantsOfType('scoped_call_expression')) {
         const scope = scopedCall.childForFieldName('scope')?.text ?? '';
         const shortScope = scope.split('\\').pop() ?? scope;
-        if (CLIENT_DATABASE_SCOPES.has(shortScope)) {
+        const scopedMethod = scopedCall.childForFieldName('name')?.text ?? '';
+        if (CLIENT_DATABASE_SCOPES.has(shortScope) || CLIENT_DATABASE_METHODS.has(scopedMethod)) {
           diagnostics.push(
             createDiagnostic(
               'KIL-120',
@@ -496,6 +534,30 @@ export function analyzePhpComponent(
               scopedCall.startPosition.row + 1,
               scopedCall.startPosition.column + 1,
               `Akses database/facade '${shortScope}' tidak boleh dilakukan di method client.`,
+              'Pindahkan query ke aksi server.'
+            )
+          );
+        }
+      }
+
+      for (const memberCall of bodyNode.descendantsOfType('member_call_expression')) {
+        const objectText = memberCall.childForFieldName('object')?.text ?? '';
+        const methodName = memberCall.childForFieldName('name')?.text ?? '';
+        const looksLikeDatabaseVariable =
+          CLIENT_DATABASE_VARIABLES.has(objectText) ||
+          /(?:^|->)(?:pdo|db|conn|connection|model|repository|stmt|statement)$/i.test(objectText);
+        const looksLikeDatabaseMethod =
+          CLIENT_DATABASE_METHODS.has(methodName) &&
+          /(?:pdo|db|conn|connection|model|repository|stmt|statement)/i.test(objectText);
+
+        if (looksLikeDatabaseVariable || looksLikeDatabaseMethod) {
+          diagnostics.push(
+            createDiagnostic(
+              'KIL-120',
+              filename,
+              memberCall.startPosition.row + 1,
+              memberCall.startPosition.column + 1,
+              `Akses database melalui '${objectText}->${methodName}()' tidak boleh dilakukan di method client.`,
               'Pindahkan query ke aksi server.'
             )
           );
@@ -674,7 +736,18 @@ export function analyzePhpComponent(
             callsInStatement.some((call) => call.childForFieldName('function')?.text === 'eval') ||
             stmt.descendantsOfType('scoped_call_expression').some((call) => {
               const scope = call.childForFieldName('scope')?.text ?? '';
-              return CLIENT_DATABASE_SCOPES.has((scope.split('\\').pop() ?? scope));
+              const method = call.childForFieldName('name')?.text ?? '';
+              return CLIENT_DATABASE_SCOPES.has((scope.split('\\').pop() ?? scope)) || CLIENT_DATABASE_METHODS.has(method);
+            }) ||
+            stmt.descendantsOfType('member_call_expression').some((call) => {
+              const objectText = call.childForFieldName('object')?.text ?? '';
+              const methodName = call.childForFieldName('name')?.text ?? '';
+              return (
+                CLIENT_DATABASE_VARIABLES.has(objectText) ||
+                /(?:^|->)(?:pdo|db|conn|connection|model|repository|stmt|statement)$/i.test(objectText) ||
+                (CLIENT_DATABASE_METHODS.has(methodName) &&
+                  /(?:pdo|db|conn|connection|model|repository|stmt|statement)/i.test(objectText))
+              );
             }) ||
             stmt
               .descendantsOfType('variable_name')

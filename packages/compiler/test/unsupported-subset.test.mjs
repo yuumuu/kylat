@@ -89,6 +89,22 @@ describe('@kylat/compiler - penolakan konstruksi di luar subset v0', () => {
     assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'KIL-110'));
   });
 
+  it('menolak User::find() di client dengan KIL-120', async () => {
+    const diagnostics = await diagnosticsFor(`    public function bad(): void
+    {
+        $this->name = User::find(1);
+    }`);
+    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'KIL-120'));
+  });
+
+  it('menolak $pdo->query() di client dengan KIL-120', async () => {
+    const diagnostics = await diagnosticsFor(`    public function bad(): void
+    {
+        $this->name = $pdo->query('select 1');
+    }`);
+    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'KIL-120'));
+  });
+
   it('menolak akses database di client dengan KIL-120', async () => {
     const diagnostics = await diagnosticsFor(`    public function bad(): void
     {
