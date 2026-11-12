@@ -11,6 +11,7 @@ Diperbarui: 12 November 2026. Sumber kebenaran: `spec/` di repo. File ini ringka
   - ADR 0007: Ditunda ke Fase 3 (rujukan transaksi database outbox).
   - ADR 0008: Disetujui (KIL-130, 203..205 ditunda ke v0.1; KIL-150 didaftarkan dan dipisahkan dari KIL-151).
   - ADR 0009: **Tetap berstatus USULAN** (Spike S2 alien-signals v3.2.1; syarat uji mobile/JSC dan perangkat fisik belum terpenuhi).
+  - ADR 0011: **DITERIMA** — closure/arrow function dan kontrol alur `if`/`foreach`/`for`/`return` didukung; `usort` ditunda ke v0.1 (KIL-110); `match` tetap ditunda (KIL-104). Menggantikan ADR 0010/KEP-38.
 
 ---
 

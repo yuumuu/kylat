@@ -18,11 +18,11 @@ Tipe: int, float, string, bool, null, list<T>, array<string, T>, enum sederhana,
 
 Operator: aritmetika, logika, perbandingan strict (===, !==, <, >, <=, >=), null coalescing, ternary.
 
-Kontrol alur: if/else, match, foreach, for, return dini.
+Kontrol alur: if/else, foreach, for, return dini. `match` ditunda ke v0.1 dan ditolak dengan KIL-104 (ADR 0011).
 
 Closure dan arrow function.
 
-Fungsi bawaan (allowlist): count, str_contains, str_starts_with, mb_strlen, mb_substr, mb_strtolower, mb_strtoupper, array_map, array_filter, array_slice, usort, implode, explode. Fungsi str_contains, str_starts_with, implode, dan explode hanya diizinkan karena terbukti setara untuk UTF-8 valid lewat differential test (K-04). trim, strtolower, dan strtoupper dihapus dari v0 karena semantiknya berbeda untuk karakter non-ASCII. Setiap fungsi punya implementasi JS terdokumentasi dan diuji differential.
+Fungsi bawaan (allowlist): count, str_contains, str_starts_with, mb_strlen, mb_substr, mb_strtolower, mb_strtoupper, array_map, array_filter, array_slice, array_values, implode, explode. `usort` ditunda ke v0.1 dan ditolak dengan KIL-110 (ADR 0011). Fungsi str_contains, str_starts_with, implode, dan explode hanya diizinkan karena terbukti setara untuk UTF-8 valid lewat differential test (K-04). trim, strtolower, dan strtoupper dihapus dari v0 karena semantiknya berbeda untuk karakter non-ASCII. Setiap fungsi punya implementasi JS terdokumentasi dan diuji differential.
 
 3. Ditolak saat build
 

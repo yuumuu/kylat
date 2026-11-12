@@ -8,7 +8,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 
 ---
 
-## Tabel Register Keputusan (KEP-01 – KEP-38)
+## Tabel Register Keputusan (KEP-01 – KEP-39)
 
 | ID | Topik & Ringkasan Keputusan | Status | Tenggat | Pemilik |
 |---|---|---|---|---|
@@ -49,7 +49,8 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 | **KEP-35** | **Reaktivitas Prop Komponen Anak**: Menetapkan semantik signal accessor getter untuk komposisi `<x-child :prop="$state">` ([`0006-reaktivitas-prop-komponen-anak.md`](0006-reaktivitas-prop-komponen-anak.md)). | **DISETUJUI untuk Fase 1** (Opsi A: accessor getter). Belum diimplementasikan. | Fase 1 | Arsitek Toolchain |
 | **KEP-36** | **Idempotensi Atomik Database & Outbox**: Menetapkan skema tabel transaksi database untuk menggantikan cache interim pada produksi ([`0007-idempotensi-atomik-database-outbox.md`](0007-idempotensi-atomik-database-outbox.md)). | **DITUNDA ke Fase 3** (Arah Opsi A disetujui sebagai rujukan Fase 3). | Fase 3 | Arsitek Backend |
 | **KEP-37** | **Penataan Status Kode Galat (KIL-130, 203..205) dan Semantik KIL-151**: Menunda KIL-130, 203..205 ke v0.1 dan memisahkan galat markup tak seimbang ke KIL-150 ([`0008-penataan-kode-galat-v0-dan-sintaks-templat.md`](0008-penataan-kode-galat-v0-dan-sintaks-templat.md)). | **PUTUSAN** (Opsi B untuk kedua masalah) | Fase 0 | Arsitek Compiler |
-| **KEP-38** | **Status Closure dan `usort` di `#[Client]`/`#[Computed]`**: Mencatat pertentangan antara `spec/php-subset.md` §2 dan batasan tugas Fase 2; belum ada perubahan perilaku compiler ([`0010-usulan-closure-usort-subset-v0.md`](0010-usulan-closure-usort-subset-v0.md)). | **USULAN** | Fase 2 | Pemilik proyek |
+| **KEP-38** | **Status Closure dan `usort` di `#[Client]`/`#[Computed]`**: Ditutup oleh ADR 0011. Closure/arrow function didukung; `usort` ditunda ke v0.1 dan ditolak KIL-110 ([`0010-usulan-closure-usort-subset-v0.md`](0010-usulan-closure-usort-subset-v0.md), [`0011-rekonsiliasi-subset-v0.md`](0011-rekonsiliasi-subset-v0.md)). | **DIGANTIKAN** | Fase 2 | Pemilik proyek |
+| **KEP-39** | **Rekonsiliasi subset v0**: `match` tetap ditunda (KIL-104), `usort` ditunda (KIL-110), closure/arrow dan kontrol alur `if`/`foreach`/`for`/`return` didukung ([`0011-rekonsiliasi-subset-v0.md`](0011-rekonsiliasi-subset-v0.md)). | **PUTUSAN** | Fase 2 | Arsitek Toolchain |
 
 ---
 
