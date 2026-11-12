@@ -1,3 +1,14 @@
+/**
+ * Fase 2 / tugas 1: penolakan konstruksi di luar subset v0.
+ *
+ * Baseline sebelum berkas ini: 78 tes total (76 pass, 2 skip).
+ * Berkas ini menambahkan 7 tes penolakan pertama, sehingga total menjadi 85:
+ * static property, pola singleton/static method, yield, goto, eval,
+ * fungsi di luar allowlist, dan akses database DB::table.
+ *
+ * Tes static helper (poin review 2) dan User::find/$pdo->query (poin review 3)
+ * ditambahkan setelah review PR.
+ */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { compile } from '../dist/index.js';
