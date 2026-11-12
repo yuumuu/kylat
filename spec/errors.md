@@ -190,7 +190,7 @@ public function statusLabel(int $status): string
 #### KIL-110
 - **Nama**: Pemanggilan fungsi atau instansiasi kelas di luar allowlist
 - **Klasifikasi**: Aturan Bahasa / Keamanan
-- **Pemicu**: Memanggil fungsi bawaan PHP yang tidak terdaftar di allowlist v0, atau menginstansiasi objek kelas sembarang menggunakan operator `new X`. Referensi tipe pada signature method, docblock generik, deklarasi `use`, `extends Component`, dan atribut komponen tetap sah.
+- **Pemicu**: Memanggil fungsi bawaan PHP yang tidak terdaftar di allowlist v0, memakai `usort` (ditunda ke v0.1), atau menginstansiasi objek kelas sembarang menggunakan operator `new X`. Referensi tipe pada signature method, docblock generik, deklarasi `use`, `extends Component`, dan atribut komponen tetap sah.
 - **Pesan**: `Pemanggilan fungsi '{nama}' atau instansiasi kelas '{kelas}' di luar allowlist tidak diizinkan di client`
 - **Rujukan**: [`spec/php-subset.md` §2, §3](php-subset.md)
 

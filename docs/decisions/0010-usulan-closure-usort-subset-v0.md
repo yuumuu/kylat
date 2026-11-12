@@ -1,6 +1,6 @@
 # ADR 0010: Usulan Status Closure dan `usort` pada `#[Client]`/`#[Computed]`
 
-- **Status**: USULAN
+- **Status**: DIGANTIKAN oleh [ADR 0011](0011-rekonsiliasi-subset-v0.md)
 - **Tanggal**: 12 November 2026
 - **Penulis**: DH
 - **Konteks**: Review PR #2, Fase 2 tugas 1

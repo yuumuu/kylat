@@ -18,11 +18,13 @@ Diturunkan dari Dokumen 2 §2–§5 (revisi P0, 25 Oktober 2026), dengan tiga pe
   > `.` adalah penggabungan string, bukan penjumlahan. Di JavaScript operatornya menjadi `+`, tetapi `+` antara string dan angka di JS melakukan koersi yang tidak ada di PHP — karena itu `+` **tidak** boleh dipakai untuk menggabungkan string, dan `1 + "2"` di PHP (`3`) tetap dihitung sebagai aritmetika. Kedua bahasa hanya sepakat bila kedua operand bertipe sama. Compiler wajib menolak `.` bila salah satu operand bukan `string` (KIL-131). Operator ini dibutuhkan oleh atribut dinamis `:href="'/produk/' . $id"` di `template.md` §4.
 - **Kontrol alur:** `if`/`else`, `foreach`, `for`, `return` dini.
 - **Closure dan arrow function.**
-- **Fungsi bawaan (allowlist):** `count`, `str_contains`, `str_starts_with`, `mb_strlen`, `mb_substr`, `mb_strtolower`, `mb_strtoupper`, `array_map`, `array_filter`, `array_slice`, `array_values`, `usort`, `implode`, `explode`.
+- **Fungsi bawaan (allowlist):** `count`, `str_contains`, `str_starts_with`, `mb_strlen`, `mb_substr`, `mb_strtolower`, `mb_strtoupper`, `array_map`, `array_filter`, `array_slice`, `array_values`, `implode`, `explode`.
 
 `str_contains`, `str_starts_with`, `implode`, dan `explode` hanya diizinkan karena terbukti setara untuk UTF-8 valid lewat differential test. `trim`, `strtolower`, dan `strtoupper` sengaja tidak ada: semantiknya berbeda untuk karakter non-ASCII.
 
 > `match` **ditunda ke v0.1** berdasarkan PUTUSAN 9 November 2026. Komponen v0 yang memakai `match` tetap ditolak dengan **KIL-104**; jangan menambahkan dukungan parsial sebelum v0.1 dibuka.
+
+> `usort` **ditunda ke v0.1** berdasarkan ADR 0011. PHP memutasi array secara *by reference* dan mengembalikan `bool`, sedangkan JavaScript memutasi array dan mengembalikan array. Pemakaian `usort` di client ditolak dengan **KIL-110** sampai semantiknya diputuskan lewat ADR baru.
 
 > `array_values` masuk allowlist sebagai konsekuensi langsung aturan `array_filter` di bagian 4. Tanpa fungsi itu, aturan tersebut tidak bisa dipatuhi. Keputusan 25 Oktober 2026: diterima, tanpa status sementara.
 
@@ -65,7 +67,7 @@ Dua kegagalan berbeda: **tidak ada tipe** (KIL-131) versus **tipe ada tetapi amb
 | String | Byte string | UTF-16 | Hanya `mb_*` dan fungsi yang setara untuk UTF-8 valid. Byte-level ditolak dengan KIL-140 |
 | **`array_filter`** | **Mempertahankan key; hasil bisa berlubang** | **`filter` menghasilkan array rapat** | **Hasil dianggap `array<int\|string,T>` sampai dibungkus `array_values`. Tanpa `array_values`, pemakaian sebagai `list<T>` menghasilkan KIL-130** |
 | Urutan key | Urutan penyisipan | Key numerik di object berbeda | Gunakan `Map` untuk data berurutan |
-| `usort` | Memutasi by reference, mengembalikan `bool` | `sort` memutasi dan mengembalikan array | **Belum diputuskan** — lihat bagian 6 |
+| `usort` | Memutasi by reference, mengembalikan `bool` | `sort` memutasi dan mengembalikan array | **Ditunda ke v0.1** — ditolak KIL-110 sampai semantiknya disepakati (ADR 0011) |
 
 ### Kenapa `array_filter` diatur eksplisit (D5)
 
@@ -84,7 +86,7 @@ Aturan di atas memilih hasil PHP sebagai sumber kebenaran: key dipertahankan, da
 
 | Butir | Status | Kenapa penting |
 |---|---|---|
-| Semantik `usort` | `[TERBUKA]` | Mutasi by reference dan nilai balik `bool` tidak punya padanan langsung di JS |
+| Semantik `usort` | **DITUNDA ke v0.1** | Mutasi by reference dan nilai balik `bool` tidak punya padanan langsung di JS; ditolak KIL-110 (ADR 0011) |
 | Kode untuk enam konstruksi terlarang | `[TERBUKA]` | Bagian 3 masih memakai tanda "—", padahal setiap error build wajib punya kode stabil |
 | Bentuk kelas yang diizinkan (konstruktor, promotion, visibility, `readonly`, enum case vs static) | `[TERBUKA]` | `enum sederhana` dan `readonly value object` didukung tanpa aturan bentuknya (audit D6) |
 | Kesetaraan `str_contains`/`explode` untuk UTF-8 | Diasumsikan setara | Harus dibuktikan lewat differential test, bukan argumen |
