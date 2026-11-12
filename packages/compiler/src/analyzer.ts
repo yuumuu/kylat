@@ -69,6 +69,12 @@ const CLIENT_BYTE_STRING_FUNCTIONS = new Set([
   'ucwords',
 ]);
 
+const CLIENT_CALLBACK_ARGUMENT_INDEX = new Map([
+  ['array_map', 0],
+  ['array_filter', 1],
+  ['usort', 1],
+]);
+
 const CLIENT_SUPERGLOBALS = new Set([
   '$_GET',
   '$_POST',
@@ -423,6 +429,84 @@ export function analyzePhpComponent(
           line: call.startPosition.row + 1,
           column: call.startPosition.column + 1,
         };
+
+        const callbackIndex = CLIENT_CALLBACK_ARGUMENT_INDEX.get(functionName);
+        if (callbackIndex !== undefined) {
+          const argsNode = call.childForFieldName('arguments');
+          const argumentNodes = (argsNode?.children ?? []).filter((child) => child.type === 'argument');
+          const callbackArgument = argumentNodes[callbackIndex]?.children[0];
+          if (callbackArgument) {
+            if (callbackArgument.type === 'array_creation_expression') {
+              diagnostics.push(
+                createDiagnostic(
+                  'KIL-120',
+                  filename,
+                  callbackArgument.startPosition.row + 1,
+                  callbackArgument.startPosition.column + 1,
+                  `Callback array pada '${functionName}' dapat menjalankan method database/objek dari client.`,
+                  'Pindahkan pemanggilan callback ke aksi server.'
+                )
+              );
+            } else if (callbackArgument.type === 'string') {
+              const callbackText = callbackArgument.text.replace(/^['"]|['"]$/g, '');
+              if (callbackText.includes('::')) {
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-120',
+                    filename,
+                    callbackArgument.startPosition.row + 1,
+                    callbackArgument.startPosition.column + 1,
+                    `Callback string '${callbackText}' mengarah ke static/class call yang tidak diizinkan di client.`,
+                    'Pindahkan pemanggilan callback ke aksi server.'
+                  )
+                );
+              } else if (CLIENT_BYTE_STRING_FUNCTIONS.has(callbackText)) {
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-140',
+                    filename,
+                    callbackArgument.startPosition.row + 1,
+                    callbackArgument.startPosition.column + 1,
+                    `Callback string byte-level '${callbackText}' tidak diizinkan di client.`
+                  )
+                );
+              } else if (!CLIENT_ALLOWED_FUNCTIONS.has(callbackText)) {
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-110',
+                    filename,
+                    callbackArgument.startPosition.row + 1,
+                    callbackArgument.startPosition.column + 1,
+                    `Callback string '${callbackText}' tidak ada di allowlist v0.`
+                  )
+                );
+              }
+            } else if (callbackArgument.type === 'function_call_expression') {
+              const callbackFunction = callbackArgument.childForFieldName('function')?.text ?? '';
+              if (CLIENT_BYTE_STRING_FUNCTIONS.has(callbackFunction)) {
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-140',
+                    filename,
+                    callbackArgument.startPosition.row + 1,
+                    callbackArgument.startPosition.column + 1,
+                    `First-class callable byte-level '${callbackFunction}' tidak diizinkan di client.`
+                  )
+                );
+              } else if (!CLIENT_ALLOWED_FUNCTIONS.has(callbackFunction)) {
+                diagnostics.push(
+                  createDiagnostic(
+                    'KIL-110',
+                    filename,
+                    callbackArgument.startPosition.row + 1,
+                    callbackArgument.startPosition.column + 1,
+                    `First-class callable '${callbackFunction}' tidak ada di allowlist v0.`
+                  )
+                );
+              }
+            }
+          }
+        }
 
         if (functionName === 'eval') {
           diagnostics.push(

@@ -33,6 +33,30 @@ describe('@kylat/compiler - AST ketat untuk akses method di client', () => {
     assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'KIL-120'));
   });
 
+  it('menolak callback array ke method client dengan KIL-120', async () => {
+    const diagnostics = await diagnosticsFor(`    public function bad(): void
+    {
+        $this->name = array_map([$this, 'query'], $rows);
+    }`);
+    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'KIL-120'));
+  });
+
+  it('menolak callback string static dengan KIL-120', async () => {
+    const diagnostics = await diagnosticsFor(`    public function bad(): void
+    {
+        $this->name = array_map('DB::table', $rows);
+    }`);
+    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'KIL-120'));
+  });
+
+  it('menolak first-class callable method dengan KIL-120', async () => {
+    const diagnostics = await diagnosticsFor(`    public function bad(): void
+    {
+        $this->name = $this->query(...);
+    }`);
+    assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'KIL-120'));
+  });
+
   it('tetap mengizinkan akses properti state tanpa pemanggilan method', async () => {
     const result = await compile(
       component(`    public function ok(): void
