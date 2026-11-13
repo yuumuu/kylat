@@ -19,6 +19,7 @@ Diperbarui: 12 November 2026. Sumber kebenaran: `spec/` di repo. File ini ringka
   - ADR 0015: **DIBUKA** — Fase 3 protokol/adapter; tugas pertama GET read/schema dan tipe protokol.
   - ADR 0016: **DITERIMA** — Fase 2 ditutup; enum/readonly ditunda ke v0.1.
   - ADR 0017: **DITERIMA** — kontrak GET read/schema, Problem Details stale build/rate limit, dan schema aksi.
+  - ADR 0018: **DITERIMA** — rate limit Redis produksi, schema auth-only, cache publik 60 detik, database MySQL utama/PostgreSQL uji.
 
 ---
 
@@ -114,15 +115,15 @@ Pengecualian Fase 2:
 
 **Status: DIBUKA (ADR 0015); GET read/schema, rate limit, dan conformance dasar selesai; optimistic/outbox/type generator belum.**
 
-Sudah ada: tipe `ReadResponse`/`SchemaResponse`/`SchemaAction`/`SchemaParam`, konstanta Problem Details, definisi `spec/protocol.schema.json`, route `GET /_kylat/read/{action}` dan `GET /_kylat/schema` di adapter Laravel, pemeriksaan `X-Kylat-Build` → 409 `urn:kylat:stale_build`, cache policy public/private, default-deny authorization, rate limit mutasi (60/menit akun, 20/menit IP anonim; fallback in-memory hanya test), dan conformance test bentuk wire.
+Sudah ada: tipe `ReadResponse`/`SchemaResponse`/`SchemaAction`/`SchemaParam`, konstanta Problem Details, definisi `spec/protocol.schema.json`, route `GET /_kylat/read/{action}` dan `GET /_kylat/schema` di adapter Laravel, pemeriksaan `X-Kylat-Build` → 409 `urn:kylat:stale_build`, cache policy public/private, default-deny authorization, rate limit mutasi (60/menit akun, 20/menit IP anonim; Redis di produksi), schema auth-only, dan conformance test bentuk wire.
 
 Sudah ada di CI: seluruh tes adapter PHP (`AdapterTest`, `CacheDriverIdempotencyTest`, `ReadEndpointTest`, `RateLimitTest`, `ConformanceTest`) dijalankan pada matrix Node/PHP.
 
-Belum ada: rate limit terdistribusi produksi, conformance lintas-adapter penuh, optimistic/rollback, idempotensi database/outbox, generator tipe, dan e2e CSP.
+Belum ada: rate limit Redis yang teruji multi-worker, conformance lintas-adapter penuh, optimistic/rollback, idempotensi database/outbox (MySQL utama, PostgreSQL uji), generator tipe, dan e2e CSP.
 
 Baseline yang sudah ada: `POST /_kylat/call` batch, idempotency key, retry/timeout, CSRF, default-deny `authorize()`, Problem Details, batas body/batch/depth, dan cache idempotensi 24 jam.
 
-Tugas berikutnya: optimistic update/rollback dan idempotensi database/outbox.
+Tugas berikutnya: ADR 0007 + implementasi tabel idempotensi/outbox MySQL/PostgreSQL, lalu optimistic update/rollback.
 
 ## Backlog Fase Berikutnya
 
