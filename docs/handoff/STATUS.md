@@ -5,6 +5,7 @@ Diperbarui: 12 November 2026. Sumber kebenaran: `spec/` di repo. File ini ringka
 ## Status Gerbang Rilis
 - **Status Fase 0**: **DITUTUP dengan pengecualian tercatat pada 10 November 2026** (Tag: `v0.0.0-p0`, commit `819bcb4`; ADR 0014).
 - **Status Fase 1**: **DITUTUP dengan pengecualian tercatat pada 11 November 2026** (Tag: `v0.1.0-p1`; ADR 0014).
+- **Status Fase 2**: **DITUTUP pada 13 November 2026** (Tag: `v0.2.0-p2`; ADR 0016).
 - **Pengesahan Golden Master**: `CartCounter.expected.js` telah DISAHKAN oleh pemilik proyek pada 10 November 2026; Kylat 6 lokal merujuk ADR 0014.
 - **Keputusan Arsitektur Terkait**:
   - ADR 0006: Disetujui untuk Fase 1 (Opsi A: accessor getter).
@@ -16,6 +17,7 @@ Diperbarui: 12 November 2026. Sumber kebenaran: `spec/` di repo. File ini ringka
   - ADR 0013: **DITERIMA** — bentuk `#[Computed]`/lifecycle v0 dan urutan DOM → OnMount → Effect.
   - ADR 0014: **DITERIMA** — STATUS adalah otoritas operasional; Fase 0/1 “ditutup dengan pengecualian tercatat”.
   - ADR 0015: **DIBUKA** — Fase 3 protokol/adapter; tugas pertama GET read/schema dan tipe protokol.
+  - ADR 0016: **DITERIMA** — Fase 2 ditutup; enum/readonly ditunda ke v0.1.
 
 ---
 
@@ -58,7 +60,7 @@ Meskipun Fase 1 ditutup dan seluruh uji CI lulus 100%, hal-hal berikut secara ek
 
 Fase 0 dan Fase 1 resmi ditutup. Baseline toolchain mencakup compiler, runtime sinyal, CLI, contoh referensi (`01-counter` SFC dan `04-cart` server action), serta adapter Laravel yang seluruhnya diverifikasi 100% lulus CI di Node 20/22 dan PHP 8.2/8.3.
 
-### Fase 2 — Compiler (berjalan)
+### Fase 2 — Compiler (DITUTUP 13 November 2026)
 
 Sudah diimplementasikan dan diuji:
 
@@ -73,13 +75,13 @@ Sudah diimplementasikan dan diuji:
 - **Golden master**: `Counter.expected.js` dan `CartCounter.expected.js` tetap identik; output lama tidak berubah.
 - **Verifikasi**: 134 tes compiler (132 lulus, 2 skip P8/P10); `pnpm typecheck` dan `pnpm test` monorepo lulus.
 
-Belum ditutup pada Fase 2:
+Pengecualian Fase 2:
 
 - KIL-203, KIL-204, dan KIL-205 masih ditunda ke v0.1 sesuai ADR 0008.
 - KIL-211 (siklus graf) dan KIL-401 (anggaran chunk) adalah pemeriksaan tingkat proyek, belum dijalankan compiler per berkas.
 - Risiko callback database dinamis (`array_map($this->callback, ...)`) masih terbuka dan tetap prioritas tinggi.
 - `match` ditunda (KIL-104); `usort` ditunda (KIL-110) sesuai ADR 0011.
-- Fase 2 belum ditutup formal dan belum diberi tag.
+- Enum dan readonly value object ditunda ke v0.1 sesuai ADR 0016.
 
 ## Repo
 
@@ -87,6 +89,7 @@ Belum ditutup pada Fase 2:
 - Branch `main` bersih, tanpa penumpukan perubahan working tree.
 - Tag rilis Fase 0: `v0.0.0-p0`.
 - Tag rilis Fase 1: `v0.1.0-p1`.
+- Tag rilis Fase 2: `v0.2.0-p2`.
 - PR #2 di-squash menjadi `cdf5f0f`; riwayat per-commit `30bc99b`..`90f3f26` hanya tersedia di PR #2 di GitHub, bukan di `git log main`.
 
 ## Komponen yang Berjalan dan Terverifikasi

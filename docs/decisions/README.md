@@ -8,7 +8,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 
 ---
 
-## Tabel Register Keputusan (KEP-01 – KEP-43)
+## Tabel Register Keputusan (KEP-01 – KEP-44)
 
 | ID | Topik & Ringkasan Keputusan | Status | Tenggat | Pemilik |
 |---|---|---|---|---|
@@ -55,6 +55,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 | **KEP-41** | **Bentuk `#[Computed]`/lifecycle v0**: computed murni tanpa parameter; urutan DOM → OnMount → Effect; cleanup dan server call dari OnMount ditunda ke v0.1 ([`0013-computed-lifecycle-v0.md`](0013-computed-lifecycle-v0.md)). | **PUTUSAN** | Fase 2 | Arsitek Toolchain |
 | **KEP-42** | **Rekonsiliasi gerbang Fase 0/1**: STATUS adalah otoritas operasional; Fase 0/1 “ditutup dengan pengecualian tercatat”; fase 2 belum ditutup ([`0014-rekonsiliasi-gerbang-fase-0-1.md`](0014-rekonsiliasi-gerbang-fase-0-1.md)). | **PUTUSAN** | Fase 2 | Arsitek Toolchain |
 | **KEP-43** | **Pembukaan Fase 3**: ruang lingkup protokol/adapter, urutan GET read/schema → conformance → optimistic/rollback → idempotensi database/outbox → generator tipe → e2e CSP ([`0015-pembukaan-fase-3.md`](0015-pembukaan-fase-3.md)). | **DIBUKA** | Fase 3 | Arsitek Toolchain |
+| **KEP-44** | **Penutupan Fase 2**: compiler, Map, KIL-130, lifecycle, differential, dan source map selesai; enum/readonly ditunda ke v0.1 ([`0016-penutupan-fase-2.md`](0016-penutupan-fase-2.md)). | **PUTUSAN** | Fase 2 | Arsitek Toolchain |
 
 ---
 
