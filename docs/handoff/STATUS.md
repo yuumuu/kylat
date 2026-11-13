@@ -128,13 +128,13 @@ Tugas berikutnya: Fase 4 (rendering dan DX).
 
 ## Fase 4 — Rendering dan DX
 
-**Status: DIBUKA (ADR 0021); source map, axe, Vite plugin, `kylat new`, dan SSR/prerender + hydration mismatch selesai; HMR granular/audit screen reader belum.**
+**Status: DIBUKA (ADR 0021); source map, axe, Vite plugin + HMR granular, `kylat new`, SSR/prerender + hydration mismatch, dan standar kebab-case selesai; audit screen reader/perangkat fisik belum.**
 
-Sudah ada: `kylat build` menghasilkan `.js.map` + `sourceMappingURL` dan `manifest.sourceMap`; `--production`/`--no-sourcemap` menghapus keduanya. Contoh keranjang CSP menjalankan axe-core WCAG 2 A/AA tanpa pelanggaran serius/kritis. `@kylat/vite-plugin` mengompilasi `*.kylat.php`, meneruskan source map, dan meng-invalidate modul saat file berubah (fallback full reload). `kylat new` menghasilkan proyek Vite minimal. `@kylat/ssr` menyediakan `renderToString()`; `hydrateIsland()` mendeteksi mismatch dan menandai `data-kylat-hydration-mismatch`. Standar nama berkas komponen kebab-case (`cart-product.kylat.php` → `CartProduct`) ditegakkan KIL-215 (ADR 0022).
+Sudah ada: `kylat build` menghasilkan `.js.map` + `sourceMappingURL` dan `manifest.sourceMap`; `--production`/`--no-sourcemap` menghapus keduanya. Contoh keranjang CSP menjalankan axe-core WCAG 2 A/AA tanpa pelanggaran serius/kritis. `@kylat/vite-plugin` mengompilasi `*.kylat.php`, meneruskan source map, dan menyuntikkan HMR accept yang memanggil `updateIslandFactory()` pada mode serve. `kylat new` menghasilkan proyek Vite minimal. `@kylat/ssr` menyediakan `renderToString()`; `hydrateIsland()` mendeteksi mismatch dan menandai `data-kylat-hydration-mismatch`. Standar nama berkas komponen kebab-case (`cart-product.kylat.php` → `CartProduct`) ditegakkan KIL-215 (ADR 0022).
 
-Belum ada: component-level HMR, audit screen reader, dan pengujian perangkat fisik.
+Belum ada: audit screen reader (VoiceOver/NVDA) dan pengujian perangkat fisik (Safari iOS/JSC/low-end).
 
-Tugas berikutnya: HMR granular, lalu audit screen reader/perangkat fisik.
+Tugas berikutnya: audit screen reader dan perangkat fisik.
 
 ## Backlog Fase Berikutnya
 
