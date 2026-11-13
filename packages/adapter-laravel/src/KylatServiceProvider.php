@@ -31,5 +31,13 @@ final class KylatServiceProvider extends ServiceProvider
         Route::post('/_kylat/call', [KylatBatchCallController::class, 'handleRequest'])
             ->middleware(['web'])
             ->name('kylat.call');
+
+        Route::get('/_kylat/read/{action}', [KylatBatchCallController::class, 'handleReadRequest'])
+            ->middleware(['web'])
+            ->name('kylat.read');
+
+        Route::get('/_kylat/schema', [KylatBatchCallController::class, 'handleSchemaRequest'])
+            ->middleware(['web'])
+            ->name('kylat.schema');
     }
 }

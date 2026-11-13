@@ -301,10 +301,10 @@ final class KylatBatchCallController
             ->header('X-Content-Type-Options', 'nosniff');
     }
 
-    private function problem(int $status, string $title, string $detail): JsonResponse
+    private function problem(int $status, string $title, string $detail, string $type = ''): JsonResponse
     {
         return response()->json([
-            'type' => 'https://kylat.dev/errors/http_' . $status,
+            'type' => $type !== '' ? $type : 'https://kylat.dev/errors/http_' . $status,
             'title' => $title,
             'status' => $status,
             'detail' => $detail,
@@ -312,6 +312,325 @@ final class KylatBatchCallController
             'Content-Type' => 'application/problem+json',
             'Cache-Control' => 'private, no-store',
         ]);
+    }
+
+    /**
+     * GET /_kylat/read/{aksi}.
+     *
+     * @return array{status:int, body:array<string,mixed>, cache:string}
+     */
+    public function handleRead(
+        string $action,
+        array $query = [],
+        array $headers = [],
+        ?string $expectedBuildId = null
+    ): array {
+        $buildError = $this->buildMismatch($headers, $expectedBuildId);
+        if ($buildError !== null) {
+            return $buildError;
+        }
+
+        if (!preg_match('/^[A-Za-z_][A-Za-z0-9_\\\\]*(?:::|\.)[A-Za-z_][A-Za-z0-9_]*$/', $action)) {
+            return $this->readProblem(400, 'Bad Request', 'Format aksi tidak valid.', 'urn:kylat:bad_request');
+        }
+
+        [$contract, $method] = preg_split('/::|\./', $action, 2);
+        $normalizedAction = $contract . '::' . $method;
+
+        $instance = ActionRegistry::resolve($contract);
+        if ($instance === null || !method_exists($instance, $method)) {
+            return $this->readProblem(404, 'Not Found', 'Aksi baca tidak ditemukan atau belum terdaftar.', 'urn:kylat:not_found');
+        }
+
+        $methodRef = $this->actionReflection($contract, $instance, $method);
+        if ($methodRef === null || $this->serverAttributeArguments($methodRef) === null) {
+            return $this->readProblem(403, 'Forbidden', 'Method bukan aksi server.', 'urn:kylat:forbidden');
+        }
+
+        if ($this->isMutationAction($contract, $method)) {
+            return $this->readProblem(
+                400,
+                'Bad Request',
+                'Aksi ini bukan aksi baca (read: true) dan tidak boleh dipanggil lewat GET.',
+                'urn:kylat:bad_request'
+            );
+        }
+
+        $args = $query['args'] ?? '{}';
+        if (!is_string($args)) {
+            return $this->readProblem(400, 'Bad Request', 'Query args wajib berupa string JSON.', 'urn:kylat:bad_request');
+        }
+
+        try {
+            $decoded = json_decode($args, true, self::MAX_JSON_DEPTH, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return $this->readProblem(400, 'Bad Request', 'Query args bukan JSON yang valid.', 'urn:kylat:bad_request');
+        }
+
+        if (!str_starts_with(ltrim($args), '{') || !is_array($decoded)) {
+            return $this->readProblem(400, 'Bad Request', 'Query args wajib berupa object JSON.', 'urn:kylat:bad_request');
+        }
+
+        $argsError = $this->validateValue($decoded, 0);
+        if ($argsError !== null) {
+            return $this->readProblem(400, 'Bad Request', $argsError, 'urn:kylat:bad_request');
+        }
+
+        $result = $this->dispatchCall('read', $normalizedAction, $decoded);
+        if (!($result['ok'] ?? false)) {
+            $type = (string) ($result['error']['type'] ?? 'kylat:server_error');
+            $message = (string) ($result['error']['message'] ?? 'Aksi baca gagal.');
+            $status = match ($type) {
+                'kylat:unauthorized' => 401,
+                'kylat:forbidden' => 403,
+                'kylat:not_found' => 404,
+                'kylat:validation' => 400,
+                default => 400,
+            };
+            $problemType = match ($status) {
+                401 => 'urn:kylat:unauthorized',
+                403 => 'urn:kylat:forbidden',
+                404 => 'urn:kylat:not_found',
+                default => 'urn:kylat:bad_request',
+            };
+
+            return $this->readProblem($status, 'Kylat read error', $message, $problemType);
+        }
+
+        $cache = $this->isPublicAction($contract, $method)
+            ? 'public, max-age=' . $this->readCacheMaxAge()
+            : 'private, no-store';
+
+        return [
+            'status' => 200,
+            'body' => ['data' => $result['data'] ?? null],
+            'cache' => $cache,
+        ];
+    }
+
+    /**
+     * GET /_kylat/schema.
+     *
+     * @return array{status:int, body:array<string,mixed>, cache:string}
+     */
+    public function handleSchema(array $headers = [], ?string $expectedBuildId = null): array
+    {
+        $buildError = $this->buildMismatch($headers, $expectedBuildId);
+        if ($buildError !== null) {
+            return $buildError;
+        }
+
+        $contracts = ActionRegistry::contracts();
+        sort($contracts);
+        $actions = [];
+
+        foreach ($contracts as $contract) {
+            $instance = ActionRegistry::resolve($contract);
+            if ($instance === null || !method_exists($instance, 'authorize')) {
+                continue;
+            }
+
+            $reflection = new \ReflectionClass($instance);
+            foreach ($reflection->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+                if (str_starts_with($method->getName(), '__')) {
+                    continue;
+                }
+
+                $methodRef = $this->actionReflection($contract, $instance, $method->getName()) ?? $method;
+                $serverArgs = $this->serverAttributeArguments($methodRef);
+                if ($serverArgs === null) {
+                    continue;
+                }
+
+                $params = [];
+                foreach ($methodRef->getParameters() as $parameter) {
+                    $params[] = [
+                        'name' => $parameter->getName(),
+                        'type' => $this->reflectionTypeToString($parameter->getType()),
+                        'required' => !$parameter->isOptional(),
+                        'nullable' => $parameter->allowsNull(),
+                    ];
+                }
+
+                $actions[] = [
+                    'name' => $contract . '::' . $method->getName(),
+                    'read' => ($serverArgs['read'] ?? false) === true,
+                    'public' => ($serverArgs['public'] ?? false) === true,
+                    'params' => $params,
+                    'returnType' => $this->reflectionTypeToString($methodRef->getReturnType()),
+                ];
+            }
+        }
+
+        $body = [
+            'protocol' => '0.1',
+            'actions' => $actions,
+        ];
+        if (is_string($expectedBuildId) && $expectedBuildId !== '') {
+            $body['build'] = $expectedBuildId;
+        }
+
+        return [
+            'status' => 200,
+            'body' => $body,
+            'cache' => 'private, no-store',
+        ];
+    }
+
+    public function handleReadRequest(Request $request, string $action): JsonResponse
+    {
+        $expectedBuildId = $this->configuredBuildId();
+        $headers = [];
+        foreach ($request->headers->all() as $name => $values) {
+            $headers[$name] = is_array($values) ? (string) ($values[0] ?? '') : (string) $values;
+        }
+
+        $result = $this->handleRead(
+            $action,
+            $request->query(),
+            $headers,
+            $expectedBuildId
+        );
+
+        return response()->json($result['body'], $result['status'], [
+            'Cache-Control' => $result['cache'],
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    public function handleSchemaRequest(Request $request): JsonResponse
+    {
+        $expectedBuildId = $this->configuredBuildId();
+        $headers = [];
+        foreach ($request->headers->all() as $name => $values) {
+            $headers[$name] = is_array($values) ? (string) ($values[0] ?? '') : (string) $values;
+        }
+
+        $result = $this->handleSchema($headers, $expectedBuildId);
+
+        return response()->json($result['body'], $result['status'], [
+            'Cache-Control' => $result['cache'],
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    /** @return array{status:int, body:array<string,mixed>, cache:string} */
+    private function readProblem(int $status, string $title, string $detail, string $type): array
+    {
+        return [
+            'status' => $status,
+            'body' => [
+                'type' => $type,
+                'title' => $title,
+                'status' => $status,
+                'detail' => $detail,
+            ],
+            'cache' => 'private, no-store',
+        ];
+    }
+
+    /** @return array{status:int, body:array<string,mixed>, cache:string}|null */
+    private function buildMismatch(array $headers, ?string $expectedBuildId): ?array
+    {
+        if (!is_string($expectedBuildId) || $expectedBuildId === '') {
+            return null;
+        }
+
+        $provided = $headers['X-Kylat-Build'] ?? $headers['x-kylat-build'] ?? null;
+        if (!is_string($provided) || $provided === '') {
+            return null;
+        }
+
+        if (hash_equals($expectedBuildId, $provided)) {
+            return null;
+        }
+
+        return $this->readProblem(
+            409,
+            'Stale build',
+            'Build client tidak kompatibel dengan build server.',
+            'urn:kylat:stale_build'
+        );
+    }
+
+    private function configuredBuildId(): ?string
+    {
+        if (!function_exists('config')) {
+            return null;
+        }
+
+        try {
+            $value = config('kylat.build_id');
+            return is_string($value) && $value !== '' ? $value : null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private function readCacheMaxAge(): int
+    {
+        if (!function_exists('config')) {
+            return 60;
+        }
+
+        try {
+            $value = config('kylat.read_cache_max_age', 60);
+            return is_numeric($value) ? max(0, (int) $value) : 60;
+        } catch (Throwable) {
+            return 60;
+        }
+    }
+
+    private function isPublicAction(string $contract, string $method): bool
+    {
+        $instance = ActionRegistry::resolve($contract);
+        if ($instance === null || !method_exists($instance, $method)) {
+            return false;
+        }
+
+        $reflection = $this->actionReflection($contract, $instance, $method);
+        if ($reflection === null) {
+            return false;
+        }
+
+        $arguments = $this->serverAttributeArguments($reflection);
+        return ($arguments['public'] ?? false) === true;
+    }
+
+    /** @return array<string,mixed>|null */
+    private function serverAttributeArguments(ReflectionMethod $method): ?array
+    {
+        foreach ($method->getAttributes() as $attribute) {
+            $name = $attribute->getName();
+            if ($name === 'Kylat\\Attributes\\Server' || str_ends_with($name, '\\Server')) {
+                return $attribute->getArguments();
+            }
+        }
+
+        return null;
+    }
+
+    private function reflectionTypeToString(?ReflectionType $type): string
+    {
+        if ($type === null) {
+            return 'mixed';
+        }
+
+        if ($type instanceof ReflectionUnionType) {
+            return implode('|', array_map(
+                fn (ReflectionType $member): string => $this->reflectionTypeToString($member),
+                $type->getTypes()
+            ));
+        }
+
+        if ($type instanceof ReflectionNamedType) {
+            $name = $type->getName();
+            return $type->allowsNull() && $name !== 'mixed' && $name !== 'null'
+                ? '?' . $name
+                : $name;
+        }
+
+        return (string) $type;
     }
 
     /**

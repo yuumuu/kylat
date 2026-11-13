@@ -112,15 +112,15 @@ Pengecualian Fase 2:
 
 ## Fase 3 — Protokol dan Adapter
 
-**Status: DIBUKA (ADR 0015); kontrak GET read/schema selesai (ADR 0017), adapter belum diimplementasikan.**
+**Status: DIBUKA (ADR 0015); kontrak dan route GET read/schema selesai; rate limit/conformance belum.**
 
-Sudah ada: tipe `ReadResponse`/`SchemaResponse`/`SchemaAction`/`SchemaParam`, konstanta Problem Details `urn:kylat:stale_build` dan `urn:kylat:rate_limited`, definisi `spec/protocol.schema.json`, dan tes kontrak protokol.
+Sudah ada: tipe `ReadResponse`/`SchemaResponse`/`SchemaAction`/`SchemaParam`, konstanta Problem Details, definisi `spec/protocol.schema.json`, route `GET /_kylat/read/{action}` dan `GET /_kylat/schema` di adapter Laravel, pemeriksaan `X-Kylat-Build` → 409 `urn:kylat:stale_build`, cache policy public/private, default-deny authorization, dan tes endpoint baca (3 suite PHP adapter lulus).
 
-Belum ada: route `GET /_kylat/read/{aksi}`, `GET /_kylat/schema`, pemeriksaan `X-Kylat-Build`, rate limit adapter, cache policy adapter, conformance suite, optimistic/rollback, idempotensi database/outbox, dan generator tipe.
+Belum ada: rate limit adapter, conformance suite, optimistic/rollback, idempotensi database/outbox, generator tipe, dan e2e CSP.
 
 Baseline yang sudah ada: `POST /_kylat/call` batch, idempotency key, retry/timeout, CSRF, default-deny `authorize()`, Problem Details, batas body/batch/depth, dan cache idempotensi 24 jam.
 
-Tugas berikutnya: implementasi route GET read/schema di adapter Laravel dan pemeriksaan build/rate limit.
+Tugas berikutnya: rate limit + conformance suite protokol.
 
 ## Backlog Fase Berikutnya
 

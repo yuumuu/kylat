@@ -70,6 +70,17 @@ final class ActionRegistry
     }
 
     /**
+     * Daftar kontrak yang terdaftar. Dipakai schema endpoint; tidak pernah
+     * menerima nama kontrak dari input wire.
+     *
+     * @return list<string>
+     */
+    public static function contracts(): array
+    {
+        return array_keys(self::$bindings);
+    }
+
+    /**
      * Menghapus semua binding (berguna untuk testing).
      */
     public static function flush(): void
