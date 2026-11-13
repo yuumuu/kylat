@@ -75,5 +75,6 @@ Nilai awal mengikuti Kylat 3 §7: 60 mutasi/menit per akun dan 20 mutasi/menit p
 
 - `packages/protocol/src/index.ts` menambah `ReadResponse`, `SchemaResponse`, `SchemaAction`, `SchemaParam`, `PROTOCOL_PROBLEM_TYPES`, dan `PROTOCOL_PROBLEM_STATUS`.
 - `spec/protocol.schema.json` menambah definisi `ReadResponse` dan `SchemaResponse`.
-- Adapter Laravel belum mengimplementasikan route pada PR ini; itu tugas berikutnya.
+- Adapter Laravel mengimplementasikan route `GET /_kylat/read/{action}` dan `GET /_kylat/schema`, pemeriksaan build, cache policy, dan default-deny authorization.
+- Rate limit adapter dan conformance suite tetap tugas berikutnya.
 - Tidak ada kode KIL baru.

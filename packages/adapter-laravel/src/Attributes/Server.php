@@ -14,6 +14,7 @@ use Attribute;
 final class Server
 {
     public function __construct(
-        public readonly bool $read = false
+        public readonly bool $read = false,
+        public readonly bool $public = false
     ) {}
 }
