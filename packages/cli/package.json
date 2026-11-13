@@ -25,6 +25,7 @@
     "@kylat/protocol": "workspace:*"
   },
   "files": [
-    "dist"
+    "dist",
+    "bin"
   ]
 }

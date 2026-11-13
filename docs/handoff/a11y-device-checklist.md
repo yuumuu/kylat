@@ -1,6 +1,6 @@
 # Checklist Audit Aksesibilitas dan Perangkat — Fase 4
 
-Status: **otomatis sebagian; audit manual belum dijalankan**.
+Status: **otomatis dieksekusi (13 November 2026); audit manual ⛔ BLOCKED — tidak ada NVDA/VoiceOver/audio dan tidak ada perangkat fisik di lingkungan ini.** Lihat [`AUDIT-2026-11-13.md`](AUDIT-2026-11-13.md).
 
 Contoh yang diaudit: `examples/05-cart-csp` (keranjang, CSP ketat).
 

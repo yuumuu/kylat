@@ -114,13 +114,13 @@ Pengecualian Fase 2:
 
 ## Fase 3 — Protokol dan Adapter
 
-**Status: DITUTUP (ADR 0020). Semua gerbang ADR 0015 terpenuhi.**
+**Status: DITUTUP (ADR 0020) dengan satu pengecualian: Spike S4 belum diukur (KEP-11 terbuka).**
 
 Sudah ada: tipe `ReadResponse`/`SchemaResponse`/`SchemaAction`/`SchemaParam`, konstanta Problem Details, definisi `spec/protocol.schema.json`, route `GET /_kylat/read/{action}` dan `GET /_kylat/schema` di adapter Laravel, pemeriksaan `X-Kylat-Build` → 409 `urn:kylat:stale_build`, cache policy public/private, default-deny authorization, rate limit mutasi (Redis/Laravel RateLimiter; fallback phpredis-Lua; in-memory hanya test), schema auth-only, conformance test bentuk wire, migrasi `kylat_idempotency_keys`/`kylat_outbox` + `last_error`, `DatabaseIdempotencyStore` (PDO, transaksi, outbox) diuji SQLite + MySQL 8.4/PostgreSQL 18.4, integrasi controller lewat `KYLAT_IDEMPOTENCY_DRIVER`, `OutboxRelay` + `kylat:outbox:relay` (SKIP LOCKED, backoff, max attempts), `beginOptimistic`/`withOptimistic` + `RpcBatcher.optimistic`, `kylat types --check`, dan E2E keranjang CSP ketat (WebKit).
 
 Sudah ada di CI: seluruh tes adapter PHP pada matrix Node/PHP, uji konkurensi + outbox relay MySQL 8.0/PostgreSQL 15, rate limit Redis multi-worker, serta job E2E WebKit untuk keranjang CSP.
 
-Tidak ada item Fase 3 yang tersisa. Catatan operasional: outbox bersifat at-least-once (handler wajib idempotent), dan relay dijalankan lewat scheduler/supervisor (`kylat:outbox:relay`).
+Tersisa satu item verifikasi: **Spike S4** (p50/p95 biaya kernel PSR-15 vs boot Laravel di PHP-FPM), tercatat di `docs/handoff/AUDIT-2026-11-13.md`. Catatan operasional: outbox bersifat at-least-once (handler wajib idempotent), dan relay dijalankan lewat scheduler/supervisor (`kylat:outbox:relay`).
 
 Baseline yang sudah ada: `POST /_kylat/call` batch, idempotency key, retry/timeout, CSRF, default-deny `authorize()`, Problem Details, batas body/batch/depth, dan cache idempotensi 24 jam.
 

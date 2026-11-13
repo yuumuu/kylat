@@ -61,7 +61,11 @@ Fase 3 ditutup dengan empat penambahan:
 
 ## 3. Konsekuensi
 
-- Gerbang Fase 3 ADR 0015 terpenuhi: conformance hijau, konkurensi database nyata hijau, optimistic/rollback ada, generator tipe + `--check`, E2E CSP ketat, GET tidak mengubah state, default-deny tetap.
+- Gerbang Fase 3 ADR 0015 terpenuhi **kecuali Spike S4** (lihat addendum §4): conformance hijau, konkurensi database nyata hijau, optimistic/rollback ada, generator tipe + `--check`, E2E CSP ketat, GET tidak mengubah state, default-deny tetap.
 - Outbox tetap at-least-once; handler wajib idempotent.
 - `kylat types` bergantung pada schema yang dihasilkan adapter; schema auth-only sehingga pengambilan schema memerlukan sesi/CI service account.
 - Import map inline memerlukan hash CSP; bila host memakai bundler, import map dapat dihapus dan `script-src 'self'` cukup.
+
+## 4. Addendum audit 13 November 2026
+
+Audit eksekusi checklist menemukan bahwa **Spike S4** (biaya kernel PSR-15 vs boot Laravel, p50/p95 di PHP-FPM) belum diukur dan **KEP-11 masih `[TERBUKA]`**. Penutupan Fase 3 tetap berlaku, tetapi klaim “semua gerbang terpenuhi” dikoreksi menjadi **“terpenuhi kecuali S4”**. S4 dilacak sebagai pekerjaan lanjutan; lihat `docs/handoff/AUDIT-2026-11-13.md` temuan F-02.
