@@ -15,6 +15,7 @@ Diperbarui: 12 November 2026. Sumber kebenaran: `spec/` di repo. File ini ringka
   - ADR 0012: **DITERIMA** — map memakai `Map` JS; IR v0 memakai semantic shell + `bodyCode`/`bodyLocations`; KIL-130 aktif.
   - ADR 0013: **DITERIMA** — bentuk `#[Computed]`/lifecycle v0 dan urutan DOM → OnMount → Effect.
   - ADR 0014: **DITERIMA** — STATUS adalah otoritas operasional; Fase 0/1 “ditutup dengan pengecualian tercatat”.
+  - ADR 0015: **DIBUKA** — Fase 3 protokol/adapter; tugas pertama GET read/schema dan tipe protokol.
 
 ---
 
@@ -104,6 +105,14 @@ Belum ditutup pada Fase 2:
   - `examples/04-cart/`: Komponen referensi pemanggilan server action RPC (`CartActions::add`) dengan otorisasi dan prop `productId`.
 
 ---
+
+## Fase 3 — Protokol dan Adapter
+
+**Status: DIBUKA (ADR 0015), implementasi belum dimulai.**
+
+Baseline yang sudah ada: `POST /_kylat/call` batch, idempotency key, retry/timeout, CSRF, default-deny `authorize()`, Problem Details, batas body/batch/depth, dan cache idempotensi 24 jam.
+
+Tugas pertama: kontrak `GET /_kylat/read/{aksi}`, `GET /_kylat/schema`, `X-Kylat-Build`/`kylat:stale_build`, `kylat:rate_limited`, dan tipe protokol. Setelah itu conformance suite, optimistic/rollback, idempotensi database/outbox, generator tipe, dan e2e CSP.
 
 ## Backlog Fase Berikutnya
 
