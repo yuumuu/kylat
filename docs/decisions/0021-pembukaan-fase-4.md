@@ -60,3 +60,4 @@
 - 13 November 2026: `kylat new` menghasilkan proyek Vite minimal (plugin, komponen contoh, README) dan komponennya lolos kompilasi.
 - 13 November 2026: `@kylat/ssr` (`renderToString`) dan deteksi hydration mismatch di `hydrateIsland()` selesai; SSR tetap opsional.
 - 13 November 2026: HMR granular selesai — plugin menyuntikkan `import.meta.hot.accept` dan runtime menyediakan `updateIslandFactory()` untuk merender ulang island tanpa full reload (state lokal di-reset).
+- 13 November 2026: audit otomatis diperluas ke keyboard-only, role/live region, dan profil WebKit iPhone 13; checklist manual screen reader/perangkat fisik tersedia di `docs/handoff/a11y-device-checklist.md`.

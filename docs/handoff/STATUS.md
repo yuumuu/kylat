@@ -128,13 +128,13 @@ Tugas berikutnya: Fase 4 (rendering dan DX).
 
 ## Fase 4 — Rendering dan DX
 
-**Status: DIBUKA (ADR 0021); source map, axe, Vite plugin + HMR granular, `kylat new`, SSR/prerender + hydration mismatch, dan standar kebab-case selesai; audit screen reader/perangkat fisik belum.**
+**Status: DIBUKA (ADR 0021); source map, axe, Vite plugin + HMR granular, `kylat new`, SSR/prerender + hydration mismatch, standar kebab-case, dan audit keyboard/role otomatis selesai; audit screen reader manual/perangkat fisik belum.**
 
 Sudah ada: `kylat build` menghasilkan `.js.map` + `sourceMappingURL` dan `manifest.sourceMap`; `--production`/`--no-sourcemap` menghapus keduanya. Contoh keranjang CSP menjalankan axe-core WCAG 2 A/AA tanpa pelanggaran serius/kritis. `@kylat/vite-plugin` mengompilasi `*.kylat.php`, meneruskan source map, dan menyuntikkan HMR accept yang memanggil `updateIslandFactory()` pada mode serve. `kylat new` menghasilkan proyek Vite minimal. `@kylat/ssr` menyediakan `renderToString()`; `hydrateIsland()` mendeteksi mismatch dan menandai `data-kylat-hydration-mismatch`. Standar nama berkas komponen kebab-case (`cart-product.kylat.php` → `CartProduct`) ditegakkan KIL-215 (ADR 0022).
 
-Belum ada: audit screen reader (VoiceOver/NVDA) dan pengujian perangkat fisik (Safari iOS/JSC/low-end).
+Belum ada: audit manual screen reader (VoiceOver/NVDA) dan pengujian perangkat fisik (Safari iOS/JSC/low-end). Checklist tersedia di `docs/handoff/a11y-device-checklist.md`; cakupan otomatis mencakup axe, keyboard-only, role/live region, serta profil WebKit desktop dan iPhone 13.
 
-Tugas berikutnya: audit screen reader dan perangkat fisik.
+Tugas berikutnya: eksekusi audit manual screen reader dan perangkat fisik sesuai checklist.
 
 ## Backlog Fase Berikutnya
 
