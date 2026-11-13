@@ -153,7 +153,7 @@ jobs:
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/ConformanceTest.php
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/DatabaseIdempotencyTest.php
 
-      - name: Run Database Concurrency Tests (MySQL/PostgreSQL)
+      - name: Run Database Concurrency & Outbox Tests (MySQL/PostgreSQL)
         env:
           KYLAT_TEST_MYSQL_DSN: 'mysql:host=127.0.0.1;port=3306;dbname=kylat_test;charset=utf8mb4'
           KYLAT_TEST_MYSQL_USER: kylat
@@ -163,6 +163,7 @@ jobs:
           KYLAT_TEST_PG_PASSWORD: kylat
         run: |
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/ConcurrencyIdempotencyTest.php
+          php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/OutboxRelayTest.php
 
       - name: Run Example App Tests
         run: pnpm test:examples

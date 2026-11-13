@@ -42,6 +42,7 @@ Kekangan:
 | `attempts` | `INT` | default 0 |
 | `available_at` | `TIMESTAMP` | jadwal relay |
 | `locked_until` | `TIMESTAMP NULL` | lease worker |
+| `last_error` | `TEXT NULL` | pesan kegagalan terakhir, maksimum 2000 karakter |
 | `created_at` / `updated_at` | `TIMESTAMP` | audit |
 
 Kekangan: unique `event_id`, index `(status, available_at)`.
@@ -94,3 +95,21 @@ Hasil 13 November 2026:
 - CI menggunakan service container MySQL 8.0 dan PostgreSQL 15 pada workflow `ci.yml`.
 
 Catatan: pada konkurensi DB nyata, worker kedua biasanya menerima `replay` (bukan `in_progress`) karena `INSERT` unik menunggu transaksi pertama commit. `in_progress` tetap valid untuk lease yang dibuat jalur non-transaksional.
+
+## 7. Relay outbox
+
+`OutboxRelay` ([`src/Support/OutboxRelay.php`](../../packages/adapter-laravel/src/Support/OutboxRelay.php)) menyediakan:
+
+- `claim()`: `SELECT ... FOR UPDATE SKIP LOCKED` pada MySQL 8+/PostgreSQL, lease `locked_until`, `attempts + 1`.
+- `complete()`: status `completed`.
+- `fail()`: status `pending` + backoff eksponensial (`10s × 2^(attempts-1)`, maksimum 1 jam), atau `failed` setelah `maxAttempts`, dengan `last_error`.
+- `run(callable $handler)`: klaim batch, panggil handler, tandai hasil.
+- Payload bukan object JSON langsung ditandai `failed` dan tidak diteruskan ke handler.
+
+Semantik pengiriman adalah **at-least-once**, bukan exactly-once. Handler wajib idempotent dan memakai `event_id` sebagai kunci deduplikasi. `OutboxRelay` tidak menyediakan daemon/Artisan command; aplikasi memanggilnya dari scheduler atau worker sendiri.
+
+Bukti uji 13 November 2026 (`test/OutboxRelayTest.php`, `test/OutboxWorker.php`):
+
+- SQLite: enqueue → claim → complete, backoff, max attempts, payload rusak.
+- MySQL 8.4.2 dan PostgreSQL 18.4: 20 event, 2 worker paralel, hasil `10 + 10`, 20 eksekusi unik, 0 event tertinggal.
+- CI memakai service container MySQL 8.0/PostgreSQL 15 dan menjalankan tes yang sama.
