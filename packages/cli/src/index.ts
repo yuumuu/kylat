@@ -7,6 +7,7 @@ import { runCheckCommand } from './commands/check.js';
 import { runBuildCommand } from './commands/build.js';
 import { runDoctorCommand } from './commands/doctor.js';
 import { runMakeComponentCommand } from './commands/make.js';
+import { runNewProjectCommand } from './commands/new.js';
 import { runTypesCommand } from './commands/types.js';
 
 export async function runCli(args: string[]): Promise<void> {
@@ -57,6 +58,15 @@ export async function runCli(args: string[]): Promise<void> {
       break;
     }
 
+    case 'new': {
+      const name = args[1] && !args[1].startsWith('--') ? args[1] : undefined;
+      const dirIndex = args.indexOf('--dir');
+      const dir = dirIndex !== -1 && args[dirIndex + 1] ? args[dirIndex + 1] : undefined;
+      const code = runNewProjectCommand(name, { dir });
+      process.exitCode = code;
+      break;
+    }
+
     case 'help':
     case '--help':
     case '-h':
@@ -67,6 +77,7 @@ Frontend subset PHP yang dikompilasi ke JavaScript reaktivitas sinyal.
 Penggunaan: kylat <perintah> [opsi]
 
 Perintah:
+  new <nama> [--dir path]           Buat proyek Kylat minimal (Vite + plugin)
   make:component <Nama> [--dir path]  Buat komponen single-file *.kylat.php
   check [path]                       Periksa aturan bahasa dan template (KIL-101..KIL-311)
   build [input] [--out-dir dir] [--production|--no-sourcemap]

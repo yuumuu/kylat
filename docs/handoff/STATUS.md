@@ -128,13 +128,13 @@ Tugas berikutnya: Fase 4 (rendering dan DX).
 
 ## Fase 4 — Rendering dan DX
 
-**Status: DIBUKA (ADR 0021); source map dev/strip produksi, baseline axe, dan plugin Vite selesai; HMR granular/SSR/generator proyek belum.**
+**Status: DIBUKA (ADR 0021); source map dev/strip produksi, baseline axe, plugin Vite, dan `kylat new` selesai; HMR granular/SSR/audit screen reader belum.**
 
-Sudah ada: `kylat build` menghasilkan `.js.map` + `sourceMappingURL` dan `manifest.sourceMap`; `--production`/`--no-sourcemap` menghapus keduanya. Contoh keranjang CSP menjalankan axe-core WCAG 2 A/AA tanpa pelanggaran serius/kritis. `@kylat/vite-plugin` mengompilasi `*.kylat.php`, meneruskan source map, dan meng-invalidate modul saat file berubah (fallback full reload).
+Sudah ada: `kylat build` menghasilkan `.js.map` + `sourceMappingURL` dan `manifest.sourceMap`; `--production`/`--no-sourcemap` menghapus keduanya. Contoh keranjang CSP menjalankan axe-core WCAG 2 A/AA tanpa pelanggaran serius/kritis. `@kylat/vite-plugin` mengompilasi `*.kylat.php`, meneruskan source map, dan meng-invalidate modul saat file berubah (fallback full reload). `kylat new` menghasilkan proyek Vite minimal yang komponennya lolos kompilasi.
 
-Belum ada: component-level HMR, generator proyek `kylat new`, prerender/SSR opsional + hydration mismatch, audit screen reader, dan pengujian perangkat fisik.
+Belum ada: component-level HMR, prerender/SSR opsional + hydration mismatch, audit screen reader, dan pengujian perangkat fisik.
 
-Tugas berikutnya: generator proyek `kylat new`, lalu prerender/SSR opsional.
+Tugas berikutnya: prerender/SSR opsional + hydration mismatch, lalu HMR granular.
 
 ## Backlog Fase Berikutnya
 

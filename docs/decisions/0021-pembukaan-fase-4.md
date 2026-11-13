@@ -57,3 +57,4 @@
 - 13 November 2026: source map dev + strip produksi selesai (`kylat build --production`).
 - 13 November 2026: `@kylat/vite-plugin` selesai untuk kompilasi dev/build dan invalidasi modul; HMR granular menyusul.
 - 13 November 2026: baseline axe-core WCAG 2 A/AA pada contoh keranjang tanpa pelanggaran serius/kritis.
+- 13 November 2026: `kylat new` menghasilkan proyek Vite minimal (plugin, komponen contoh, README) dan komponennya lolos kompilasi.
