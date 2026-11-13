@@ -7,6 +7,7 @@ import { runCheckCommand } from './commands/check.js';
 import { runBuildCommand } from './commands/build.js';
 import { runDoctorCommand } from './commands/doctor.js';
 import { runMakeComponentCommand } from './commands/make.js';
+import { runTypesCommand } from './commands/types.js';
 
 export async function runCli(args: string[]): Promise<void> {
   const command = args[0] || 'help';
@@ -44,6 +45,16 @@ export async function runCli(args: string[]): Promise<void> {
       break;
     }
 
+    case 'types': {
+      const schemaPath = args[1] && !args[1].startsWith('--') ? args[1] : undefined;
+      const outIndex = args.indexOf('--out');
+      const out = outIndex !== -1 && args[outIndex + 1] ? args[outIndex + 1] : undefined;
+      const check = args.includes('--check');
+      const code = await runTypesCommand(schemaPath, { out, check });
+      process.exitCode = code;
+      break;
+    }
+
     case 'help':
     case '--help':
     case '-h':
@@ -57,6 +68,8 @@ Perintah:
   make:component <Nama> [--dir path]  Buat komponen single-file *.kylat.php
   check [path]                       Periksa aturan bahasa dan template (KIL-101..KIL-311)
   build [input] [--out-dir dir]      Kompilasi komponen ke modul JavaScript + manifest
+  types <schema.json|-> [--out file] [--check]
+                                     Hasilkan tipe TypeScript dari schema aksi; --check untuk validasi sinkron
   doctor                             Audit ringan Node, PHP, dan Composer
 `);
       break;

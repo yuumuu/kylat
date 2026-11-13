@@ -13,6 +13,8 @@ require_once __DIR__ . '/../src/Component.php';
 require_once __DIR__ . '/../src/Actions/ActionRegistry.php';
 require_once __DIR__ . '/../src/Support/IdempotencyStore.php';
 require_once __DIR__ . '/../src/Support/KylatRateLimiter.php';
+require_once __DIR__ . '/../src/Support/RedisRateLimiter.php';
+require_once __DIR__ . '/../src/Support/RedisConnection.php';
 require_once __DIR__ . '/../src/Support/RateLimitExceeded.php';
 require_once __DIR__ . '/../src/Http/Controllers/KylatBatchCallController.php';
 require_once __DIR__ . '/../src/Blade/KylatDirective.php';
@@ -81,7 +83,7 @@ function runTests(): void
         assertTrue(false, 'Registrasi kontrak tanpa authorize wajib gagal');
     } catch (\InvalidArgumentException $exception) {
         assertTrue(str_contains($exception->getMessage(), 'KIL-310'), 'Pesan registrasi harus memuat KIL-310');
-        echo "   ✅ KIL-310 menolak kontrak tanpa authorize saat registrasi.\n";
+        echo "   âœ… KIL-310 menolak kontrak tanpa authorize saat registrasi.\n";
     }
 
     // 1. Uji KylatDirective::renderIsland
@@ -89,7 +91,7 @@ function runTests(): void
     $markup = KylatDirective::renderIsland('Counter', ['initialCount' => 5]);
     assertTrue(str_contains($markup, 'data-island="Counter"'), "Markup harus memuat data-island='Counter'");
     assertTrue(str_contains($markup, 'data-props="{&quot;initialCount&quot;:5}"'), "Markup harus memuat JSON hex/quote escaped data-props");
-    echo "   ✅ Render island valid berhasil.\n";
+    echo "   âœ… Render island valid berhasil.\n";
 
     // 2. Uji batasan data-props 16 KB (KIL-213)
     echo "2. Menguji batasan data-props > 16 KB (KIL-213)...\n";
@@ -99,7 +101,7 @@ function runTests(): void
         assertTrue(false, "Harus melempar exception untuk props > 16 KB");
     } catch (RuntimeException $e) {
         assertTrue(str_contains($e->getMessage(), 'KIL-213') || str_contains($e->getMessage(), '16 KB') || str_contains($e->getMessage(), '10.000'), "Pesan error harus memuat batasan data-props");
-        echo "   ✅ Pelanggaran KIL-213 berhasil dicegah: " . $e->getMessage() . "\n";
+        echo "   âœ… Pelanggaran KIL-213 berhasil dicegah: " . $e->getMessage() . "\n";
     }
 
     // 3. Uji CounterActions (Default-Deny, Anti-Koersi, Non-Existent, Magic Methods)
@@ -122,7 +124,7 @@ function runTests(): void
     ]);
     assertTrue($authRes['results'][0]['ok'] === false, "Default deny harus menolak aksi tanpa izin");
     assertTrue($authRes['results'][0]['error']['type'] === 'kylat:unauthorized', "Error type harus kylat:unauthorized");
-    echo "   ✅ CounterActions default-deny otorisasi berhasil diverifikasi.\n";
+    echo "   âœ… CounterActions default-deny otorisasi berhasil diverifikasi.\n";
 
     // Izinkan untuk pengujian fungsional berikutnya
     $counterActions->authorized = true;
@@ -140,7 +142,7 @@ function runTests(): void
     ]);
     assertTrue($coerceRes['results'][0]['ok'] === false, "String '5' harus ditolak untuk parameter int");
     assertTrue($coerceRes['results'][0]['error']['type'] === 'kylat:validation', "Error type harus kylat:validation");
-    echo "   ✅ Parameter string '5' untuk int berhasil ditolak dengan kylat:validation.\n";
+    echo "   âœ… Parameter string '5' untuk int berhasil ditolak dengan kylat:validation.\n";
 
     // 3c. Method tidak ada di kontrak
     $missingRes = $controller->handle([
@@ -155,7 +157,7 @@ function runTests(): void
     ]);
     assertTrue($missingRes['results'][0]['ok'] === false, "Method tidak ada harus ditolak");
     assertTrue($missingRes['results'][0]['error']['type'] === 'kylat:not_found', "Error type harus kylat:not_found");
-    echo "   ✅ Method di luar kontrak berhasil ditolak dengan kylat:not_found.\n";
+    echo "   âœ… Method di luar kontrak berhasil ditolak dengan kylat:not_found.\n";
 
     // 3d. Magic Method ditolak keras
     $magicRes = $controller->handle([
@@ -170,7 +172,7 @@ function runTests(): void
     ]);
     assertTrue($magicRes['results'][0]['ok'] === false, "Magic method wajib ditolak");
     assertTrue($magicRes['results'][0]['error']['type'] === 'kylat:forbidden', "Error type harus kylat:forbidden");
-    echo "   ✅ Magic method berhasil dicegah dengan kylat:forbidden.\n";
+    echo "   âœ… Magic method berhasil dicegah dengan kylat:forbidden.\n";
 
     // 3d2. Kelas arbitrer tidak boleh di-resolve dari wire
     $arbitraryRes = $controller->handle([
@@ -200,7 +202,7 @@ function runTests(): void
     assertTrue($noServerRes['results'][0]['ok'] === false, "Method tanpa #[Server] wajib ditolak");
     assertTrue($noServerRes['results'][0]['error']['type'] === 'kylat:forbidden', "Method tanpa #[Server] harus forbidden");
 
-    // 3e. Invarian Dokumen 3 §4: Mutasi tanpa Idempotency-Key WAJIB DITOLAK
+    // 3e. Invarian Dokumen 3 Â§4: Mutasi tanpa Idempotency-Key WAJIB DITOLAK
     $noKeyRes = $controller->handle([
         'calls' => [
             [
@@ -214,7 +216,7 @@ function runTests(): void
     assertTrue($noKeyRes['results'][0]['ok'] === false, "Mutasi tanpa idempotency key wajib ditolak");
     assertTrue($noKeyRes['results'][0]['error']['type'] === 'kylat:validation', "Error type harus kylat:validation");
     assertTrue(str_contains($noKeyRes['results'][0]['error']['message'], 'wajib menyertakan Idempotency-Key'), "Pesan error harus mewajibkan Idempotency-Key");
-    echo "   ✅ Invarian Dokumen 3 §4 terkonfirmasi: mutasi tanpa Idempotency-Key ditolak server.\n";
+    echo "   âœ… Invarian Dokumen 3 Â§4 terkonfirmasi: mutasi tanpa Idempotency-Key ditolak server.\n";
 
     // 3f. Penolakan Idempotency-Key dengan panjang < 8 karakter (minLength: 8)
     $shortKeyRes = $controller->handle([
@@ -230,7 +232,7 @@ function runTests(): void
     assertTrue($shortKeyRes['results'][0]['ok'] === false, "Idempotency-Key < 8 karakter wajib ditolak");
     assertTrue($shortKeyRes['results'][0]['error']['type'] === 'kylat:validation', "Error type harus kylat:validation");
     assertTrue(str_contains($shortKeyRes['results'][0]['error']['message'], 'antara 8 hingga 128'), "Pesan error harus menyatakan batasan panjang 8-128");
-    echo "   ✅ Validasi minLength 8 karakter untuk Idempotency-Key terverifikasi di adapter.\n";
+    echo "   âœ… Validasi minLength 8 karakter untuk Idempotency-Key terverifikasi di adapter.\n";
 
     // 4. Uji Idempotency-Key untuk Mutasi saveCount
     echo "4. Menguji Idempotency-Key untuk Mutasi (Dua Klik Cegah Duplikasi)...\n";
@@ -271,7 +273,7 @@ function runTests(): void
         $counterActions->executionCount === 1,
         "MUTASI DICEGAH: Handler fisik TIDAK BOLEH dieksekusi 2 kali untuk key yang sama!"
     );
-    echo "   ✅ Idempotency-Key terverifikasi: 2 panggilan dengan key sama hanya mengeksekusi handler 1 kali di server.\n";
+    echo "   âœ… Idempotency-Key terverifikasi: 2 panggilan dengan key sama hanya mengeksekusi handler 1 kali di server.\n";
 
     // 5. Uji Konflik Idempotency: Key yang sama dipakai ulang dengan payload berbeda (KIL-A4)
     echo "5. Menguji Konflik Idempotency-Key dengan Payload Berbeda (kylat:idempotency_conflict)...\n";
@@ -295,7 +297,7 @@ function runTests(): void
         "Pesan error harus menjelaskan konflik payload"
     );
     assertTrue($counterActions->lastSavedCount === 7, "Nilai di server tidak boleh berubah saat konflik");
-    echo "   ✅ kylat:idempotency_conflict berhasil dicegah saat payload berbeda dikirim dengan key yang sama.\n";
+    echo "   âœ… kylat:idempotency_conflict berhasil dicegah saat payload berbeda dikirim dengan key yang sama.\n";
 
     // 6. Uji Kasus Claude: Panggilan pertama gagal, lalu user ubah angka dengan key yang sama
     echo "6. Menguji Kasus Gagal Pertama lalu Retry Payload Berbeda...\n";
@@ -331,7 +333,7 @@ function runTests(): void
         $conflictCall2['results'][0]['error']['type'] === 'kylat:idempotency_conflict',
         "Error type harus 'kylat:idempotency_conflict' meskipun request pertama gagal"
     );
-    echo "   ✅ Key yang sama setelah panggilan gagal tetap menolak payload baru dengan kylat:idempotency_conflict.\n";
+    echo "   âœ… Key yang sama setelah panggilan gagal tetap menolak payload baru dengan kylat:idempotency_conflict.\n";
 
     // 6b. Uji Gagal Pertama Lalu Retry Langsung Harus Berhasil (Menaikkan Attempt & Melepas Lock)
     echo "6b. Menguji Gagal Pertama Lalu Retry Langsung Harus Berhasil...\n";
@@ -405,7 +407,7 @@ function runTests(): void
     $multi3 = $controller->handle(['calls' => [['id' => 'm3', 'action' => 'CounterActions::saveCount', 'args' => ['count' => 88], 'idempotencyKey' => $multiRetryKey]]]);
     assertTrue($multi3['results'][0]['ok'] === true, "Multi-retry percobaan 3 langsung berhasil");
     assertTrue($counterActions->lastSavedCount === 88, "State tersimpan pada percobaan 3");
-    echo "   ✅ Gagal pertama lalu retry langsung (serta multi-retry) berhasil tanpa terhalang lock.\n";
+    echo "   âœ… Gagal pertama lalu retry langsung (serta multi-retry) berhasil tanpa terhalang lock.\n";
 
     // 7. Uji Kanonikalisasi JSON: Urutan key berbeda tetap dianggap payload identik
     echo "7. Menguji Kanonikalisasi JSON Payload Hashing (Kekebalan Urutan Key)...\n";
@@ -442,7 +444,7 @@ function runTests(): void
     ]);
     assertTrue($canonCall2['results'][0]['ok'] === true, "Panggilan kedua harus mengembalikan respons yang sama");
     assertTrue($canonCall2['results'][0]['id'] === 'canon_2', "ID panggilan disesuaikan");
-    echo "   ✅ Kanonikalisasi JSON terbukti: hash payload konsisten dan kebal terhadap variasi urutan key.\n";
+    echo "   âœ… Kanonikalisasi JSON terbukti: hash payload konsisten dan kebal terhadap variasi urutan key.\n";
 
     // 8. Uji Race Condition: Permintaan kedua saat status in_progress ditolak dengan kylat:in_progress
     echo "8. Menguji Anti Race-Condition (Permintaan saat in_progress ditolak kylat:in_progress)...\n";
@@ -469,12 +471,12 @@ function runTests(): void
         $raceCall['results'][0]['error']['type'] === 'kylat:in_progress',
         "Error type harus 'kylat:in_progress'"
     );
-    echo "   ✅ Race condition klik ganda berhasil dicegah dengan penolakan kylat:in_progress.\n";
+    echo "   âœ… Race condition klik ganda berhasil dicegah dengan penolakan kylat:in_progress.\n";
 
     // 9. Verifikasi TTL 24 Jam
-    echo "9. Menguji Batas TTL Idempotensi 24 Jam (Threat Model §3 A4)...\n";
+    echo "9. Menguji Batas TTL Idempotensi 24 Jam (Threat Model Â§3 A4)...\n";
     assertTrue(IdempotencyStore::DEFAULT_TTL_SECONDS === 86400, "TTL default wajib 86.400 detik (24 jam)");
-    echo "   ✅ TTL idempotensi terkonfirmasi 24 jam (86.400 detik).\n";
+    echo "   âœ… TTL idempotensi terkonfirmasi 24 jam (86.400 detik).\n";
 
     // 10. Uji Verifikasi Versi PHP Fail-Closed (Threat Model F1 - PHP2Shell CVE-2026-109618 / CVE-2026-109619)
     echo "10. Menguji Verifikasi Versi PHP Fail-Closed (Threat Model F1)...\n";
@@ -509,7 +511,7 @@ function runTests(): void
     assertTrue($evalVersion('8.3.36', '8.3')[0] === true && $evalVersion('8.3.36', '8.3')[1] === 'safe', 'PHP 8.3.36 aman harus diterima');
     assertTrue($evalVersion('8.4.27', '8.4')[0] === true && $evalVersion('8.4.27', '8.4')[1] === 'safe', 'PHP 8.4.27 aman harus diterima');
     assertTrue($evalVersion('8.5.12', '8.5')[0] === true && $evalVersion('8.5.12', '8.5')[1] === 'safe', 'PHP 8.5.12 aman harus diterima');
-    echo "   ✅ Verifikasi fail-closed untuk cabang minor tak dikenal & ambang patch aman terbukti 100%.\n";
+    echo "   âœ… Verifikasi fail-closed untuk cabang minor tak dikenal & ambang patch aman terbukti 100%.\n";
 
     // 11. Uji Heartbeat & Perlindungan Aksi Berjalan Lebih Lama dari Lease (Mencegah Eksekusi Ganda)
     echo "11. Menguji Heartbeat & Aksi Berjalan Lebih Lama dari Lease (Anti Eksekusi Ganda)...\n";
@@ -574,9 +576,9 @@ function runTests(): void
     );
 
     IdempotencyStore::resetLeaseSeconds();
-    echo "   ✅ Heartbeat terbukti melindungi aksi berdurasi lama & mencegah eksekusi ganda 100%.\n";
+    echo "   âœ… Heartbeat terbukti melindungi aksi berdurasi lama & mencegah eksekusi ganda 100%.\n";
 
-    echo "\n🎉 SEMUA PENGUJIAN ADAPTER LARAVEL SUKSES 100% DENGAN STRICT ASSERTIONS!\n";
+    echo "\nðŸŽ‰ SEMUA PENGUJIAN ADAPTER LARAVEL SUKSES 100% DENGAN STRICT ASSERTIONS!\n";
 }
 
 runTests();

@@ -1,0 +1,80 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b1020;
+  --card: #151c33;
+  --text: #e6ebff;
+  --muted: #93a0c4;
+  --accent: #6ea8fe;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+main {
+  width: min(420px, calc(100vw - 2rem));
+  background: var(--card);
+  border: 1px solid #2a355c;
+  border-radius: 1rem;
+  padding: 2rem;
+}
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.4rem;
+}
+
+.hint {
+  margin: 0 0 1.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.cart h2 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.9rem;
+  font: inherit;
+  font-weight: 600;
+  color: #06122b;
+  background: var(--accent);
+}
+
+button.submit {
+  background: #2fbf8f;
+}
+
+.qty {
+  min-width: 2.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.25rem;
+}
+
+.status {
+  min-height: 1.2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}

@@ -53,6 +53,8 @@ namespace Illuminate\Support\Facades {
 namespace Kylat\Laravel\Tests {
     require_once __DIR__ . '/../src/Support/IdempotencyStore.php';
     require_once __DIR__ . '/../src/Support/KylatRateLimiter.php';
+require_once __DIR__ . '/../src/Support/RedisRateLimiter.php';
+require_once __DIR__ . '/../src/Support/RedisConnection.php';
     require_once __DIR__ . '/../src/Support/RateLimitExceeded.php';
     require_once __DIR__ . '/../src/Http/Controllers/KylatBatchCallController.php';
     require_once __DIR__ . '/../src/Actions/ActionRegistry.php';
@@ -120,7 +122,7 @@ namespace Kylat\Laravel\Tests {
     if (isset(Cache::$storage["kylat:idemp:lock:{$key}:1"])) {
         throw new RuntimeException("Lock attempt 1 harus dilepas oleh markFailed");
     }
-    echo "✅ markFailed berhasil menaikkan attempt ke 2 dan melepas lock pada Cache.\n";
+    echo "âœ… markFailed berhasil menaikkan attempt ke 2 dan melepas lock pada Cache.\n";
 
     // 2. Percobaan 2: Retry langsung dengan izin true
     $actions->authorized = true;
@@ -138,7 +140,7 @@ namespace Kylat\Laravel\Tests {
     if (!is_array($record2) || $record2['status'] !== 'completed') {
         throw new RuntimeException("Status di cache harus 'completed'");
     }
-    echo "✅ Retry langsung dengan payload sama berhasil dieksekusi dan status menjadi completed.\n";
+    echo "âœ… Retry langsung dengan payload sama berhasil dieksekusi dan status menjadi completed.\n";
 
     // 3. Percobaan 3: Panggilan duplikat harus dikembalikan dari cache
     $payload['calls'][0]['id'] = 'c3';
@@ -149,7 +151,7 @@ namespace Kylat\Laravel\Tests {
     if ($actions->execCount !== 1) {
         throw new RuntimeException("Handler TIDAK boleh dieksekusi ulang!");
     }
-    echo "✅ Panggilan ketiga dikembalikan dari cache tanpa mengeksekusi handler lagi.\n";
+    echo "âœ… Panggilan ketiga dikembalikan dari cache tanpa mengeksekusi handler lagi.\n";
 
     // 4. Percobaan 4: Heartbeat memperpanjang lease pada Cache Facade
     $longKey = "cache_hb_" . uniqid();
@@ -167,7 +169,7 @@ namespace Kylat\Laravel\Tests {
     if (!is_array($cachedRec) || $cachedRec['status'] !== 'in_progress') {
         throw new RuntimeException("Record harus tetap in_progress");
     }
-    echo "✅ Heartbeat berhasil memperpanjang lease pada driver Cache.\n";
+    echo "âœ… Heartbeat berhasil memperpanjang lease pada driver Cache.\n";
 
-    echo "\n🎉 SEMUA PENGUJIAN CACHE FACADE IDEMPOTENCYSTORE BERHASIL 100%!\n";
+    echo "\nðŸŽ‰ SEMUA PENGUJIAN CACHE FACADE IDEMPOTENCYSTORE BERHASIL 100%!\n";
 }

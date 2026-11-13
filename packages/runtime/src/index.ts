@@ -11,6 +11,7 @@
  */
 
 export * from './signals.js';
+export * from './optimistic.js';
 export * from './dom.js';
 export * from './reconciler.js';
 export * from './rpc.js';

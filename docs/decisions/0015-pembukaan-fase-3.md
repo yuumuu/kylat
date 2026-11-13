@@ -1,6 +1,6 @@
 # ADR 0015: Pembukaan Fase 3 — Protokol dan Adapter
 
-- **Status**: DIBUKA
+- **Status**: DITUTUP — lihat ADR 0020 (`0020-penutupan-fase-3.md`)
 - **Tanggal**: 13 November 2026
 - **Penulis**: Arsitek Toolchain
 - **Konteks**: Fase 2 berada pada tahap rekonsiliasi akhir; Fase 3 dibuka agar pekerjaan protokol/adapter punya urutan dan gerbang yang eksplisit.

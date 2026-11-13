@@ -7,6 +7,7 @@ Perintah pengguna. Node 20+.
 | `kylat make:component <Nama> [--dir path]` | Membuat komponen single-file `*.kylat.php` |
 | `kylat check [path]` | Lint komponen dan template |
 | `kylat build [path] [--out-dir dir]` | Preflight KIL-310, kompilasi ke modul JS + `manifest.json` + `client.js` |
+| `kylat types <schema.json\|-> [--out file] [--check]` | Hasilkan tipe TypeScript dari schema aksi; `--check` memvalidasi sinkronisasi |
 | `kylat doctor` | Cek Node, PHP patch minimum, Composer |
 
 Output build berisi modul per komponen, `manifest.json`, dan `client.js` (registrasi island + `hydrateAll`). `client.js` mengimpor `@kylat/runtime`; gunakan bundler/import map di aplikasi host.
@@ -14,3 +15,15 @@ Output build berisi modul per komponen, `manifest.json`, dan `client.js` (regist
 ```html
 <script type="module" src="/dist/kylat/client.js"></script>
 ```
+
+## Generator tipe
+
+`kylat types` membaca respons `GET /_kylat/schema` yang disimpan sebagai JSON:
+
+```bash
+curl -H 'Accept: application/json' https://app.test/_kylat/schema > schema.json
+kylat types schema.json --out resources/js/kylat-actions.ts
+kylat types schema.json --out resources/js/kylat-actions.ts --check
+```
+
+File hasil berisi `KylatActionMap`, `KylatActionName`, dan `callKylatAction()` yang memanggil `@kylat/runtime` dengan tipe args/result. Jalankan `--check` di CI untuk mencegah drift schema.

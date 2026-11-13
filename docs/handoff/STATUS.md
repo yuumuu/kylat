@@ -114,17 +114,17 @@ Pengecualian Fase 2:
 
 ## Fase 3 — Protokol dan Adapter
 
-**Status: DIBUKA (ADR 0015); GET read/schema, rate limit, idempotensi database, uji konkurensi, dan outbox relay selesai; optimistic/type generator belum.**
+**Status: DITUTUP (ADR 0020). Semua gerbang ADR 0015 terpenuhi.**
 
-Sudah ada: tipe `ReadResponse`/`SchemaResponse`/`SchemaAction`/`SchemaParam`, konstanta Problem Details, definisi `spec/protocol.schema.json`, route `GET /_kylat/read/{action}` dan `GET /_kylat/schema` di adapter Laravel, pemeriksaan `X-Kylat-Build` → 409 `urn:kylat:stale_build`, cache policy public/private, default-deny authorization, rate limit mutasi (60/menit akun, 20/menit IP anonim; Redis di produksi), schema auth-only, conformance test bentuk wire, migrasi `kylat_idempotency_keys`/`kylat_outbox` + `last_error`, `DatabaseIdempotencyStore` (PDO, transaksi, outbox) diuji SQLite + MySQL 8.4/PostgreSQL 18.4, integrasi controller lewat `KYLAT_IDEMPOTENCY_DRIVER` (default `cache`), dan `OutboxRelay` (SKIP LOCKED, backoff, max attempts) diuji 20 event/2 worker pada MySQL/PostgreSQL.
+Sudah ada: tipe `ReadResponse`/`SchemaResponse`/`SchemaAction`/`SchemaParam`, konstanta Problem Details, definisi `spec/protocol.schema.json`, route `GET /_kylat/read/{action}` dan `GET /_kylat/schema` di adapter Laravel, pemeriksaan `X-Kylat-Build` → 409 `urn:kylat:stale_build`, cache policy public/private, default-deny authorization, rate limit mutasi (Redis/Laravel RateLimiter; fallback phpredis-Lua; in-memory hanya test), schema auth-only, conformance test bentuk wire, migrasi `kylat_idempotency_keys`/`kylat_outbox` + `last_error`, `DatabaseIdempotencyStore` (PDO, transaksi, outbox) diuji SQLite + MySQL 8.4/PostgreSQL 18.4, integrasi controller lewat `KYLAT_IDEMPOTENCY_DRIVER`, `OutboxRelay` + `kylat:outbox:relay` (SKIP LOCKED, backoff, max attempts), `beginOptimistic`/`withOptimistic` + `RpcBatcher.optimistic`, `kylat types --check`, dan E2E keranjang CSP ketat (WebKit).
 
-Sudah ada di CI: seluruh tes adapter PHP (`AdapterTest`, `CacheDriverIdempotencyTest`, `ReadEndpointTest`, `RateLimitTest`, `ConformanceTest`, `DatabaseIdempotencyTest`) pada matrix Node/PHP, plus uji konkurensi dan outbox relay MySQL 8.0/PostgreSQL 15 lewat service container.
+Sudah ada di CI: seluruh tes adapter PHP pada matrix Node/PHP, uji konkurensi + outbox relay MySQL 8.0/PostgreSQL 15, rate limit Redis multi-worker, serta job E2E WebKit untuk keranjang CSP.
 
-Belum ada: daemon/Artisan command relay outbox, conformance lintas-adapter penuh, optimistic/rollback, generator tipe, dan e2e CSP.
+Tidak ada item Fase 3 yang tersisa. Catatan operasional: outbox bersifat at-least-once (handler wajib idempotent), dan relay dijalankan lewat scheduler/supervisor (`kylat:outbox:relay`).
 
 Baseline yang sudah ada: `POST /_kylat/call` batch, idempotency key, retry/timeout, CSRF, default-deny `authorize()`, Problem Details, batas body/batch/depth, dan cache idempotensi 24 jam.
 
-Tugas berikutnya: wiring scheduler/daemon outbox, lalu optimistic update/rollback dan generator tipe.
+Tugas berikutnya: Fase 4 (rendering dan DX).
 
 ## Backlog Fase Berikutnya
 
@@ -134,14 +134,14 @@ Tugas berikutnya: wiring scheduler/daemon outbox, lalu optimistic update/rollbac
 3. **Callback database dinamis**: tutup residual `array_map($this->callback, ...)`.
 4. **Penutupan Fase 2**: gate differential penuh, review, dan tag `v0.2.0-p2`.
 
-### Fase 3: Protokol dan Adapter
-1. **GET read/schema**: `GET /_kylat/read` dan `GET /_kylat/schema`.
-2. **Optimistic update/rollback** dan generator tipe.
-3. **Conformance suite** protokol.
-4. **Idempotensi Database Outbox (ADR 0007/0019)**: skema + driver + integrasi controller + `OutboxRelay` selesai (default `cache`); daemon/Artisan command belum.
-5. **Uji konkurensi database riil**: MySQL/PostgreSQL selesai (idempotensi + outbox); Redis rate-limit multi-worker belum.
-6. **Reset state Octane/FrankenPHP** pada `IdempotencyStore`.
-7. **Stale build, rate limit, dan pointer validasi**.
+### Fase 3: Protokol dan Adapter (SELESAI — ADR 0020)
+1. GET read/schema, stale build, rate limit, Problem Details.
+2. Optimistic update/rollback dan generator tipe + `--check`.
+3. Conformance suite protokol.
+4. Idempotensi database/outbox + `kylat:outbox:relay`.
+5. Uji konkurensi MySQL/PostgreSQL/Redis (multi-worker).
+6. Reset state Octane/FrankenPHP pada listener `RequestReceived`.
+7. E2E keranjang CSP ketat (WebKit).
 
 ### Fase 4: Rendering dan DX
 1. **Source map runtime** dan strip produksi.

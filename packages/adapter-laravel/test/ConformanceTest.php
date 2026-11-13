@@ -8,6 +8,8 @@ require_once __DIR__ . '/../src/Attributes/Server.php';
 require_once __DIR__ . '/../src/Actions/ActionRegistry.php';
 require_once __DIR__ . '/../src/Support/IdempotencyStore.php';
 require_once __DIR__ . '/../src/Support/KylatRateLimiter.php';
+require_once __DIR__ . '/../src/Support/RedisRateLimiter.php';
+require_once __DIR__ . '/../src/Support/RedisConnection.php';
 require_once __DIR__ . '/../src/Support/RateLimitExceeded.php';
 require_once __DIR__ . '/../src/Http/Controllers/KylatBatchCallController.php';
 
