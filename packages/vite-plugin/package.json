@@ -1,0 +1,32 @@
+{
+  "name": "@kylat/vite-plugin",
+  "version": "0.0.1",
+  "license": "Apache-2.0",
+  "description": "Plugin Vite untuk komponen single-file Kylat (*.kylat.php)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@kylat/compiler": "workspace:*"
+  },
+  "peerDependencies": {
+    "vite": ">=5"
+  },
+  "devDependencies": {
+    "vite": "^8.0.0"
+  },
+  "files": [
+    "dist"
+  ]
+}
