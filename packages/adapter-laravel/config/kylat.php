@@ -26,4 +26,11 @@ return [
      */
     'idempotency_driver' => env('KYLAT_IDEMPOTENCY_DRIVER', 'cache'),
     'idempotency_identity' => env('KYLAT_IDEMPOTENCY_IDENTITY', 'auto'),
+
+    /*
+     * Relay outbox: at-least-once, handler wajib idempotent.
+     */
+    'outbox_max_attempts' => (int) env('KYLAT_OUTBOX_MAX_ATTEMPTS', 5),
+    'outbox_lease_seconds' => (int) env('KYLAT_OUTBOX_LEASE_SECONDS', 60),
+    'outbox_batch_size' => (int) env('KYLAT_OUTBOX_BATCH_SIZE', 10),
 ];

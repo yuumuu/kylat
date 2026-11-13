@@ -31,7 +31,8 @@
       "php -d zend.assertions=1 -d assert.exception=1 test/RateLimitTest.php",
       "php -d zend.assertions=1 -d assert.exception=1 test/ConformanceTest.php",
       "php -d zend.assertions=1 -d assert.exception=1 test/DatabaseIdempotencyTest.php",
-      "php -d zend.assertions=1 -d assert.exception=1 test/ConcurrencyIdempotencyTest.php"
+      "php -d zend.assertions=1 -d assert.exception=1 test/ConcurrencyIdempotencyTest.php",
+      "php -d zend.assertions=1 -d assert.exception=1 test/OutboxRelayTest.php"
     ]
   }
 }
