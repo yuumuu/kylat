@@ -11,7 +11,13 @@ import {
   ClientCompileError,
   type MethodSymbols,
 } from './client-compiler.js';
-import { parsePhpType, UNKNOWN } from './types.js';
+import {
+  parsePhpType,
+  parseTypeExpression,
+  UNKNOWN,
+  extractVarDocType,
+  extractParamDocType,
+} from './types.js';
 import type {
   ComponentIR,
   ComputedDefinition,
@@ -332,7 +338,20 @@ export function analyzePhpComponent(
       const initNode = elemNode.children.find((c) => c.type === 'property_initializer');
       const defaultValue = initNode ? initNode.text.replace(/^=\s*/, '').trim() : undefined;
       const typeStr = typeNode ? typeNode.text : 'mixed';
-      const parsedType = parsePhpType(typeStr, docblockBefore(p));
+      const docblock = docblockBefore(p);
+      const parsedType = parsePhpType(typeStr, docblock);
+      if (isBareArrayType(typeStr) && !hasGenericArrayDocblock(docblock)) {
+        diagnostics.push(
+          createDiagnostic(
+            'KIL-130',
+            filename,
+            p.startPosition.row + 1,
+            p.startPosition.column + 1,
+            'Tipe array ambigu antara list dan map. Tambahkan docblock /** @var list<T> */ atau /** @var array<string,T> */.',
+            'Deklarasikan tipe generik pada docblock tepat di atas properti.'
+          )
+        );
+      }
 
       // Cek apakah memiliki atribut #[Prop]
       const propAttribute = p
@@ -402,6 +421,18 @@ export function analyzePhpComponent(
     const returnTypeNode = m.childForFieldName('return_type');
     const returnType = returnTypeNode?.text || 'void';
     const parsedReturnType = parsePhpType(returnType, docblockBefore(m));
+    if (isBareArrayType(returnType) && !hasGenericArrayDocblock(docblockBefore(m))) {
+      diagnostics.push(
+        createDiagnostic(
+          'KIL-130',
+          filename,
+          m.startPosition.row + 1,
+          m.startPosition.column + 1,
+          'Tipe return array ambigu antara list dan map. Tambahkan docblock generik.',
+          'Gunakan /** @var list<T> */ atau /** @var array<string,T> */ pada method.'
+        )
+      );
+    }
     if (!returnTypeNode) {
       diagnostics.push(
         createDiagnostic(
@@ -437,6 +468,59 @@ export function analyzePhpComponent(
           : isEffect
             ? 'effect'
             : 'client';
+
+    if (isComputed) {
+      const parameterCount = m.childForFieldName('parameters')?.namedChildren.length ?? 0;
+      if (parameterCount > 0) {
+        diagnostics.push(
+          createDiagnostic(
+            'KIL-104',
+            filename,
+            m.startPosition.row + 1,
+            m.startPosition.column + 1,
+            'Method #[Computed] tidak boleh memiliki parameter.',
+            'Pindahkan input ke props/state dan hitung nilainya di body computed.'
+          )
+        );
+      }
+      if (returnType.trim().toLowerCase() === 'void') {
+        diagnostics.push(
+          createDiagnostic(
+            'KIL-104',
+            filename,
+            m.startPosition.row + 1,
+            m.startPosition.column + 1,
+            'Method #[Computed] wajib mengembalikan nilai bertipe eksplisit, bukan void.',
+            'Tambahkan tipe return seperti : int atau : string.'
+          )
+        );
+      }
+      if (bodyWritesState(m)) {
+        diagnostics.push(
+          createDiagnostic(
+            'KIL-104',
+            filename,
+            m.startPosition.row + 1,
+            m.startPosition.column + 1,
+            'Method #[Computed] tidak boleh menulis state; computed harus murni.',
+            'Pindahkan mutasi ke method #[Client] atau aksi server.'
+          )
+        );
+      }
+    }
+
+    if ((isOnMount || isEffect) && (m.childForFieldName('parameters')?.namedChildren.length ?? 0) > 0) {
+      diagnostics.push(
+        createDiagnostic(
+          'KIL-104',
+          filename,
+          m.startPosition.row + 1,
+          m.startPosition.column + 1,
+          'Method lifecycle #[OnMount]/#[Effect] tidak boleh memiliki parameter.',
+          'Hapus parameter method lifecycle.'
+        )
+      );
+    }
 
     if (isServer) {
       if (serverActionNames.has(mName)) {
@@ -881,7 +965,14 @@ export function analyzePhpComponent(
                 const isState = stateDefinitions.some((s) => s.name === prop);
 
                 if (isProp) {
-                  argsList.push({ name: prop, valueExpr: `prop_${prop}` });
+                  const propType = propDefinitions.find((candidate) => candidate.name === prop)?.parsedType;
+                  argsList.push({
+                    name: prop,
+                    valueExpr:
+                      propType?.kind === 'map'
+                        ? `(typeof prop_${prop} === 'function' ? prop_${prop}() : prop_${prop})`
+                        : `prop_${prop}`,
+                  });
                   continue;
                 }
                 if (isState) {
@@ -953,11 +1044,26 @@ export function analyzePhpComponent(
         const typeNode = child.childForFieldName('type');
         const paramName = nameNode?.text.replace('$', '') ?? '';
         if (!paramName) continue;
+        const paramDocType = extractParamDocType(docblockBefore(m) ?? '', paramName);
         params.push({
           name: paramName,
           type: typeNode?.text ?? 'mixed',
-          parsedType: parsePhpType(typeNode?.text),
+          parsedType: paramDocType
+            ? parseTypeExpression(paramDocType)
+            : parsePhpType(typeNode?.text),
         });
+        if (typeNode && isBareArrayType(typeNode.text) && !paramDocType) {
+          diagnostics.push(
+            createDiagnostic(
+              'KIL-130',
+              filename,
+              child.startPosition.row + 1,
+              child.startPosition.column + 1,
+              `Parameter $${paramName} bertipe array ambigu. Gunakan docblock @param list<T> atau array<string,T>.`,
+              'Deklarasikan tipe generik pada docblock method.'
+            )
+          );
+        }
         if (!typeNode) {
           diagnostics.push(
             createDiagnostic(
@@ -1106,8 +1212,42 @@ export function analyzeActionContract(tree: Parser.Tree, filename: string): Diag
 }
 
 function docblockBefore(node: Parser.SyntaxNode): string | undefined {
-  const sibling = node.previousNamedSibling;
+  let sibling = node.previousNamedSibling;
+  while (sibling && (sibling.type === 'attribute_list' || sibling.type === 'attribute_group')) {
+    sibling = sibling.previousNamedSibling;
+  }
   return sibling?.type === 'comment' && sibling.text.startsWith('/**') ? sibling.text : undefined;
+}
+
+function isBareArrayType(typeText: string | undefined): boolean {
+  const normalized = (typeText ?? '').trim().toLowerCase();
+  return normalized === 'array' || normalized === 'iterable';
+}
+
+function hasGenericArrayDocblock(docblock: string | undefined): boolean {
+  if (!docblock) return false;
+  const docType = extractVarDocType(docblock);
+  return Boolean(docType && /^(list|array)\s*</i.test(docType));
+}
+
+function bodyWritesState(method: Parser.SyntaxNode): boolean {
+  const writes = [
+    ...method.descendantsOfType('assignment_expression'),
+    ...method.descendantsOfType('augmented_assignment_expression'),
+  ];
+  for (const write of writes) {
+    const left = write.childForFieldName('left');
+    if (left?.type === 'member_access_expression' && left.childForFieldName('object')?.text === '$this') {
+      return true;
+    }
+  }
+  for (const update of method.descendantsOfType('update_expression')) {
+    const argument = update.childForFieldName('argument');
+    if (argument?.type === 'member_access_expression' && argument.childForFieldName('object')?.text === '$this') {
+      return true;
+    }
+  }
+  return false;
 }
 
 function methodNeedsStatementCompiler(

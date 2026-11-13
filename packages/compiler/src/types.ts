@@ -127,6 +127,15 @@ export function extractVarDocType(docblock: string): string | undefined {
   return (end === -1 ? match[1] : match[1].slice(0, end)).trim();
 }
 
+export function extractParamDocType(docblock: string, parameterName: string): string | undefined {
+  const pattern = /@param\s+([^\s]+)\s+\$([A-Za-z_][A-Za-z0-9_]*)/gi;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(docblock)) !== null) {
+    if (match[2] === parameterName) return match[1];
+  }
+  return undefined;
+}
+
 export function typeToString(type: KylatType): string {
   switch (type.kind) {
     case 'primitive':

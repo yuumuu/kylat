@@ -1,6 +1,6 @@
 # ADR 0008: Penataan Status Kode Galat (KIL-130, 203..205) dan Semantik KIL-151
 
-- **Status**: DISETUJUI (opsi B untuk kedua masalah)
+- **Status**: DISETUJUI (opsi B untuk kedua masalah); **KIL-130 diaktifkan kembali oleh ADR 0012**
 - **Tanggal**: 10 November 2026
 - **Penulis**: Antigravity & Tim Pengembang
 - **Konteks**: Audit Kepatuhan Kode Galat Spesifikasi v0

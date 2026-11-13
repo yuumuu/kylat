@@ -42,12 +42,12 @@ export function compileDefaultValue(source: string): string {
             }
           })()
         : Number(rawKey);
-      entries.push(`${JSON.stringify(String(key))}: ${compileDefaultValue(rawValue)}`);
+      entries.push(`[${JSON.stringify(String(key))}, ${compileDefaultValue(rawValue)}]`);
     }
 
     if (hasKeys) {
-      const numericEntries = values.map((value, index) => `${JSON.stringify(String(index))}: ${value}`);
-      return `{ ${[...numericEntries, ...entries].join(', ')} }`;
+      const numericEntries = values.map((value, index) => `[${JSON.stringify(String(index))}, ${value}]`);
+      return `new Map([${[...numericEntries, ...entries].join(', ')}])`;
     }
     return `[${values.join(', ')}]`;
   }

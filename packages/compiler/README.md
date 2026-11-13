@@ -20,7 +20,9 @@ Mem-parse komponen Kylat (PHP subset + template), menganalisis aturan, membangun
 - Closure/arrow function dan pemanggilan closure lokal.
 - `#[Computed]`, `#[OnMount]`, dan `#[Effect]` menghasilkan sinyal/efek runtime.
 - Analisis tipe property, parameter, return, nullable, `list<T>`, dan `array<string,T>`.
-- Differential test PHP vs JavaScript untuk operator, string UTF-8, array, dan null coalescing.
+- KIL-130 aktif: array tanpa docblock generik dan `array_filter` tanpa `array_values()` ditolak.
+- Map `array<string,T>` memakai `Map` JavaScript; helper chunk lokal menjaga key order tanpa menambah runtime global.
+- Differential test PHP vs JavaScript untuk operator, string UTF-8, array, map, dan null coalescing.
 - Setiap hasil kompilasi menyertakan `map` berisi source map v3.
 - `match` tetap KIL-104; `usort` ditunda dan ditolak KIL-110 sesuai ADR 0011.
 

@@ -245,7 +245,6 @@ public function loadProfile(): void
 ---
 
 #### KIL-130
-- **Status**: Ditunda ke v0.1
 - **Nama**: Tipe array ambigu antara list dan map
 - **Klasifikasi**: Sistem Tipe
 - **Pemicu**: Variabel atau properti bertipe `array` tanpa anotasi tipe generik yang jelas (`list<T>` vs `array<string, T>`), atau pemakaian langsung hasil `array_filter` sebagai list tanpa dibungkus `array_values()`.

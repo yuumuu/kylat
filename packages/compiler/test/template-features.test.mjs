@@ -111,7 +111,8 @@ describe('@kylat/compiler - template features', () => {
 
   it('menjalankan @foreach dengan key dan empty state', async () => {
     const result = await compile(
-      baseComponent(`    public array $items = [];
+      baseComponent(`    /** @var list<int> */
+    public array $items = [];
     #[Client]
     public function fill(): void { $this->items = [1, 2, 3]; }`),
       'Demo.php',
@@ -173,7 +174,7 @@ describe('@kylat/compiler - template features', () => {
   });
 
   it('menolak @foreach tanpa key dan bind ke prop', async () => {
-    const noKey = await compile(baseComponent('    public array $items = [];'), 'Demo.php', {
+    const noKey = await compile(baseComponent('    /** @var list<int> */\n    public array $items = [];'), 'Demo.php', {
       template: '<ul>@foreach($items as $item)<li>{{ $item }}</li>@endforeach</ul>',
     });
     assert.equal(noKey.success, false);

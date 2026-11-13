@@ -4,6 +4,8 @@ Kylat 6 — Roadmap, Keputusan, Risiko, dan Gerbang
 
 Status: draf konsolidasi v1.0. Ini dokumen yang dipakai untuk mengelola pekerjaan. Setiap keputusan [TERBUKA] punya pemilik dan tenggat.
 
+> **Catatan status 13 November 2026**: status penutupan terkini ada di [`docs/handoff/STATUS.md`](../../handoff/STATUS.md) dan ADR 0014. Fase 0/1 berstatus “ditutup dengan pengecualian tercatat”; daftar blocker di bawah adalah risiko yang dilacak, bukan pembukaan kembali fase secara otomatis.
+
 1. Pemilik dan peran
 
 Pemilik proyek: Haidar. Memutuskan ruang lingkup, nama, dan prioritas.
