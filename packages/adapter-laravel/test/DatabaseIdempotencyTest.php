@@ -93,6 +93,24 @@ $otherUser = DatabaseIdempotencyStore::execute(
 );
 dbCheck($otherUser['status'] === 'completed', 'pemanggil lain dengan key sama harus independen');
 
+$failedResult = DatabaseIdempotencyStore::execute(
+    'user:1',
+    'idem-key-0003',
+    'CounterActions::save',
+    str_repeat('d', 64),
+    fn (): array => ['ok' => false, 'error' => ['type' => 'kylat:unauthorized', 'message' => 'nope']]
+);
+dbCheck($failedResult['status'] === 'failed', 'handler ok=false harus mengembalikan status failed (rollback)');
+
+$retryResult = DatabaseIdempotencyStore::execute(
+    'user:1',
+    'idem-key-0003',
+    'CounterActions::save',
+    str_repeat('d', 64),
+    fn (): array => ['ok' => true, 'value' => 7]
+);
+dbCheck($retryResult['status'] === 'completed', 'retry setelah handler gagal harus berhasil');
+
 $rolledBack = false;
 try {
     DatabaseIdempotencyStore::execute(

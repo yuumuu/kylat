@@ -38,15 +38,10 @@ final class DatabaseIdempotencyStore
 
     /**
      * @param callable(): array<string, mixed> $handler
-     * @return array{status: 'completed'|'replay'|'conflict'|'in_progress', response?: array<string, mixed>}
+     * @return array{status: 'completed'|'replay'|'conflict'|'in_progress'|'failed', response?: array<string, mixed>}
      */
-    public static function execute(
-        string $identity,
-        string $key,
-        string $action,
-        string $payloadHash,
-        callable $handler
-    ): array {
+    public static function execute(string $identity, string $key, string $action, string $payloadHash, callable $handler): array
+    {
         $pdo = self::pdo();
         $keyColumn = self::quoteIdentifier('key');
         $now = self::now();
@@ -72,6 +67,12 @@ final class DatabaseIdempotencyStore
 
         try {
             $response = $handler();
+
+            if (!($response['ok'] ?? false)) {
+                $pdo->rollBack();
+                return ['status' => 'failed', 'response' => $response];
+            }
+
             $payload = self::encodeResponse($response);
 
             $update = $pdo->prepare(
@@ -102,6 +103,7 @@ final class DatabaseIdempotencyStore
     public static function enqueueOutbox(string $eventType, array $payload): string
     {
         $pdo = self::pdo();
+
         if (!$pdo->inTransaction()) {
             throw new RuntimeException('enqueueOutbox wajib dipanggil di dalam transaksi idempotensi.');
         }
@@ -110,13 +112,14 @@ final class DatabaseIdempotencyStore
         $insert = $pdo->prepare(
             'INSERT INTO kylat_outbox
              (event_id, event_type, payload, status, attempts, available_at, created_at, updated_at)
-             VALUES (?, ?, ?, ?, 0, ?, ?, ?)'
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $insert->execute([
             $eventId,
             $eventType,
             self::encodeResponse($payload),
             'pending',
+            0,
             self::now(),
             self::now(),
             self::now(),
@@ -129,7 +132,7 @@ final class DatabaseIdempotencyStore
     private static function inspectExisting(string $identity, string $key, string $payloadHash): array
     {
         $pdo = self::pdo();
-        $keyColumn = self::quoteIdentifier('key');
+        $keyColumn = self::quoteIdentifier($key);
         $select = $pdo->prepare(
             "SELECT payload_hash, status, response, locked_until FROM kylat_idempotency_keys
              WHERE user_id = ? AND {$keyColumn} = ?"
