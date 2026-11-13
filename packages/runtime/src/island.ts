@@ -33,8 +33,18 @@ export function clearIslands(): void {
 }
 
 /**
+ * Menormalkan markup untuk perbandingan hidrasi: whitespace antar-tag
+ * diabaikan agar perbedaan format server/klien tidak menjadi false positive.
+ */
+export function normalizeMarkup(markup: string): string {
+  return markup.replace(/>\s+</g, '><').trim();
+}
+
+/**
  * Hidrasi elemen DOM penampung island (elemen beratribut data-island="...").
  * Idempoten: elemen yang sudah ditandai tidak dihidrasi dua kali.
+ * Bila markup server (root ber-atribut data-kylat-component) berbeda dari hasil
+ * klien, elemen ditandai data-kylat-hydration-mismatch dan peringatan dicatat.
  */
 export function hydrateIsland(el: HTMLElement): void {
   if (el.getAttribute('data-kylat-hydrated') === 'true') return;
@@ -65,6 +75,24 @@ export function hydrateIsland(el: HTMLElement): void {
 
   try {
     const rendered = factory(props);
+    const serverMarkup = typeof el.innerHTML === 'string' ? el.innerHTML : '';
+    const hasServerMarkup =
+      serverMarkup.trim() !== '' && el.querySelector('[data-kylat-component]') !== null;
+
+    if (hasServerMarkup) {
+      const renderedMarkup =
+        typeof (rendered as Element).outerHTML === 'string'
+          ? (rendered as Element).outerHTML
+          : rendered.textContent ?? '';
+
+      if (normalizeMarkup(serverMarkup) !== normalizeMarkup(renderedMarkup)) {
+        console.warn(
+          `[Kylat] Hydration mismatch pada island '${islandName}': markup server tidak sama dengan hasil klien.`
+        );
+        el.setAttribute('data-kylat-hydration-mismatch', 'true');
+      }
+    }
+
     el.replaceChildren(rendered);
     el.setAttribute('data-kylat-hydrated', 'true');
   } catch (error) {
