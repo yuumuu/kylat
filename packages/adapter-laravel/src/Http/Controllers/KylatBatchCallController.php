@@ -340,6 +340,7 @@ final class KylatBatchCallController
         ], $status, [
             'Content-Type' => 'application/problem+json',
             'Cache-Control' => 'private, no-store',
+            'Vary' => 'Cookie',
         ]);
     }
 
@@ -523,12 +524,33 @@ final class KylatBatchCallController
 
         return response()->json($result['body'], $result['status'], [
             'Cache-Control' => $result['cache'],
+            'Vary' => str_starts_with($result['cache'], 'public') ? 'Accept-Encoding' : 'Cookie',
             'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 
     public function handleSchemaRequest(Request $request): JsonResponse
     {
+        if (function_exists('auth')) {
+            try {
+                if (auth()->check() !== true) {
+                    return $this->problem(
+                        401,
+                        'Unauthorized',
+                        'Schema hanya tersedia untuk pengguna terautentikasi.',
+                        'urn:kylat:unauthorized'
+                    );
+                }
+            } catch (Throwable) {
+                return $this->problem(
+                    401,
+                    'Unauthorized',
+                    'Schema hanya tersedia untuk pengguna terautentikasi.',
+                    'urn:kylat:unauthorized'
+                );
+            }
+        }
+
         $expectedBuildId = $this->configuredBuildId();
         $headers = [];
         foreach ($request->headers->all() as $name => $values) {
@@ -539,6 +561,7 @@ final class KylatBatchCallController
 
         return response()->json($result['body'], $result['status'], [
             'Cache-Control' => $result['cache'],
+            'Vary' => 'Cookie',
             'X-Content-Type-Options' => 'nosniff',
         ]);
     }

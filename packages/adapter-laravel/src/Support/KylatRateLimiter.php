@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Kylat\Laravel\Support;
 
+use RuntimeException;
+use Throwable;
+
 /**
  * Rate limit sederhana untuk aksi mutasi.
  *
@@ -30,21 +33,28 @@ final class KylatRateLimiter
             ? 'kylat:mutation:user:' . (string) $user->getAuthIdentifier()
             : 'kylat:mutation:ip:' . ($ip ?? 'unknown');
         $limit = $authenticated
-            ? self::MUTATIONS_PER_MINUTE_AUTHENTICATED
-            : self::MUTATIONS_PER_MINUTE_ANONYMOUS;
+            ? self::configuredLimit('kylat.rate_limit_authenticated', self::MUTATIONS_PER_MINUTE_AUTHENTICATED)
+            : self::configuredLimit('kylat.rate_limit_anonymous', self::MUTATIONS_PER_MINUTE_ANONYMOUS);
 
-        if (class_exists(\Illuminate\Support\Facades\RateLimiter::class)) {
-            if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($key, $limit)) {
-                throw new RateLimitExceeded(
-                    (int) \Illuminate\Support\Facades\RateLimiter::availableIn($key)
-                );
+        if (class_exists(\Illuminate\Cache\RateLimiter::class) && function_exists('cache')) {
+            $store = self::config('kylat.rate_limit_store', 'redis');
+            $limiter = new \Illuminate\Cache\RateLimiter(cache($store ?: null));
+
+            if ($limiter->tooManyAttempts($key, $limit)) {
+                throw new RateLimitExceeded((int) $limiter->availableIn($key));
             }
 
             for ($i = 0; $i < $mutations; $i++) {
-                \Illuminate\Support\Facades\RateLimiter::hit($key, self::WINDOW_SECONDS);
+                $limiter->hit($key, self::WINDOW_SECONDS);
             }
 
             return;
+        }
+
+        if (self::isProduction()) {
+            throw new RuntimeException(
+                'KylatRateLimiter: RateLimiter Laravel/Redis wajib tersedia di produksi; fallback in-memory dilarang.'
+            );
         }
 
         $now = microtime(true);
@@ -70,5 +80,37 @@ final class KylatRateLimiter
     public static function reset(): void
     {
         self::$hits = [];
+    }
+
+    private static function configuredLimit(string $key, int $default): int
+    {
+        $value = self::config($key, $default);
+        return is_numeric($value) ? max(1, (int) $value) : $default;
+    }
+
+    private static function config(string $key, mixed $default = null): mixed
+    {
+        if (!function_exists('config')) {
+            return $default;
+        }
+
+        try {
+            return config($key, $default);
+        } catch (Throwable) {
+            return $default;
+        }
+    }
+
+    private static function isProduction(): bool
+    {
+        if (!function_exists('app')) {
+            return false;
+        }
+
+        try {
+            return app()->environment('production');
+        } catch (Throwable) {
+            return false;
+        }
     }
 }

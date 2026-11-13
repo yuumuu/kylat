@@ -18,8 +18,17 @@ use Kylat\Laravel\Http\Controllers\KylatBatchCallController;
  */
 final class KylatServiceProvider extends ServiceProvider
 {
+    public function register(): void
+    {
+        $this->mergeConfigFrom(__DIR__ . '/../config/kylat.php', 'kylat');
+    }
+
     public function boot(): void
     {
+        $this->publishes([
+            __DIR__ . '/../config/kylat.php' => config_path('kylat.php'),
+        ], 'kylat-config');
+
         Blade::directive('kylat', function (string $expression): string {
             return "<?php echo \\Kylat\\Laravel\\Blade\\KylatDirective::renderIsland({$expression}); ?>";
         });
