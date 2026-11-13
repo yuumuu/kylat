@@ -24,7 +24,9 @@ export async function runCli(args: string[]): Promise<void> {
       const input = args[1] && !args[1].startsWith('--') ? args[1] : undefined;
       const outDirIndex = args.indexOf('--out-dir');
       const outDir = outDirIndex !== -1 && args[outDirIndex + 1] ? args[outDirIndex + 1] : undefined;
-      const code = await runBuildCommand(input, { outDir });
+      const production = args.includes('--production');
+      const sourceMap = args.includes('--no-sourcemap') ? false : undefined;
+      const code = await runBuildCommand(input, { outDir, sourceMap, production });
       process.exitCode = code;
       break;
     }
@@ -67,7 +69,8 @@ Penggunaan: kylat <perintah> [opsi]
 Perintah:
   make:component <Nama> [--dir path]  Buat komponen single-file *.kylat.php
   check [path]                       Periksa aturan bahasa dan template (KIL-101..KIL-311)
-  build [input] [--out-dir dir]      Kompilasi komponen ke modul JavaScript + manifest
+  build [input] [--out-dir dir] [--production|--no-sourcemap]
+                                     Kompilasi komponen ke modul JavaScript + manifest + source map
   types <schema.json|-> [--out file] [--check]
                                      Hasilkan tipe TypeScript dari schema aksi; --check untuk validasi sinkron
   doctor                             Audit ringan Node, PHP, dan Composer

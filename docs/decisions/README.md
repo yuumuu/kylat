@@ -8,7 +8,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 
 ---
 
-## Tabel Register Keputusan (KEP-01 – KEP-48)
+## Tabel Register Keputusan (KEP-01 – KEP-49)
 
 | ID | Topik & Ringkasan Keputusan | Status | Tenggat | Pemilik |
 |---|---|---|---|---|
@@ -60,6 +60,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 | **KEP-46** | **Operasional Fase 3**: rate limit Redis di produksi, schema auth-only, cache read publik 60 detik dengan Vary/private, database MySQL utama + PostgreSQL uji ([`0018-operasional-fase-3-rate-limit-schema-cache-database.md`](0018-operasional-fase-3-rate-limit-schema-cache-database.md)). | **PUTUSAN** | Fase 3 | Pemilik proyek |
 | **KEP-47** | **Skema idempotensi/outbox**: tabel `kylat_idempotency_keys` dengan PK `(user_id,key)` dan `kylat_outbox`; transaksi per panggilan, rollback penuh, outbox dalam transaksi ([`0019-skema-idempotensi-outbox.md`](0019-skema-idempotensi-outbox.md)). | **PUTUSAN** | Fase 3 | Arsitek Backend |
 | **KEP-48** | **Penutupan Fase 3**: optimistic update/rollback, generator tipe + `sync-contract`, command relay outbox, E2E keranjang CSP ketat, rate limit Redis multi-worker ([`0020-penutupan-fase-3.md`](0020-penutupan-fase-3.md)). | **PUTUSAN** | Fase 3 | Arsitek Toolchain |
+| **KEP-49** | **Pembukaan Fase 4**: source map + strip produksi, Vite/HMR, generator proyek, SSR opsional + hydration mismatch, audit aksesibilitas dan perangkat fisik ([`0021-pembukaan-fase-4.md`](0021-pembukaan-fase-4.md)). | **DIBUKA** | Fase 4 | Arsitek Toolchain |
 
 ---
 

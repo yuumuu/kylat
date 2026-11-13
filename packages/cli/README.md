@@ -6,11 +6,13 @@ Perintah pengguna. Node 20+.
 |---|---|
 | `kylat make:component <Nama> [--dir path]` | Membuat komponen single-file `*.kylat.php` |
 | `kylat check [path]` | Lint komponen dan template |
-| `kylat build [path] [--out-dir dir]` | Preflight KIL-310, kompilasi ke modul JS + `manifest.json` + `client.js` |
+| `kylat build [path] [--out-dir dir] [--production\|--no-sourcemap]` | Preflight KIL-310, kompilasi ke modul JS + `manifest.json` + `client.js`; source map aktif kecuali produksi |
 | `kylat types <schema.json\|-> [--out file] [--check]` | Hasilkan tipe TypeScript dari schema aksi; `--check` memvalidasi sinkronisasi |
 | `kylat doctor` | Cek Node, PHP patch minimum, Composer |
 
 Output build berisi modul per komponen, `manifest.json`, dan `client.js` (registrasi island + `hydrateAll`). `client.js` mengimpor `@kylat/runtime`; gunakan bundler/import map di aplikasi host.
+
+Pada mode dev, setiap modul menghasilkan `<Nama>.js.map` dan `//# sourceMappingURL`. Gunakan `--production` (atau `--no-sourcemap`) untuk build produksi: file map tidak ditulis dan `manifest.components[].sourceMap` bernilai `null`.
 
 ```html
 <script type="module" src="/dist/kylat/client.js"></script>
