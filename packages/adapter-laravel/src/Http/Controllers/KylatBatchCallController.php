@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Kylat\Laravel\Http\Controllers;
 
 use Kylat\Laravel\Actions\ActionRegistry;
+use Kylat\Laravel\Support\DatabaseIdempotencyStore;
+use Kylat\Laravel\Support\IdempotencyConnection;
 use Kylat\Laravel\Support\IdempotencyStore;
 use Kylat\Laravel\Support\KylatRateLimiter;
 use Kylat\Laravel\Support\RateLimitExceeded;
@@ -187,6 +189,43 @@ final class KylatBatchCallController
             $payloadHash = '';
             if ($idempotencyKey !== '') {
                 $payloadHash = IdempotencyStore::computeCanonicalHash($action, $args);
+
+                if ($this->usesDatabaseIdempotency()) {
+                    $pdo = IdempotencyConnection::resolve();
+                    if ($pdo === null) {
+                        $results[] = $this->errorResult(
+                            $callId,
+                            'kylat:server_error',
+                            'Driver idempotensi database tidak tersedia. Konfigurasi koneksi database Laravel.'
+                        );
+                        continue;
+                    }
+
+                    DatabaseIdempotencyStore::useConnection($pdo);
+                    try {
+                        $outcome = DatabaseIdempotencyStore::execute(
+                            $this->callerIdentity(),
+                            $idempotencyKey,
+                            $action,
+                            $payloadHash,
+                            fn (): array => $this->dispatchCall($callId, $action, $args)
+                        );
+                    } catch (Throwable $exception) {
+                        DatabaseIdempotencyStore::reset();
+                        $this->logInternalError($exception);
+                        $results[] = $this->errorResult(
+                            $callId,
+                            'kylat:server_error',
+                            'Terjadi kesalahan internal pada server.'
+                        );
+                        continue;
+                    }
+                    DatabaseIdempotencyStore::reset();
+
+                    $results[] = $this->resultFromDatabaseOutcome($callId, $idempotencyKey, $outcome);
+                    continue;
+                }
+
                 $lock = IdempotencyStore::acquire($storeKey, $payloadHash);
 
                 if ($lock['status'] === 'conflict') {
@@ -935,6 +974,93 @@ final class KylatBatchCallController
         } catch (Throwable) {
             return 'Otorisasi gagal dievaluasi.';
         }
+    }
+
+    private function usesDatabaseIdempotency(): bool
+    {
+        if (function_exists('config')) {
+            try {
+                $value = config('kylat.idempotency_driver');
+                if (is_string($value) && $value !== '') {
+                    return strtolower($value) === 'database';
+                }
+            } catch (Throwable) {
+                // fall through ke env
+            }
+        }
+
+        $env = getenv('KYLAT_IDEMPOTENCY_DRIVER');
+
+        return is_string($env) && strtolower($env) === 'database';
+    }
+
+    private function callerIdentity(): string
+    {
+        $user = $this->currentUser();
+        if (is_object($user) && method_exists($user, 'getAuthIdentifier')) {
+            return 'user:' . (string) $user->getAuthIdentifier();
+        }
+        if (function_exists('session')) {
+            try {
+                $sessionId = session()->getId();
+                if (is_string($sessionId) && $sessionId !== '') {
+                    return 'anon:' . $sessionId;
+                }
+            } catch (Throwable) {
+                // fall through
+            }
+        }
+
+        return 'anon:cli';
+    }
+
+    /**
+     * Memetakan hasil driver database menjadi bentuk respons call.
+     *
+     * @param array<string, mixed> $outcome
+     * @return array<string, mixed>
+     */
+    private function resultFromDatabaseOutcome(string $callId, string $idempotencyKey, array $outcome): array
+    {
+        $response = is_array($outcome['response'] ?? null) ? $outcome['response'] : null;
+
+        return match ($outcome['status'] ?? '') {
+            'completed' => $response ?? $this->errorResult(
+                $callId,
+                'kylat:server_error',
+                'Respons idempotensi tidak tersedia.'
+            ),
+            'replay' => array_merge(
+                is_array($response) ? $response : ['ok' => true],
+                ['id' => $callId]
+            ),
+            'failed' => $response ?? $this->errorResult(
+                $callId,
+                'kylat:server_error',
+                'Terjadi kesalahan internal pada server.'
+            ),
+            'conflict' => $this->errorResult(
+                $callId,
+                'kylat:idempotency_conflict',
+                sprintf(
+                    "Idempotency-Key '%s' telah digunakan untuk payload yang berbeda.",
+                    $idempotencyKey
+                )
+            ),
+            'in_progress' => $this->errorResult(
+                $callId,
+                'kylat:in_progress',
+                sprintf(
+                    "Operasi dengan Idempotency-Key '%s' sedang diproses di server. Silakan tunggu.",
+                    $idempotencyKey
+                )
+            ),
+            default => $this->errorResult(
+                $callId,
+                'kylat:server_error',
+                'Status idempotensi tidak dikenal.'
+            ),
+        };
     }
 
     private function scopeIdempotencyKey(string $key): string

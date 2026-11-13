@@ -19,4 +19,11 @@ return [
     'rate_limit_store' => env('KYLAT_RATE_LIMIT_STORE', 'redis'),
     'rate_limit_authenticated' => (int) env('KYLAT_RATE_LIMIT_AUTHENTICATED', 60),
     'rate_limit_anonymous' => (int) env('KYLAT_RATE_LIMIT_ANONYMOUS', 20),
+
+    /*
+     * Driver idempotensi: 'cache' (interim) atau 'database' (ADR 0019).
+     * Produksi wajib 'database' setelah uji konkurensi MySQL/PostgreSQL.
+     */
+    'idempotency_driver' => env('KYLAT_IDEMPOTENCY_DRIVER', 'cache'),
+    'idempotency_identity' => env('KYLAT_IDEMPOTENCY_IDENTITY', 'auto'),
 ];
