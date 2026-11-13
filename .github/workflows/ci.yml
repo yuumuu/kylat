@@ -123,6 +123,7 @@ jobs:
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/ReadEndpointTest.php
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/RateLimitTest.php
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/ConformanceTest.php
+          php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/DatabaseIdempotencyTest.php
 
       - name: Run Example App Tests
         run: pnpm test:examples

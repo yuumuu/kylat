@@ -8,7 +8,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 
 ---
 
-## Tabel Register Keputusan (KEP-01 – KEP-46)
+## Tabel Register Keputusan (KEP-01 – KEP-47)
 
 | ID | Topik & Ringkasan Keputusan | Status | Tenggat | Pemilik |
 |---|---|---|---|---|
@@ -58,6 +58,7 @@ Setiap keputusan memiliki ID unik (`KEP-xx`), status, tenggat pencapaian, dan pe
 | **KEP-44** | **Penutupan Fase 2**: compiler, Map, KIL-130, lifecycle, differential, dan source map selesai; enum/readonly ditunda ke v0.1 ([`0016-penutupan-fase-2.md`](0016-penutupan-fase-2.md)). | **PUTUSAN** | Fase 2 | Arsitek Toolchain |
 | **KEP-45** | **Kontrak GET read/schema**: bentuk respons, encoding `args`, Problem Details `stale_build`/`rate_limited`, dan schema aksi ([`0017-kontrak-get-read-schema.md`](0017-kontrak-get-read-schema.md)). | **PUTUSAN** | Fase 3 | Arsitek Toolchain |
 | **KEP-46** | **Operasional Fase 3**: rate limit Redis di produksi, schema auth-only, cache read publik 60 detik dengan Vary/private, database MySQL utama + PostgreSQL uji ([`0018-operasional-fase-3-rate-limit-schema-cache-database.md`](0018-operasional-fase-3-rate-limit-schema-cache-database.md)). | **PUTUSAN** | Fase 3 | Pemilik proyek |
+| **KEP-47** | **Skema idempotensi/outbox**: tabel `kylat_idempotency_keys` dengan PK `(user_id,key)` dan `kylat_outbox`; transaksi per panggilan, rollback penuh, outbox dalam transaksi ([`0019-skema-idempotensi-outbox.md`](0019-skema-idempotensi-outbox.md)). | **PUTUSAN** | Fase 3 | Arsitek Backend |
 
 ---
 

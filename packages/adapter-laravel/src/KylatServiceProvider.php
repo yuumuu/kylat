@@ -25,6 +25,8 @@ final class KylatServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+
         $this->publishes([
             __DIR__ . '/../config/kylat.php' => config_path('kylat.php'),
         ], 'kylat-config');

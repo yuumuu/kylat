@@ -1,0 +1,75 @@
+# ADR 0019: Skema Idempotensi Database dan Transactional Outbox
+
+- **Status**: DITERIMA
+- **Tanggal**: 13 November 2026
+- **Penulis**: Arsitek Backend
+- **Konteks**: ADR 0007/0018 menetapkan database MySQL utama + PostgreSQL uji untuk Fase 3.
+
+---
+
+## 1. Skema `kylat_idempotency_keys`
+
+| Kolom | Tipe | Aturan |
+|---|---|---|
+| `user_id` | `VARCHAR(255)` | identitas pemanggil: `user:<id>` atau `anon:<session_hash>` |
+| `key` | `VARCHAR(128)` | nilai `Idempotency-Key` (8–128 karakter) |
+| `action` | `VARCHAR(255)` | nama aksi |
+| `payload_hash` | `CHAR(64)` | SHA-256 payload kanonikal |
+| `status` | `VARCHAR(20)` | `in_progress` atau `completed` |
+| `response` | `MEDIUMTEXT`/`TEXT` | JSON respons; maksimum 64 KB |
+| `attempts` | `INT` | jumlah percobaan; default 1 |
+| `locked_until` | `TIMESTAMP NULL` | lease in-progress |
+| `expires_at` | `TIMESTAMP` | `created_at + 24 jam` |
+| `created_at` | `TIMESTAMP` | waktu dibuat |
+| `updated_at` | `TIMESTAMP` | waktu diperbarui |
+
+Kekangan:
+
+- `PRIMARY KEY (user_id, key)`.
+- `INDEX (expires_at)` untuk pruning.
+- Tidak memakai `INSERT IGNORE`.
+- Duplikat ditangani per driver: MySQL `1062`, PostgreSQL `23505`, SQLite `23000`.
+
+## 2. Skema `kylat_outbox`
+
+| Kolom | Tipe | Aturan |
+|---|---|---|
+| `id` | big integer | auto increment |
+| `event_id` | `CHAR(36)` | UUID unik |
+| `event_type` | `VARCHAR(128)` | jenis efek samping |
+| `payload` | `TEXT` | JSON event |
+| `status` | `VARCHAR(20)` | `pending`, `processing`, `completed`, `failed` |
+| `attempts` | `INT` | default 0 |
+| `available_at` | `TIMESTAMP` | jadwal relay |
+| `locked_until` | `TIMESTAMP NULL` | lease worker |
+| `created_at` / `updated_at` | `TIMESTAMP` | audit |
+
+Kekangan: unique `event_id`, index `(status, available_at)`.
+
+## 3. Semantik transaksi
+
+1. Satu transaksi per panggilan mutasi.
+2. `INSERT` baris idempotensi `in_progress` di dalam transaksi.
+3. Handler bisnis dan `enqueueOutbox()` memakai koneksi/transaksi yang sama.
+4. Sukses: update `completed` + response, lalu `COMMIT`.
+5. Exception: `ROLLBACK` penuh; baris idempotensi dan outbox ikut hilang.
+6. Replay: hash sama + `completed` → kembalikan response tanpa eksekusi.
+7. Hash berbeda → `kylat:idempotency_conflict`.
+8. In-progress dan lease masih aktif → `kylat:in_progress`.
+9. Respons > 64 KB atau gagal disimpan → rollback dan `kylat:action_error`.
+10. Tidak ada `markFailed` pada driver database.
+
+## 4. Integrasi
+
+- Migrasi disediakan di `packages/adapter-laravel/database/migrations/`.
+- Driver `DatabaseIdempotencyStore` memakai PDO yang sama dengan handler; integrasi controller dilakukan pada PR berikutnya setelah driver diuji.
+- Driver Cache tetap tersedia untuk development/ephemeral, bukan produksi.
+
+## 5. Uji wajib
+
+- Replay idempotensi dan konflik hash.
+- Rollback penuh saat handler exception.
+- Outbox ikut rollback.
+- Dua pemanggil berbeda dengan key sama tidak berbagi hasil.
+- Uji konkurensi MySQL/PostgreSQL dijalankan sebelum klaim portabilitas.
+- SQLite hanya untuk unit test logika, bukan bukti row-level lock.
