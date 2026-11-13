@@ -7,6 +7,8 @@
   "oneOf": [
     { "$ref": "#/$defs/BatchRequest" },
     { "$ref": "#/$defs/BatchResponse" },
+    { "$ref": "#/$defs/ReadResponse" },
+    { "$ref": "#/$defs/SchemaResponse" },
     { "$ref": "#/$defs/ProblemDetails" }
   ],
   "$defs": {
@@ -79,6 +81,71 @@
           "items": {
             "$ref": "#/$defs/CallResult"
           }
+        }
+      }
+    },
+
+    "ReadResponse": {
+      "title": "ReadResponse",
+      "description": "Respons HTTP 200 untuk GET /_kylat/read/{aksi}.",
+      "type": "object",
+      "required": ["data"],
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "description": "Nilai balikan aksi baca mengikuti signature aksi.",
+          "type": ["object", "array", "string", "number", "boolean", "null"]
+        }
+      }
+    },
+
+    "SchemaParam": {
+      "title": "SchemaParam",
+      "description": "Parameter aksi pada schema kontrak.",
+      "type": "object",
+      "required": ["name", "type", "required", "nullable"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "required": { "type": "boolean" },
+        "nullable": { "type": "boolean" }
+      }
+    },
+
+    "SchemaAction": {
+      "title": "SchemaAction",
+      "description": "Satu aksi server pada schema kontrak.",
+      "type": "object",
+      "required": ["name", "read", "public", "params", "returnType"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_\\\\]*(::|\\.)[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "read": { "type": "boolean" },
+        "public": { "type": "boolean" },
+        "params": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SchemaParam" }
+        },
+        "returnType": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "SchemaResponse": {
+      "title": "SchemaResponse",
+      "description": "Respons HTTP 200 untuk GET /_kylat/schema.",
+      "type": "object",
+      "required": ["protocol", "actions"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol": { "type": "string", "const": "0.1" },
+        "build": { "type": "string" },
+        "actions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SchemaAction" }
         }
       }
     },
@@ -238,7 +305,7 @@
         },
         "Idempotency-Key": {
           "type": "string",
-          "minLength": 16,
+          "minLength": 8,
           "maxLength": 128,
           "description": "Kunci idempotensi untuk aksi mutasi, disimpan dengan TTL 24 jam."
         },
