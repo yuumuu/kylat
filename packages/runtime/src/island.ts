@@ -33,6 +33,46 @@ export function clearIslands(): void {
 }
 
 /**
+ * Mengganti factory island dan merender ulang semua elemen yang sudah terpasang.
+ * Dipakai oleh HMR Vite: modul baru menggantikan factory lama tanpa full reload.
+ * State lokal komponen akan dibuat ulang (bukan dipulihkan).
+ *
+ * @returns jumlah elemen yang dirender ulang
+ */
+export function updateIslandFactory(name: string, factory: ComponentFactory): number {
+  islandRegistry.set(name, factory);
+  if (typeof document === 'undefined') return 0;
+
+  let updated = 0;
+  document.querySelectorAll<HTMLElement>('[data-island]').forEach((el) => {
+    if (el.getAttribute('data-island') !== name) return;
+
+    let props: IslandProps = {};
+    const raw = el.getAttribute('data-props');
+    if (raw) {
+      try {
+        const parsed: unknown = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          props = parsed as IslandProps;
+        }
+      } catch {
+        return;
+      }
+    }
+
+    try {
+      el.replaceChildren(factory(props));
+      el.setAttribute('data-kylat-hydrated', 'true');
+      updated++;
+    } catch {
+      // HMR gagal: biarkan elemen lama, jangan gagalkan modul.
+    }
+  });
+
+  return updated;
+}
+
+/**
  * Menormalkan markup untuk perbandingan hidrasi: whitespace antar-tag
  * diabaikan agar perbedaan format server/klien tidak menjadi false positive.
  */

@@ -22,10 +22,15 @@ function cleanId(id: string | null): string {
 
 export function kylat(options: KylatPluginOptions = {}): Plugin {
   const include = options.include ?? DEFAULT_INCLUDE;
+  let isServe = false;
 
   return {
     name: 'kylat',
     enforce: 'pre',
+
+    configResolved(config) {
+      isServe = config.command === 'serve';
+    },
 
     async transform(code: string, id: string) {
       const file = cleanId(id);
@@ -42,8 +47,21 @@ export function kylat(options: KylatPluginOptions = {}): Plugin {
         return null;
       }
 
+      const componentName = result.ir?.name ?? '';
+      const hmrFooter =
+        isServe && componentName
+          ? `\nimport { updateIslandFactory } from '@kylat/runtime';\n` +
+            `if (import.meta.hot) {\n` +
+            `  import.meta.hot.accept((next) => {\n` +
+            `    if (next && typeof next.create${componentName} === 'function') {\n` +
+            `      updateIslandFactory(${JSON.stringify(componentName)}, next.create${componentName});\n` +
+            `    }\n` +
+            `  });\n` +
+            `}\n`
+          : '';
+
       return {
-        code: result.code,
+        code: result.code + hmrFooter,
         map: result.map ? JSON.parse(result.map) : null,
       };
     },

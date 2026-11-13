@@ -59,3 +59,4 @@
 - 13 November 2026: baseline axe-core WCAG 2 A/AA pada contoh keranjang tanpa pelanggaran serius/kritis.
 - 13 November 2026: `kylat new` menghasilkan proyek Vite minimal (plugin, komponen contoh, README) dan komponennya lolos kompilasi.
 - 13 November 2026: `@kylat/ssr` (`renderToString`) dan deteksi hydration mismatch di `hydrateIsland()` selesai; SSR tetap opsional.
+- 13 November 2026: HMR granular selesai — plugin menyuntikkan `import.meta.hot.accept` dan runtime menyediakan `updateIslandFactory()` untuk merender ulang island tanpa full reload (state lokal di-reset).

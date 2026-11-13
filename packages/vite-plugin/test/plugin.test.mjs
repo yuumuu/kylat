@@ -34,6 +34,34 @@ describe('@kylat/vite-plugin', () => {
     assert.deepEqual(result.map.sources, ['/tmp/counter.kylat.php']);
   });
 
+  it('menyuntikkan HMR accept saat serve', async () => {
+    const plugin = kylat();
+    plugin.configResolved({ command: 'serve' });
+
+    const result = await plugin.transform.call(
+      { error: (message) => { throw new Error(message); } },
+      counterSource,
+      '/tmp/counter.kylat.php'
+    );
+
+    assert.match(result.code, /import\.meta\.hot\.accept/);
+    assert.match(result.code, /updateIslandFactory\("Counter"/);
+  });
+
+  it('tidak menyuntikkan HMR pada build', async () => {
+    const plugin = kylat();
+    plugin.configResolved({ command: 'build' });
+
+    const result = await plugin.transform.call(
+      { error: (message) => { throw new Error(message); } },
+      counterSource,
+      '/tmp/counter.kylat.php'
+    );
+
+    assert.doesNotMatch(result.code, /import\.meta\.hot/);
+    assert.doesNotMatch(result.code, /updateIslandFactory/);
+  });
+
   it('mengabaikan berkas non-Kylat', async () => {
     const plugin = kylat();
     const result = await plugin.transform.call({ error: () => {} }, 'console.log(1)', '/tmp/app.js');
