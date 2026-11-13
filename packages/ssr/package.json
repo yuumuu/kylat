@@ -1,0 +1,30 @@
+{
+  "name": "@kylat/ssr",
+  "version": "0.0.1",
+  "license": "Apache-2.0",
+  "description": "Prerender/SSR opsional untuk komponen Kylat",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "linkedom": "^0.18.15"
+  },
+  "devDependencies": {
+    "@kylat/compiler": "workspace:*",
+    "@kylat/runtime": "workspace:*"
+  },
+  "files": [
+    "dist"
+  ]
+}
