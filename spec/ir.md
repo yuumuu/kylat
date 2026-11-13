@@ -248,7 +248,9 @@ export type KylatType =
   | { kind: 'list'; itemType: KylatType }
   | { kind: 'map'; keyType: 'string'; valueType: KylatType }
   | { kind: 'enum'; enumName: string; cases: string[] }
-  | { kind: 'nullable'; innerType: KylatType };
+  | { kind: 'nullable'; innerType: KylatType }
+  | { kind: 'function'; params: KylatType[]; returnType: KylatType }
+  | { kind: 'unknown' };
 ```
 
 ---
@@ -279,6 +281,15 @@ export type KylatType =
 |  (Operasi DOM langsung tanpa Virtual DOM)|
 +------------------------------------------+
 ```
+
+### 7.1 Bentuk eksekutabel IR v0
+
+Sesuai ADR 0012, IR v0 memiliki dua lapisan:
+
+1. **Semantic shell terketik** — `ComponentNode`, `PropNode`, `StateNode`, `ComputedNode`, `MethodNode`, `KylatType`, dan `SourceLocation`.
+2. **Executable body** — `bodyCode` berisi statement JavaScript hasil kompilasi AST PHP, dengan `bodyLocations` untuk source map. Body ini sudah bebas PHP; codegen tidak membaca ulang sintaks PHP.
+
+Pohon `StatementNode`/`ExpressionNode` penuh untuk transformasi IR tingkat lanjut ditunda ke v0.1. Tooling yang membutuhkan pohon tersebut harus memakai AST parser sampai versi itu tersedia.
 
 ---
 

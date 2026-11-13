@@ -86,8 +86,13 @@ Menggantikan `onMount` dan `effect` di tabel migrasi (dokumen 5, bagian 8).
 
 | Atribut method | Perilaku | Batasan |
 |---|---|---|
-| `#[OnMount]` | Dijalankan sekali setelah komponen dihidrasi | Boleh memanggil `#[Client]` dan `#[Server]` |
+| `#[OnMount]` | Dijalankan sekali setelah komponen dihidrasi | Boleh memanggil `#[Client]`; panggilan `$this->server(...)` ditunda ke v0.1 dan ditolak KIL-120 |
 | `#[Effect]` | Dijalankan ulang saat signal yang dibacanya berubah | Tidak boleh memanggil `#[Server]`, untuk mencegah loop (KIL-157) |
+
+- `#[OnMount]` dan `#[Effect]` wajib berupa method tanpa parameter dengan return `void`. Pelanggaran menghasilkan KIL-104.
+- `#[Computed]` wajib berupa method tanpa parameter dengan return non-`void`; body tidak boleh menulis state atau memanggil aksi server. Pelanggaran menghasilkan KIL-104/KIL-120.
+- Urutan eksekusi v0: DOM dibangun → `#[OnMount]` sesuai urutan deklarasi → `#[Effect]` sesuai urutan deklarasi. Cleanup belum didukung di v0; return function dari lifecycle diabaikan sampai v0.1.
+- `#[Computed]` tidak boleh menjadi target `on:` atau dipanggil langsung dari event.
 
 ## 6. Navigasi
 
@@ -169,6 +174,6 @@ Pembagian ini mengikat semua adapter. Adapter Laravel menyediakan `@kylat`; adap
 | Pemisahan `#[Uses]` dan `#[Child]` | **PUTUSAN** | `#[Uses(CartActions::class)]` khusus kontrak aksi server; `#[Child(Counter::class)]` membuka tag `<x-counter>`. KIL-212 mengacu ke `#[Child]`. Quick start counter tidak memerlukan `#[Child]` |
 | Event pemicu `bind:value` | `[TERBUKA]` | `input` atau `change` belum ditetapkan; perilaku untuk `<select>` dan `contenteditable` juga |
 | Modifier `on:` | `[TERBUKA]` | `.prevent`, `.stop`, `.once` belum ada; tanpa itu `on:submit` selalu memuat ulang halaman |
-| Urutan `#[OnMount]` / `#[Effect]` terhadap render, dan cleanup | `[TERBUKA]` | Dibutuhkan sebelum runtime fase 1 |
+| Urutan `#[OnMount]` / `#[Effect]` terhadap render, dan cleanup | **PUTUSAN v0** | Urutan: DOM → OnMount → Effect; cleanup ditunda ke v0.1 (ADR 0013) |
 | Kode galat tabrakan nama tag | `[TERBUKA]` | Belum dialokasikan |
 | Aturan validasi yang dikompilasi ke client | `[TERBUKA]` | Dokumen 3 §8 belum menetapkan subset aturan; tanpa itu validasi instan tidak bisa diuji |

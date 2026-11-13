@@ -89,7 +89,11 @@ export function generateJavaScript(
     const matchingProp = ir.props.find(
       (p) => p.name.toLowerCase() === `initial${s.name.toLowerCase()}` || p.name === s.name
     );
-    const initialExpr = matchingProp ? `prop_${matchingProp.name}` : compileDefaultValue(s.initialValue);
+    const initialExpr = matchingProp
+      ? s.parsedType?.kind === 'map'
+        ? `__kylatMapFrom(prop_${matchingProp.name})`
+        : `prop_${matchingProp.name}`
+      : compileDefaultValue(s.initialValue);
     bodyLines.push(`  const [${s.name}, set_${s.name}] = createSignal(${initialExpr});`);
   }
 
@@ -163,9 +167,17 @@ export function generateJavaScript(
       const pendingSignal = serverActionPendingSignals.get(m.name)!;
       const errorSignal = serverActionErrorSignals.get(m.name)!;
 
+      const hasMapArgument =
+        ir.state.some((state) => state.parsedType?.kind === 'map') ||
+        ir.props.some((prop) => prop.parsedType?.kind === 'map');
       const argsObject =
         serverCall && serverCall.args.length > 0
-          ? `{ ${serverCall.args.map((a) => `${a.name}: ${a.valueExpr}`).join(', ')} }`
+          ? `{ ${serverCall.args
+              .map(
+                (a) =>
+                  `${a.name}: ${hasMapArgument ? `__kylatPlain(${a.valueExpr})` : a.valueExpr}`
+              )
+              .join(', ')} }`
           : 'args';
 
       bodyLines.push(`  async function ${m.name}(args = {}) {`);
@@ -603,7 +615,7 @@ export function generateJavaScript(
     };
 
     bodyLines.push(
-      `${pad(depth)}reconcileKeyedList(${parentVar}, () => ${collection}, (item, index) => ${keyExpression}, (item, index) => {`
+      `${pad(depth)}reconcileKeyedList(${parentVar}, () => __kylatValues(${collection}), (item, index) => ${keyExpression}, (item, index) => {`
     );
     bodyLines.push(`${pad(depth + 1)}const ${fragment} = document.createDocumentFragment();`);
     emitNodes(node.children, fragment, loopContext, depth + 2);
@@ -617,7 +629,7 @@ export function generateJavaScript(
       bodyLines.push(`${pad(depth)}${parentVar}.appendChild(${emptyMarker});`);
       const emptyFragment = `empty_fragment_${++temporaryCounter}`;
       bodyLines.push(
-        `${pad(depth)}bindIf(${parentVar}, () => (${collection} ?? []).length === 0, () => {`
+        `${pad(depth)}bindIf(${parentVar}, () => __kylatValues(${collection}).length === 0, () => {`
       );
       bodyLines.push(`${pad(depth + 1)}const ${emptyFragment} = document.createDocumentFragment();`);
       emitNodes(node.emptyChildren, emptyFragment, ctx, depth + 2);
@@ -661,7 +673,10 @@ export function generateJavaScript(
   for (const lifecycle of ir.lifecycle ?? []) {
     if (lifecycle.kind === 'onMount') {
       bodyLines.push(`  ${lifecycle.name}();`);
-    } else {
+    }
+  }
+  for (const lifecycle of ir.lifecycle ?? []) {
+    if (lifecycle.kind === 'effect') {
       usedImports.add('createEffect');
       bodyLines.push(`  createEffect(() => { ${lifecycle.name}(); });`);
     }
@@ -690,6 +705,10 @@ export function generateJavaScript(
     headerLines.push(`import { create${childClass} } from '${importPath}';`);
   }
   if (childImports.size > 0) headerLines.push('');
+
+  if (bodyLines.join('\n').includes('__kylat')) {
+    headerLines.push(...PHP_RUNTIME_HELPERS, '');
+  }
 
   sourceMap?.shift(headerLines.length);
 
@@ -812,6 +831,53 @@ function containsErrorBinding(nodes: ParsedNode[]): boolean {
   }
   return false;
 }
+
+const PHP_RUNTIME_HELPERS = [
+  'function __kylatEntries(value) {',
+  '  if (value instanceof Map) return value.entries();',
+  '  if (Array.isArray(value)) return value.map((item, index) => [index, item]);',
+  '  return Object.entries(value ?? {});',
+  '}',
+  'function __kylatValues(value) {',
+  '  if (value instanceof Map) return Array.from(value.values());',
+  '  if (Array.isArray(value)) return value;',
+  '  return Object.values(value ?? {});',
+  '}',
+  'function __kylatGet(value, key) {',
+  '  if (value instanceof Map) return value.get(typeof key === "number" ? String(key) : key);',
+  '  return value?.[key];',
+  '}',
+  'function __kylatCount(value) {',
+  '  if (value instanceof Map) return value.size;',
+  '  if (Array.isArray(value)) return value.length;',
+  '  return Object.keys(value ?? {}).length;',
+  '}',
+  'function __kylatMapFrom(value) {',
+  '  if (value instanceof Map || Array.isArray(value)) return value;',
+  '  return new Map(Object.entries(value ?? {}));',
+  '}',
+  'function __kylatMap(value, callback) {',
+  '  if (Array.isArray(value)) return value.map((item, index) => callback(item, index));',
+  '  return new Map(Array.from(__kylatEntries(value)).map(([key, item]) => [key, callback(item, key)]));',
+  '}',
+  'function __kylatFilter(value, callback) {',
+  '  return new Map(Array.from(__kylatEntries(value)).filter(([key, item]) => Boolean(callback(item, key))));',
+  '}',
+  'function __kylatPlain(value) {',
+  '  if (value instanceof Map) {',
+  '    const result = {};',
+  '    for (const [key, item] of value) result[String(key)] = __kylatPlain(item);',
+  '    return result;',
+  '  }',
+  '  if (Array.isArray(value)) return value.map(__kylatPlain);',
+  '  if (value && typeof value === "object") {',
+  '    const result = {};',
+  '    for (const [key, item] of Object.entries(value)) result[key] = __kylatPlain(item);',
+  '    return result;',
+  '  }',
+  '  return value;',
+  '}',
+];
 
 const JS_RESERVED = new Set([
   'await','break','case','catch','class','const','continue','debugger','default','delete','do','else','enum','export','extends','false','finally','for','function','if','implements','import','in','instanceof','interface','let','new','null','package','private','protected','public','return','static','super','switch','this','throw','true','try','typeof','var','void','while','with','yield','undefined','NaN','Infinity',

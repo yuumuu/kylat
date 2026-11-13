@@ -199,6 +199,81 @@ describe('@kylat/compiler - kontrol alur dan closure subset v0', () => {
     assert.equal(findOne(root, 'span').textContent, '15');
   });
 
+  it('menjalankan OnMount sebelum Effect meskipun Effect dideklarasikan lebih dahulu', async () => {
+    const result = await compile(
+      component(`    public int $mounted = 0;
+    public int $seen = -1;
+    #[Effect]
+    public function watch(): void { $this->seen = $this->mounted; }
+    #[OnMount]
+    public function ready(): void { $this->mounted = 1; }`),
+      'Demo.kylat.php',
+      { template: '<div><span>{{ $mounted }}</span><b>{{ $seen }}</b></div>' }
+    );
+    assert.equal(result.success, true, JSON.stringify(result.diagnostics));
+    const root = load(result.code)();
+    assert.equal(findOne(root, 'span').textContent, '1');
+    assert.equal(findOne(root, 'b').textContent, '1');
+  });
+
+  it('menolak #[Computed] berparameter dan yang menulis state dengan KIL-104', async () => {
+    const withParam = await compile(
+      component(`    #[Computed] public function total(int $x): int { return $x; }`),
+      'Demo.kylat.php',
+      { template: '<div></div>' }
+    );
+    assert.equal(withParam.success, false);
+    assert.ok(withParam.diagnostics.some((diagnostic) => diagnostic.code === 'KIL-104'));
+
+    const withWrite = await compile(
+      component(`    public int $count = 0;
+    #[Computed] public function total(): int { $this->count = 1; return 1; }`),
+      'Demo.kylat.php',
+      { template: '<div></div>' }
+    );
+    assert.equal(withWrite.success, false);
+    assert.ok(withWrite.diagnostics.some((diagnostic) => diagnostic.code === 'KIL-104'));
+  });
+
+  it('menolak lifecycle berparameter dan server call dari OnMount', async () => {
+    const lifecycleParam = await compile(
+      component('    #[OnMount] public function ready(int $x): void {}'),
+      'Demo.kylat.php',
+      { template: '<div></div>' }
+    );
+    assert.equal(lifecycleParam.success, false);
+    assert.ok(lifecycleParam.diagnostics.some((diagnostic) => diagnostic.code === 'KIL-104'));
+
+    const serverCall = await compile(
+      component(`    #[OnMount] public function ready(): void { $this->server(Actions::class)->load(1); }`),
+      'Demo.kylat.php',
+      { template: '<div></div>' }
+    );
+    assert.equal(serverCall.success, false);
+    assert.ok(serverCall.diagnostics.some((diagnostic) => diagnostic.code === 'KIL-120'));
+  });
+
+  it('mengubah Map menjadi object biasa saat argumen aksi server', async () => {
+    const result = await compile(
+      `<?php
+declare(strict_types=1);
+namespace App\\Components;
+use Kylat\\Component;
+#[Uses(DemoActions::class)]
+final class Demo extends Component {
+  /** @var array<string, int> */
+  public array $scores = ['a' => 1];
+  #[Server]
+  public function save(): void { $this->server(DemoActions::class)->saveScores($this->scores); }
+}`,
+      'Demo.kylat.php',
+      { template: '<div></div>' }
+    );
+    assert.equal(result.success, true, JSON.stringify(result.diagnostics));
+    assert.ok(result.code.includes('__kylatPlain(scores())'));
+    assert.ok(result.code.includes('function __kylatPlain'));
+  });
+
   it('menolak usort dengan KIL-110 sesuai ADR 0011', async () => {
     const result = await compile(
       component(`    /** @var list<int> */

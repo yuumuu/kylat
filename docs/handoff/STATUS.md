@@ -3,15 +3,18 @@
 Diperbarui: 12 November 2026. Sumber kebenaran: `spec/` di repo. File ini ringkasan operasional, bukan spesifikasi.
 
 ## Status Gerbang Rilis
-- **Status Fase 0**: **DITUTUP pada 10 November 2026** (Tag: `v0.0.0-p0`, commit `819bcb4`)
-- **Status Fase 1**: **DITUTUP pada 11 November 2026** (Tag: `v0.1.0-p1`)
-- **Pengesahan Golden Master**: `CartCounter.expected.js` telah DISAHKAN oleh pemilik proyek pada 10 November 2026.
+- **Status Fase 0**: **DITUTUP dengan pengecualian tercatat pada 10 November 2026** (Tag: `v0.0.0-p0`, commit `819bcb4`; ADR 0014).
+- **Status Fase 1**: **DITUTUP dengan pengecualian tercatat pada 11 November 2026** (Tag: `v0.1.0-p1`; ADR 0014).
+- **Pengesahan Golden Master**: `CartCounter.expected.js` telah DISAHKAN oleh pemilik proyek pada 10 November 2026; Kylat 6 lokal merujuk ADR 0014.
 - **Keputusan Arsitektur Terkait**:
   - ADR 0006: Disetujui untuk Fase 1 (Opsi A: accessor getter).
   - ADR 0007: Ditunda ke Fase 3 (rujukan transaksi database outbox).
-  - ADR 0008: Disetujui (KIL-130, 203..205 ditunda ke v0.1; KIL-150 didaftarkan dan dipisahkan dari KIL-151).
+  - ADR 0008: Disetujui (KIL-203..205 ditunda ke v0.1; KIL-150 didaftarkan dan dipisahkan dari KIL-151). **KIL-130 diaktifkan kembali oleh ADR 0012.**
   - ADR 0009: **Tetap berstatus USULAN** (Spike S2 alien-signals v3.2.1; syarat uji mobile/JSC dan perangkat fisik belum terpenuhi).
   - ADR 0011: **DITERIMA** — closure/arrow function dan kontrol alur `if`/`foreach`/`for`/`return` didukung; `usort` ditunda ke v0.1 (KIL-110); `match` tetap ditunda (KIL-104). Menggantikan ADR 0010/KEP-38.
+  - ADR 0012: **DITERIMA** — map memakai `Map` JS; IR v0 memakai semantic shell + `bodyCode`/`bodyLocations`; KIL-130 aktif.
+  - ADR 0013: **DITERIMA** — bentuk `#[Computed]`/lifecycle v0 dan urutan DOM → OnMount → Effect.
+  - ADR 0014: **DITERIMA** — STATUS adalah otoritas operasional; Fase 0/1 “ditutup dengan pengecualian tercatat”.
 
 ---
 
@@ -58,22 +61,24 @@ Fase 0 dan Fase 1 resmi ditutup. Baseline toolchain mencakup compiler, runtime s
 
 Sudah diimplementasikan dan diuji:
 
-- **Analisis tipe v0**: property, parameter, return, nullable, `list<T>`, `array<string,T>`, serta KIL-131 untuk tipe hilang dan konkatenasi titik non-string.
-- **IR terketik**: `parsedType` pada prop/state/parameter/return, `bodyCode` + `bodyLocations` untuk method, computed, dan lifecycle.
+- **Analisis tipe v0**: property, parameter, return, nullable, `list<T>`, `array<string,T>`, serta KIL-131 untuk tipe hilang dan konkatenasi titik non-string; KIL-130 aktif untuk array ambigu dan `array_filter` tanpa `array_values`.
+- **IR terketik**: `parsedType` pada prop/state/parameter/return, `bodyCode` + `bodyLocations` untuk method, computed, dan lifecycle (ADR 0012).
+- **Map PHP**: `array<string,T>` memakai `Map` JavaScript dengan helper chunk lokal; `array_filter` mempertahankan key dan `array_values` mengembalikan list.
 - **Kontrol alur**: `if`/`elseif`/`else`, `foreach` (termasuk key map dan `continue`), `for`, `return` dini.
 - **Closure/arrow function**: closure lokal, `use`, dan pemanggilan closure; `usort` tetap ditolak KIL-110.
-- **Computed/lifecycle**: `#[Computed]` menjadi `createComputed`; `#[OnMount]` dijalankan setelah DOM; `#[Effect]` menjadi `createEffect`.
-- **Differential test**: 10 kasus PHP vs JavaScript untuk aritmetika, konkatenasi, ternary, null coalescing, UTF-8, string, dan array.
+- **Computed/lifecycle**: `#[Computed]` menjadi `createComputed`; urutan DOM → `#[OnMount]` → `#[Effect]`; cleanup dan server call dari OnMount ditunda ke v0.1 (ADR 0013).
+- **Differential test**: 13 kasus PHP vs JavaScript untuk aritmetika, konkatenasi, ternary, null coalescing, UTF-8, string, dan array.
 - **Source map v3**: `CompileResult.map` memetakan baris method/computed/lifecycle/templat ke baris `*.kylat.php`; template diagnostic diberi offset baris berkas.
 - **Golden master**: `Counter.expected.js` dan `CartCounter.expected.js` tetap identik; output lama tidak berubah.
-- **Verifikasi**: 126 tes compiler (124 lulus, 2 skip P8/P10); `pnpm typecheck` dan `pnpm test` monorepo lulus.
+- **Verifikasi**: 134 tes compiler (132 lulus, 2 skip P8/P10); `pnpm typecheck` dan `pnpm test` monorepo lulus.
 
 Belum ditutup pada Fase 2:
 
-- KIL-130, KIL-203, KIL-204, dan KIL-205 masih ditunda ke v0.1 sesuai ADR 0008.
+- KIL-203, KIL-204, dan KIL-205 masih ditunda ke v0.1 sesuai ADR 0008.
 - KIL-211 (siklus graf) dan KIL-401 (anggaran chunk) adalah pemeriksaan tingkat proyek, belum dijalankan compiler per berkas.
 - Risiko callback database dinamis (`array_map($this->callback, ...)`) masih terbuka dan tetap prioritas tinggi.
 - `match` ditunda (KIL-104); `usort` ditunda (KIL-110) sesuai ADR 0011.
+- Fase 2 belum ditutup formal dan belum diberi tag.
 
 ## Repo
 
@@ -88,7 +93,7 @@ Belum ditutup pada Fase 2:
 - **Parser PHP**: Subset PHP via `web-tree-sitter` WASM (Spike S1).
 - **Format Komponen**: Single-file `*.kylat.php` (KEP-34) dengan validasi KIL-214, 215, 216.
 - **Template Engine**: Teks, interpolasi `{{ }}`, `@if/@elseif/@else`, `@foreach/@empty`, `key`, `on:click`, `bind:value`, `bind:checked`, atribut dinamis `:attr`, tag komponen anak `<x-nama>` dengan `#[Child]`, reaktivitas prop anak via accessor getter (KEP-35).
-- **Taksonomi Galat**: 33 kode terdaftar di `spec/errors.md`; 27 kode aktif ditegakkan di `@kylat/compiler` (termasuk KIL-110 penolakan closure prop, pemisahan KIL-150 markup tak seimbang dan KIL-151 direktif tak didukung).
+- **Taksonomi Galat**: 33 kode terdaftar di `spec/errors.md`; 28 kode aktif ditegakkan di `@kylat/compiler` (termasuk KIL-130 dan KIL-110 penolakan closure prop, pemisahan KIL-150 markup tak seimbang dan KIL-151 direktif tak didukung).
 - **Codegen Langsung & Sinyal**: DOM codegen langsung + signals (`alien-signals` v3.2.1), keyed list reconciler, sanitasi skema URL & penegakan atribut ARIA (`bindAttr`).
 - **Anggaran Runtime (P10)**: Runtime monolitik gzipped < 4 KB, chunk terkompilasi < 8 KB.
 - **RPC Protokol**: Batch microtask client dispatcher dengan retry transient/in-progress, timeout, CSRF token, idempotency key unik (`createIdempotencyKey`).
@@ -102,19 +107,30 @@ Belum ditutup pada Fase 2:
 
 ## Backlog Fase Berikutnya
 
-### Fase 2: CLI & Developer Experience
-1. **Source Map Generik**: Pemetaan presisi baris error templat single-file ke baris editor pengguna.
-2. **Diagnostik & Autocomplete**: Peningkatan CLI `check` dan integrasi LSP / skema.
+### Fase 2: Compiler
+1. **KIL-203/204/205**: aktifkan konvensi/kompleksitas pada v0.1.
+2. **KIL-211/KIL-401**: pemeriksaan graf komponen dan anggaran chunk di tingkat proyek.
+3. **Callback database dinamis**: tutup residual `array_map($this->callback, ...)`.
+4. **Penutupan Fase 2**: gate differential penuh, review, dan tag `v0.2.0-p2`.
 
-### Fase 3: Produksi & Adapter Riil
-1. **Idempotensi Database Outbox (ADR 0007)**: Migrasi tabel database dan transactional outbox untuk menggantikan cache interim.
-2. **Uji Konkurensi Database Riil**: Pengujian konkurensi tingkat tinggi dengan MySQL/PostgreSQL/Redis nyata.
-3. **Reset State Octane/FrankenPHP**: Penanganan siklus hidup worker long-running pada `IdempotencyStore`.
+### Fase 3: Protokol dan Adapter
+1. **GET read/schema**: `GET /_kylat/read` dan `GET /_kylat/schema`.
+2. **Optimistic update/rollback** dan generator tipe.
+3. **Conformance suite** protokol.
+4. **Idempotensi Database Outbox (ADR 0007)**: menggantikan cache interim.
+5. **Uji konkurensi database riil** MySQL/PostgreSQL/Redis.
+6. **Reset state Octane/FrankenPHP** pada `IdempotencyStore`.
+7. **Stale build, rate limit, dan pointer validasi**.
 
-### Fase 4: Optimasi & Produksi Skala Penuh
-1. **Pengujian Fisik & Mobile**: Pengujian Safari iOS fisik, JSC, dan perangkat low-end untuk evaluasi final ADR 0009.
-2. **Audit Aksesibilitas Nyata**: Pengujian langsung dengan screen reader (VoiceOver, NVDA).
-3. **Prerender & SSR**: Evaluasi rendering server untuk kecepatan muat awal.
+### Fase 4: Rendering dan DX
+1. **Source map runtime** dan strip produksi.
+2. **Prerender, SSR opsional, dan hydration mismatch test**.
+3. **HMR, generator proyek, dan plugin Vite**.
+4. **Pengujian fisik/mobile** Safari iOS, JSC, perangkat low-end.
+5. **Audit aksesibilitas nyata** dengan screen reader.
 
-### Fase 5: Dokumentasi, Ekosistem & Adopsi
-1. **Target Waktu Adopsi 10 Menit (P8)**: Pengujian waktu dari instalasi hingga komponen pertama berfungsi.
+### Fase 5: Performa, Dokumentasi, dan Rilis
+1. **P8/P10**: uji adopsi 10 menit dan benchmark ukuran resmi.
+2. **Audit keamanan independen**.
+3. **Paket npm/Composer, checksum/provenance/SRI, kebijakan versi**.
+4. **Konsistensi dokumentasi** dan uji usability pemula.

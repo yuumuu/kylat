@@ -300,13 +300,9 @@ class ClientBodyCompiler {
     if (keyPhpName) this.declareLocal(keyPhpName, keyType, true);
 
     if (keyName) {
-      this.push(
-        `for (const [${keyName}, ${itemName}] of (Array.isArray(${temp}) ? ${temp}.map((value, index) => [index, value]) : Object.entries(${temp}))) {`
-      );
+      this.push(`for (const [${keyName}, ${itemName}] of __kylatEntries(${temp})) {`);
     } else {
-      this.push(
-        `for (const ${itemName} of (Array.isArray(${temp}) ? ${temp} : Object.values(${temp}))) {`
-      );
+      this.push(`for (const ${itemName} of __kylatValues(${temp})) {`);
     }
     this.indent++;
     this.loopDepth++;
@@ -495,7 +491,7 @@ class ClientBodyCompiler {
     if (!object) this.unsupported(node);
     const objectCode = this.emitExpression(object!, false);
     const indexCode = index ? this.emitExpression(index, false) : 'undefined';
-    return `${objectCode}[${indexCode}]`;
+    return `__kylatGet(${objectCode}, ${indexCode})`;
   }
 
   private emitBinary(node: Parser.SyntaxNode): string {
@@ -645,7 +641,7 @@ class ClientBodyCompiler {
     switch (rawName) {
       case 'count': {
         const value = args[0] ? this.emitExpression(args[0], false) : 'undefined';
-        return `(Array.isArray(${value}) ? ${value}.length : Object.keys(${value} ?? {}).length)`;
+        return `__kylatCount(${value})`;
       }
       case 'mb_strlen': {
         const value = args[0] ? `String(${this.emitExpression(args[0], false)})` : "''";
@@ -677,7 +673,7 @@ class ClientBodyCompiler {
       case 'implode': {
         const glue = args[0] ? this.emitExpression(args[0], false) : "''";
         const array = args[1] ? this.emitExpression(args[1], false) : '[]';
-        return `Object.values(${array}).join(${glue})`;
+        return `__kylatValues(${array}).join(${glue})`;
       }
       case 'explode': {
         const delimiter = args[0] ? this.emitExpression(args[0], false) : "''";
@@ -686,26 +682,26 @@ class ClientBodyCompiler {
       }
       case 'array_values': {
         const array = args[0] ? this.emitExpression(args[0], false) : '[]';
-        return `Object.values(${array})`;
+        return `__kylatValues(${array})`;
       }
       case 'array_slice': {
         const array = args[0] ? this.emitExpression(args[0], false) : '[]';
         const offset = args[1] ? this.emitExpression(args[1], false) : '0';
         if (args[2]) {
           const length = this.emitExpression(args[2], false);
-          return `Object.values(${array}).slice(${offset}, ${offset} + ${length})`;
+          return `__kylatValues(${array}).slice(${offset}, ${offset} + ${length})`;
         }
-        return `Object.values(${array}).slice(${offset})`;
+        return `__kylatValues(${array}).slice(${offset})`;
       }
       case 'array_filter': {
         const array = args[0] ? this.emitExpression(args[0], false) : '[]';
         const callback = args[1] ? this.emitExpression(args[1], false) : '(value) => Boolean(value)';
-        return `Object.fromEntries(Object.entries(${array}).filter(([__key, __value]) => Boolean((${callback})(__value, __key))))`;
+        return `__kylatFilter(${array}, ${callback})`;
       }
       case 'array_map': {
         const callback = args[0] ? this.emitExpression(args[0], false) : '(value) => value';
         const array = args[1] ? this.emitExpression(args[1], false) : '[]';
-        return `(Array.isArray(${array}) ? ${array}.map((__value, __key) => (${callback})(__value, __key)) : Object.fromEntries(Object.entries(${array}).map(([__key, __value]) => [__key, (${callback})(__value, __key)])))`;
+        return `__kylatMap(${array}, ${callback})`;
       }
       default:
         this.error('KIL-110', node, `Fungsi '${rawName}' belum didukung.`);
@@ -742,13 +738,13 @@ class ClientBodyCompiler {
         hasKey = true;
         const key = this.emitExpression(children[0]!, false);
         const value = this.emitExpression(children[1]!, false);
-        parts.push(`[${key}]: ${value}`);
+        parts.push(`[${key}, ${value}]`);
       } else if (children[0]) {
         parts.push(this.emitExpression(children[0], false));
       }
     });
     if (hasKey) {
-      return `{ ${parts.join(', ')} }`;
+      return `new Map([${parts.join(', ')}])`;
     }
     return `[${parts.join(', ')}]`;
   }
@@ -879,6 +875,13 @@ class ClientBodyCompiler {
   private checkAssignmentType(target: KylatType, value: KylatType, node: Parser.SyntaxNode): void {
     if (!isKnown(target) || !isKnown(value)) return;
     if (target.kind === 'primitive' && target.name === 'null') return;
+    if (target.kind === 'list' && value.kind === 'map') {
+      this.error(
+        'KIL-130',
+        node,
+        "Hasil array_filter mempertahankan key dan bertipe map. Bungkus dengan array_values() sebelum dipakai sebagai list<T>."
+      );
+    }
     if (!isAssignable(value, target)) {
       // Tipe numerik dan string dari mb_* sengaja tidak dipaksa pada v0;
       // KIL-131 hanya ditegakkan untuk operator titik dan return.
@@ -970,8 +973,11 @@ class ClientBodyCompiler {
         if (name === 'count' || name === 'mb_strlen' || name === 'array_slice') return primitive('int');
         if (name === 'str_contains' || name === 'str_starts_with') return primitive('bool');
         if (name === 'mb_strtolower' || name === 'mb_strtoupper' || name === 'implode') return primitive('string');
-        if (name === 'explode' || name === 'array_values' || name === 'array_slice' || name === 'array_filter') {
+        if (name === 'explode' || name === 'array_values' || name === 'array_slice') {
           return { kind: 'list', itemType: UNKNOWN };
+        }
+        if (name === 'array_filter') {
+          return { kind: 'map', keyType: 'string', valueType: UNKNOWN };
         }
         if (name === 'array_map') {
           const args = this.argumentNodes(node.childForFieldName('arguments'));
@@ -1039,7 +1045,9 @@ class ClientBodyCompiler {
   }
 
   private readProp(name: string): string {
-    return `(typeof prop_${name} === 'function' ? prop_${name}() : prop_${name})`;
+    const value = `(typeof prop_${name} === 'function' ? prop_${name}() : prop_${name})`;
+    const type = this.options.symbols.props.get(name);
+    return type?.kind === 'map' ? `__kylatMapFrom(${value})` : value;
   }
   private lookupLocal(name: string): LocalBinding | undefined {
     for (let i = this.scopes.length - 1; i >= 0; i--) {

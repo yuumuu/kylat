@@ -96,4 +96,55 @@ describe('@kylat/compiler - analisis tipe v0', () => {
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
   });
+
+  it('menerima parameter array dengan docblock @param generik', async () => {
+    const result = await compile(
+      component(`    /** @param list<int> $items */
+    #[Client] public function total(array $items): int {
+      $sum = 0;
+      foreach ($items as $item) { $sum += $item; }
+      return $sum;
+    }`),
+      'Demo.kylat.php',
+      { template: '<div></div>' }
+    );
+    assert.equal(result.success, true, JSON.stringify(result.diagnostics));
+  });
+
+  it('menolak properti array tanpa docblock generik dengan KIL-130', async () => {
+    const result = await compile(
+      component('    public array $items = [];'),
+      'Demo.kylat.php',
+      { template: '<div></div>' }
+    );
+    assert.equal(result.success, false);
+    assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === 'KIL-130'));
+  });
+
+  it('menolak hasil array_filter langsung sebagai list dengan KIL-130', async () => {
+    const result = await compile(
+      component(`    /** @var list<int> */
+    public array $items = [1, 2, 3];
+    #[Client] public function clean(): void {
+      $this->items = array_filter($this->items, fn($n) => $n > 1);
+    }`),
+      'Demo.kylat.php',
+      { template: '<div></div>' }
+    );
+    assert.equal(result.success, false);
+    assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === 'KIL-130'));
+  });
+
+  it('menerima array_filter yang dibungkus array_values', async () => {
+    const result = await compile(
+      component(`    /** @var list<int> */
+    public array $items = [1, 2, 3];
+    #[Client] public function clean(): void {
+      $this->items = array_values(array_filter($this->items, fn($n) => $n > 1));
+    }`),
+      'Demo.kylat.php',
+      { template: '<div></div>' }
+    );
+    assert.equal(result.success, true, JSON.stringify(result.diagnostics));
+  });
 });

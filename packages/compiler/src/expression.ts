@@ -286,7 +286,7 @@ class ExpressionParser {
       if (this.match('[')) {
         const indexExpression = this.parseTernary();
         this.expect(']');
-        value = `${value}[${indexExpression}]`;
+        value = `__kylatGet(${value}, ${indexExpression})`;
         continue;
       }
       break;
@@ -366,7 +366,7 @@ class ExpressionParser {
     const one = args[0] ?? 'undefined';
     switch (name) {
       case 'count':
-        return `(${one}).length`;
+        return `__kylatCount(${one})`;
       case 'mb_strlen':
         return `String(${one}).length`;
       case 'str_contains':
@@ -374,11 +374,11 @@ class ExpressionParser {
       case 'str_starts_with':
         return `String(${one}).startsWith(String(${args[1] ?? "''"}))`;
       case 'implode':
-        return `(${args[1] ?? '[]'}).join(${one})`;
+        return `__kylatValues(${args[1] ?? '[]'}).join(${one})`;
       case 'explode':
         return `String(${args[1] ?? "''"}).split(${one})`;
       case 'array_values':
-        return `Object.values(${one})`;
+        return `__kylatValues(${one})`;
       default:
         throw new ExpressionError('KIL-110', `Fungsi '${name}' belum didukung.`);
     }
