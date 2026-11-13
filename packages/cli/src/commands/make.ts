@@ -50,7 +50,7 @@ final class ${name} extends Component
 ?>
 <div class="kylat-${name.toLowerCase()}">
     <h1>${name}</h1>
-    <button on:click="increment">Klik: {{ $count }}</button>
+    <button on:click="increment()">Klik: {{ $count }}</button>
 </div>
 `;
 
