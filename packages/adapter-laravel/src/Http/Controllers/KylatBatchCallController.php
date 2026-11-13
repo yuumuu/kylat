@@ -6,6 +6,8 @@ namespace Kylat\Laravel\Http\Controllers;
 
 use Kylat\Laravel\Actions\ActionRegistry;
 use Kylat\Laravel\Support\IdempotencyStore;
+use Kylat\Laravel\Support\KylatRateLimiter;
+use Kylat\Laravel\Support\RateLimitExceeded;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use JsonException;
@@ -38,7 +40,7 @@ final class KylatBatchCallController
      * @param array<string, string> $headers
      * @return array{results: list<array<string, mixed>>}
      */
-    public function handle(array $payload, array $headers = [], int $bodyBytes = 0): array
+    public function handle(array $payload, array $headers = [], int $bodyBytes = 0, ?string $clientIp = null): array
     {
         if ($bodyBytes > self::MAX_BODY_BYTES) {
             throw new \InvalidArgumentException('Ukuran body melebihi batas 256 KB.');
@@ -65,6 +67,26 @@ final class KylatBatchCallController
                     self::MAX_CALLS_PER_BATCH
                 )
             );
+        }
+
+        $mutationCount = 0;
+        foreach ($rawCalls as $rawCall) {
+            if (!is_array($rawCall) || !isset($rawCall['action']) || !is_string($rawCall['action'])) {
+                continue;
+            }
+            $parts = preg_split('/::|\./', $rawCall['action'], 2);
+            if (!is_array($parts) || count($parts) !== 2) {
+                continue;
+            }
+            if ($this->isMutationAction($parts[0], $parts[1])) {
+                $mutationCount++;
+            }
+        }
+        if ($mutationCount > 0) {
+            $user = $this->currentUser();
+            if ($user !== null || $clientIp !== null) {
+                KylatRateLimiter::assertAllowed($user, $clientIp, $mutationCount);
+            }
         }
 
         $results = [];
@@ -291,7 +313,14 @@ final class KylatBatchCallController
         }
 
         try {
-            $result = $this->handle($payload, $headers, strlen($body));
+            $result = $this->handle($payload, $headers, strlen($body), $request->ip());
+        } catch (RateLimitExceeded $exception) {
+            return $this->problem(
+                429,
+                'Too Many Requests',
+                'Rate limit mutasi terlampaui.',
+                'urn:kylat:rate_limited'
+            )->header('Retry-After', (string) $exception->retryAfterSeconds);
         } catch (\InvalidArgumentException $exception) {
             return $this->problem(400, 'Bad Request', $exception->getMessage());
         }

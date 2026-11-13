@@ -26,7 +26,9 @@
     "test": [
       "php -d zend.assertions=1 -d assert.exception=1 test/AdapterTest.php",
       "php -d zend.assertions=1 -d assert.exception=1 test/CacheDriverIdempotencyTest.php",
-      "php -d zend.assertions=1 -d assert.exception=1 test/ReadEndpointTest.php"
+      "php -d zend.assertions=1 -d assert.exception=1 test/ReadEndpointTest.php",
+      "php -d zend.assertions=1 -d assert.exception=1 test/RateLimitTest.php",
+      "php -d zend.assertions=1 -d assert.exception=1 test/ConformanceTest.php"
     ]
   }
 }
