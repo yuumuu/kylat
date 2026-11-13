@@ -8,14 +8,14 @@ Setiap aturan wajib punya: kode stabil, lokasi di PHP, penjelasan satu kalimat, 
 |---|---|---|
 | KIL-102 | `declare(strict_types=1)` wajib | Bahasa |
 | KIL-103 | Tanpa `static`, `global`, atau singleton di komponen | Bahasa |
-| KIL-201 | Satu komponen per file; nama file sama dengan nama kelas | Struktur |
+| KIL-201 | Satu komponen final per file | Struktur |
 | KIL-203 | Urutan anggota: konstanta, `#[Prop]`, state, computed, `#[Client]`, `#[Server]` | Konvensi |
 | KIL-204 | Method `#[Client]` pendek; batas lunak 40 baris, nesting maksimal 3 (peringatan) | Konvensi |
 | KIL-205 | Templat hanya ekspresi sederhana; logika masuk computed | Konvensi |
 | KIL-211 | Tidak ada dependensi sirkular antar komponen | Struktur |
 | KIL-212 | Tag `<x-nama>` wajib dideklarasikan lewat `#[Child(Nama::class)]` di komponen induk | Struktur |
 | KIL-214 | Bagian PHP hanya boleh berisi `declare`, `namespace`, `use`, dan satu class | Struktur |
-| KIL-215 | Nama class harus sama dengan nama berkas dalam PascalCase | Struktur |
+| KIL-215 | Nama berkas kebab-case; class PascalCase turunannya | Struktur |
 | KIL-216 | `?>` wajib ada, dan tidak boleh ada kode PHP setelahnya | Struktur |
 | KIL-310 | Setiap aksi `#[Server]` wajib punya `authorize()` eksplisit | Keamanan |
 | KIL-311 | Nama aksi unik per kontrak | Kontrak |
@@ -39,7 +39,7 @@ Rentang sah: `1xx` bahasa, `2xx` konvensi dan struktur, `3xx` keamanan dan kontr
 
 **KIL-214.** Bagian PHP pada komponen single-file `*.kylat.php` hanya boleh berisi `declare(strict_types=1);`, `namespace`, pernyataan `use`, dan tepat satu definisi kelas komponen. Dilarang keras menempatkan pernyataan di luar tubuh kelas (*top-level statements*), fungsi mandiri, atau variabel di luar kelas.
 
-**KIL-215.** Nama kelas komponen wajib persis sama dengan nama berkas dalam format PascalCase (misal: berkas `Counter.kylat.php` wajib mendefinisikan `class Counter`). Perbedaan kapitalisasi atau nama yang tidak seragam menggagalkan build demi kepastian pemetaan rujukan dan tag island.
+**KIL-215.** Nama kelas komponen wajib persis sama dengan nama berkas dalam format PascalCase (misal: berkas `counter.kylat.php` wajib mendefinisikan `class Counter`). Perbedaan kapitalisasi atau nama yang tidak seragam menggagalkan build demi kepastian pemetaan rujukan dan tag island.
 
 **KIL-216.** Tag penutup PHP `?>` wajib ada setelah definisi kelas komponen untuk menutup bagian PHP. Tidak boleh ada tag PHP pembuka (`<?php` atau `<?=`) di dalam bagian templat setelahnya. Bagian kedua diperlakukan sepenuhnya sebagai templat HTML/Kylat.
 

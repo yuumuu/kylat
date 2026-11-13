@@ -16,6 +16,21 @@ export function kebabToCamel(str: string): string {
 }
 
 /**
+ * Mengubah string kebab-case menjadi PascalCase deterministik.
+ * Contoh:
+ *   - "counter" -> "Counter"
+ *   - "cart-product" -> "CartProduct"
+ *   - "item-2-count" -> "Item2Count"
+ */
+export function kebabToPascal(str: string): string {
+  return str
+    .split('-')
+    .filter((part) => part.length > 0)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
+}
+
+/**
  * Mengubah string camelCase menjadi kebab-case HTML.
  * Contoh:
  *   - "initialCount" -> "initial-count"

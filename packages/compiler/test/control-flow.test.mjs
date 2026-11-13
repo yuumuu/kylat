@@ -67,7 +67,7 @@ describe('@kylat/compiler - kontrol alur dan closure subset v0', () => {
       for ($i = 0; $i < $limit; $i++) { $this->count += $i; }
       if ($this->count > 2) { $this->count = 2; }
     }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div><button on:click="run(3)">go</button><span>{{ $count }}</span></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
@@ -90,7 +90,7 @@ describe('@kylat/compiler - kontrol alur dan closure subset v0', () => {
         $this->sum += $value;
       }
     }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div><button on:click="reduce">go</button><span>{{ $keys }}</span><b>{{ $sum }}</b></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
@@ -109,7 +109,7 @@ describe('@kylat/compiler - kontrol alur dan closure subset v0', () => {
     }
     #[Client]
     public function apply(int $value): void { $this->label = $this->classify($value); }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div><button on:click="apply(2)">go</button><span>{{ $label }}</span></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
@@ -131,7 +131,7 @@ describe('@kylat/compiler - kontrol alur dan closure subset v0', () => {
       foreach ($kept as $value) { $sum += $value; }
       $this->total = $sum;
     }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div><button on:click="compute">go</button><span>{{ $total }}</span></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
@@ -147,7 +147,7 @@ describe('@kylat/compiler - kontrol alur dan closure subset v0', () => {
     public function doubled(): int { return $this->count * 2; }
     #[Client]
     public function inc(): void { $this->count++; }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div><button on:click="inc">go</button><span>{{ $doubled }}</span></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
@@ -169,7 +169,7 @@ describe('@kylat/compiler - kontrol alur dan closure subset v0', () => {
     public function watch(): void { $this->observed = $this->count; }
     #[Client]
     public function inc(): void { $this->count++; }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div><button on:click="inc">go</button><span>{{ $mounted }}</span><b>{{ $observed }}</b></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
@@ -190,7 +190,7 @@ describe('@kylat/compiler - kontrol alur dan closure subset v0', () => {
       $fn = function($x) use ($base) { $y = $x + $base; return $y; };
       $this->result = $fn(5);
     }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div><button on:click="run">go</button><span>{{ $result }}</span></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
@@ -207,7 +207,7 @@ describe('@kylat/compiler - kontrol alur dan closure subset v0', () => {
     public function watch(): void { $this->seen = $this->mounted; }
     #[OnMount]
     public function ready(): void { $this->mounted = 1; }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div><span>{{ $mounted }}</span><b>{{ $seen }}</b></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
@@ -219,7 +219,7 @@ describe('@kylat/compiler - kontrol alur dan closure subset v0', () => {
   it('menolak #[Computed] berparameter dan yang menulis state dengan KIL-104', async () => {
     const withParam = await compile(
       component(`    #[Computed] public function total(int $x): int { return $x; }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(withParam.success, false);
@@ -228,7 +228,7 @@ describe('@kylat/compiler - kontrol alur dan closure subset v0', () => {
     const withWrite = await compile(
       component(`    public int $count = 0;
     #[Computed] public function total(): int { $this->count = 1; return 1; }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(withWrite.success, false);
@@ -238,7 +238,7 @@ describe('@kylat/compiler - kontrol alur dan closure subset v0', () => {
   it('menolak lifecycle berparameter dan server call dari OnMount', async () => {
     const lifecycleParam = await compile(
       component('    #[OnMount] public function ready(int $x): void {}'),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(lifecycleParam.success, false);
@@ -246,7 +246,7 @@ describe('@kylat/compiler - kontrol alur dan closure subset v0', () => {
 
     const serverCall = await compile(
       component(`    #[OnMount] public function ready(): void { $this->server(Actions::class)->load(1); }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(serverCall.success, false);
@@ -266,7 +266,7 @@ final class Demo extends Component {
   #[Server]
   public function save(): void { $this->server(DemoActions::class)->saveScores($this->scores); }
 }`,
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
@@ -280,7 +280,7 @@ final class Demo extends Component {
     public array $items = [3, 1, 2];
     #[Client]
     public function sortItems(): void { usort($this->items, fn($a, $b) => $a <=> $b); }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, false);
@@ -292,7 +292,7 @@ final class Demo extends Component {
       component(`    public int $n = 1;
     #[Client]
     public function bad(): void { $this->n = $this->n . 'x'; }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, false);
@@ -304,7 +304,7 @@ final class Demo extends Component {
       component(`    public int $n = 0;
     #[Client]
     public function loop(): void { while ($this->n < 3) { $this->n++; } }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, false);

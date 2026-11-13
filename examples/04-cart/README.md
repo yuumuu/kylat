@@ -1,7 +1,7 @@
 # examples/04-cart/
 
 > [!WARNING]
-> **Legacy Fixture (Pra-KEP-34)**: Contoh ini menggunakan format dua-berkas terpisah (`.php` dan `.blade.php`) sebelum penetapan arsitektur kanonik Single-File Component (`*.kylat.php`) pada KEP-34 / ADR 0004. Direktori ini dipertahankan sebagai fixture kompatibilitas dan referensi historis, bukan sebagai format standar komponen Kylat saat ini. Untuk contoh kanonik SFC terkini, lihat `examples/01-counter/Counter.kylat.php`.
+> **Legacy Fixture (Pra-KEP-34)**: Contoh ini menggunakan format dua-berkas terpisah (`.php` dan `.blade.php`) sebelum penetapan arsitektur kanonik Single-File Component (`*.kylat.php`) pada KEP-34 / ADR 0004. Direktori ini dipertahankan sebagai fixture kompatibilitas dan referensi historis, bukan sebagai format standar komponen Kylat saat ini. Untuk contoh kanonik SFC terkini, lihat `examples/01-counter/counter.kylat.php`.
 
 Contoh komponen CartCounter dengan mutasi aksi server `CartActions::add` dan prop `productId` (sesuai Dokumen 4 §1.4, Spike S3, dan ADR 0003).
 

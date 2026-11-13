@@ -107,7 +107,7 @@ Pengecualian Fase 2:
 - **Adapter Laravel**: Registry-only, method wajib `#[Server]`, otorisasi `authorize()` default-deny, kontrol batas body/batch/depth, Problem Details RFC 9457, proteksi race-condition idempotensi 24 jam.
 - **CLI Toolchain**: `make:component`, `check`, `build` (manifest builder), `doctor`.
 - **Contoh Aplikasi Referensi**:
-  - `examples/01-counter/`: Komponen Single-File resmi (`Counter.kylat.php`), server demo, uji E2E Node, dan uji WebKit Playwright.
+  - `examples/01-counter/`: Komponen Single-File resmi (`counter.kylat.php`), server demo, uji E2E Node, dan uji WebKit Playwright.
   - `examples/04-cart/`: Komponen referensi pemanggilan server action RPC (`CartActions::add`) dengan otorisasi dan prop `productId`.
 
 ---
@@ -130,7 +130,7 @@ Tugas berikutnya: Fase 4 (rendering dan DX).
 
 **Status: DIBUKA (ADR 0021); source map, axe, Vite plugin, `kylat new`, dan SSR/prerender + hydration mismatch selesai; HMR granular/audit screen reader belum.**
 
-Sudah ada: `kylat build` menghasilkan `.js.map` + `sourceMappingURL` dan `manifest.sourceMap`; `--production`/`--no-sourcemap` menghapus keduanya. Contoh keranjang CSP menjalankan axe-core WCAG 2 A/AA tanpa pelanggaran serius/kritis. `@kylat/vite-plugin` mengompilasi `*.kylat.php`, meneruskan source map, dan meng-invalidate modul saat file berubah (fallback full reload). `kylat new` menghasilkan proyek Vite minimal. `@kylat/ssr` menyediakan `renderToString()`; `hydrateIsland()` mendeteksi mismatch dan menandai `data-kylat-hydration-mismatch`.
+Sudah ada: `kylat build` menghasilkan `.js.map` + `sourceMappingURL` dan `manifest.sourceMap`; `--production`/`--no-sourcemap` menghapus keduanya. Contoh keranjang CSP menjalankan axe-core WCAG 2 A/AA tanpa pelanggaran serius/kritis. `@kylat/vite-plugin` mengompilasi `*.kylat.php`, meneruskan source map, dan meng-invalidate modul saat file berubah (fallback full reload). `kylat new` menghasilkan proyek Vite minimal. `@kylat/ssr` menyediakan `renderToString()`; `hydrateIsland()` mendeteksi mismatch dan menandai `data-kylat-hydration-mismatch`. Standar nama berkas komponen kebab-case (`cart-product.kylat.php` → `CartProduct`) ditegakkan KIL-215 (ADR 0022).
 
 Belum ada: component-level HMR, audit screen reader, dan pengujian perangkat fisik.
 

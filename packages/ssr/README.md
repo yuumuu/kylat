@@ -4,7 +4,7 @@ Prerender/SSR opsional untuk komponen Kylat. Memakai `linkedom`; tidak dipakai d
 
 ```js
 import { renderToString } from '@kylat/ssr';
-import { createCounter } from './Counter.kylat.php';
+import { createCounter } from './counter.kylat.php';
 
 const html = renderToString(createCounter, { initialCount: 3 });
 ```

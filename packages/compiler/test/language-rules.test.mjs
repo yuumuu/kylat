@@ -12,7 +12,7 @@ ${body}
 }`;
 
 async function codes(body) {
-  const result = await compile(component(body), 'Demo.kylat.php', { template: '<div></div>' });
+  const result = await compile(component(body), 'demo.kylat.php', { template: '<div></div>' });
   return result.diagnostics.map((diagnostic) => diagnostic.code);
 }
 
@@ -51,7 +51,7 @@ final class BadClosure extends Component {
 }
 ?>
 <div></div>`,
-      'BadClosure.kylat.php'
+      'bad-closure.kylat.php'
     );
     assert.equal(result.success, false);
     assert.ok(result.diagnostics.some((d) => d.code === 'KIL-110'));
@@ -66,7 +66,7 @@ final class BadClosure extends Component {
   it('mengizinkan fungsi allowlist seperti mb_strlen', async () => {
     const result = await compile(
       component(`    public function ok(): void { $this->name = mb_strlen($this->name); }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
@@ -103,7 +103,7 @@ describe('@kylat/compiler - match ditunda', () => {
     const codes = await (async () => {
       const result = await compile(
         component('    public function label(int $status): string { return match($status) { 1 => "A", default => "B" }; }'),
-        'Demo.kylat.php',
+        'demo.kylat.php',
         { template: '<div></div>' }
       );
       return result.diagnostics.map((diagnostic) => diagnostic.code);

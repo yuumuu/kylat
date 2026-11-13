@@ -24,7 +24,7 @@ describe('@kylat/cli - generator proyek', () => {
       'README.md',
       '.gitignore',
       'src/main.js',
-      'src/Counter.kylat.php',
+      'src/counter.kylat.php',
     ]) {
       assert.ok(fs.existsSync(path.join(target, file)), `${file} harus dibuat`);
     }
@@ -40,14 +40,14 @@ describe('@kylat/cli - generator proyek', () => {
     assert.match(viteConfig, /plugins: \[kylat\(\)\]/);
 
     const main = fs.readFileSync(path.join(target, 'src/main.js'), 'utf-8');
-    assert.match(main, /from '\.\/Counter\.kylat\.php'/);
+    assert.match(main, /from '\.\/counter\.kylat\.php'/);
     assert.match(main, /createCounter/);
 
-    const component = fs.readFileSync(path.join(target, 'src/Counter.kylat.php'), 'utf-8');
+    const component = fs.readFileSync(path.join(target, 'src/counter.kylat.php'), 'utf-8');
     assert.match(component, /final class Counter extends Component/);
     assert.match(component, /on:click="increment\(\)"/);
 
-    const result = await compile(component, 'Counter.kylat.php');
+    const result = await compile(component, 'counter.kylat.php');
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
     assert.match(result.code, /export function createCounter/);
   });

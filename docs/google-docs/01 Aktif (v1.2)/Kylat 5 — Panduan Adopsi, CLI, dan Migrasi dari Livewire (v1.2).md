@@ -88,7 +88,7 @@ Jalur ini melewati resolusi versi otomatis. Pantau update lewat SECURITY.md.
 
 6. CLI
 
-npm create kylat@latest my-app       scaffold repo FE, tanpa PHPcd my-app && npm run dev           kylat dev, HMRkylat make:component Counter        buat src/components/Counter.kylat.phpkylat make:action AddToCart         buat stub aksi di backendkylat check                         lint subset PHP, tipe, KIL-xxxkylat build [--cdn]                 build produksi, opsional artefak CDNkylat doctor                        cek keamanan dan konfigurasikylat sync-contract [--check]       sinkron kontrak dengan backend
+npm create kylat@latest my-app       scaffold repo FE, tanpa PHPcd my-app && npm run dev           kylat dev, HMRkylat make:component Counter        buat src/components/counter.kylat.phpkylat make:action AddToCart         buat stub aksi di backendkylat check                         lint subset PHP, tipe, KIL-xxxkylat build [--cdn]                 build produksi, opsional artefak CDNkylat doctor                        cek keamanan dan konfigurasikylat sync-contract [--check]       sinkron kontrak dengan backend
 
 Untuk Laravel: composer require kylat/laravel, lalu php artisan kylat:install. Perintah ini menambah provider, config, dan contoh aksi, serta mencetak langkah berikutnya.
 

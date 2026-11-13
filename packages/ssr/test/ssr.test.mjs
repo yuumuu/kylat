@@ -42,7 +42,7 @@ final class Widget extends Component
 `;
 
 async function loadWidget() {
-  const result = await compile(WIDGET, 'Widget.kylat.php');
+  const result = await compile(WIDGET, 'widget.kylat.php');
   assert.equal(result.success, true, JSON.stringify(result.diagnostics));
 
   const runtimeUrl = pathToFileURL(path.resolve(__dirname, '../../runtime/dist/index.js')).href;

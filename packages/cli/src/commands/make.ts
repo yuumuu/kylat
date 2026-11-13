@@ -1,25 +1,32 @@
 /**
  * @kylat/cli - commands/make.ts
  * Scaffold komponen single-file agar onboarding seperti framework frontend modern.
+ *
+ * Nama komponen memakai kebab-case: `kylat make:component cart-product`
+ * menghasilkan `cart-product.kylat.php` dengan class `CartProduct`.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { kebabToPascal } from '@kylat/compiler';
 
 export interface MakeOptions {
   dir?: string;
 }
 
+const COMPONENT_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+
 export function runMakeComponentCommand(name: string | undefined, options?: MakeOptions): number {
   if (!name) {
-    console.error('❌ Nama komponen wajib diisi. Contoh: kylat make:component Counter');
+    console.error('❌ Nama komponen wajib diisi. Contoh: kylat make:component cart-product');
     return 1;
   }
-  if (!/^[A-Z][A-Za-z0-9]*$/.test(name)) {
-    console.error('❌ Nama komponen wajib PascalCase, misal: Counter atau ProductCard.');
+  if (!COMPONENT_NAME.test(name)) {
+    console.error('❌ Nama komponen wajib kebab-case, misal: counter atau cart-product.');
     return 1;
   }
 
+  const className = kebabToPascal(name);
   const dir = path.resolve(process.cwd(), options?.dir ?? 'resources/views/components');
   fs.mkdirSync(dir, { recursive: true });
   const destination = path.join(dir, `${name}.kylat.php`);
@@ -37,7 +44,7 @@ namespace App\\Components;
 use Kylat\\Component;
 use Kylat\\Attributes\\Client;
 
-final class ${name} extends Component
+final class ${className} extends Component
 {
     public int $count = 0;
 
@@ -48,8 +55,8 @@ final class ${name} extends Component
     }
 }
 ?>
-<div class="kylat-${name.toLowerCase()}">
-    <h1>${name}</h1>
+<div class="kylat-${name}">
+    <h1>${className}</h1>
     <button on:click="increment()">Klik: {{ $count }}</button>
 </div>
 `;

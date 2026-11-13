@@ -26,12 +26,12 @@ describe('@kylat/cli - Command Suite', () => {
   });
 
   describe('make:component', () => {
-    it('membuat berkas *.kylat.php baru dengan nama PascalCase', () => {
-      const exitCode = runMakeComponentCommand('QuickCounter', { dir: tmpDir });
+    it('membuat berkas *.kylat.php baru dengan nama kebab-case', () => {
+      const exitCode = runMakeComponentCommand('quick-counter', { dir: tmpDir });
       assert.equal(exitCode, 0, 'make:component harus mengembalikan exit code 0');
 
-      const targetFile = path.join(tmpDir, 'QuickCounter.kylat.php');
-      assert.ok(fs.existsSync(targetFile), 'Berkas QuickCounter.kylat.php harus dibuat');
+      const targetFile = path.join(tmpDir, 'quick-counter.kylat.php');
+      assert.ok(fs.existsSync(targetFile), 'Berkas quick-counter.kylat.php harus dibuat');
 
       const content = fs.readFileSync(targetFile, 'utf-8');
       assert.ok(content.includes('declare(strict_types=1);'), 'Wajib memiliki declare strict_types');
@@ -39,20 +39,20 @@ describe('@kylat/cli - Command Suite', () => {
       assert.ok(content.includes('?>'), 'Wajib memiliki penutup tag PHP ?>');
     });
 
-    it('menolak nama komponen yang bukan PascalCase', () => {
-      const exitCode1 = runMakeComponentCommand('lowercase', { dir: tmpDir });
-      assert.equal(exitCode1, 1, 'Nama lowercase harus ditolak');
+    it('menolak nama komponen yang bukan kebab-case', () => {
+      const exitCode1 = runMakeComponentCommand('QuickCounter', { dir: tmpDir });
+      assert.equal(exitCode1, 1, 'Nama PascalCase harus ditolak');
 
-      const exitCode2 = runMakeComponentCommand('kebab-case', { dir: tmpDir });
-      assert.equal(exitCode2, 1, 'Nama kebab-case harus ditolak');
+      const exitCode2 = runMakeComponentCommand('quick_counter', { dir: tmpDir });
+      assert.equal(exitCode2, 1, 'Nama snake_case harus ditolak');
 
       const exitCode3 = runMakeComponentCommand(undefined, { dir: tmpDir });
       assert.equal(exitCode3, 1, 'Nama undefined harus ditolak');
     });
 
     it('menolak menimpa berkas jika komponen sudah ada', () => {
-      // QuickCounter sudah dibuat pada tes pertama
-      const exitCode = runMakeComponentCommand('QuickCounter', { dir: tmpDir });
+      // quick-counter sudah dibuat pada tes pertama
+      const exitCode = runMakeComponentCommand('quick-counter', { dir: tmpDir });
       assert.equal(exitCode, 1, 'Harus gagal karena berkas sudah ada');
     });
   });
@@ -67,7 +67,7 @@ describe('@kylat/cli - Command Suite', () => {
 
   describe('check & build', () => {
     it('memeriksa komponen valid dengan kylat check', async () => {
-      // tmpDir berisi QuickCounter.kylat.php yang valid
+      // tmpDir berisi quick-counter.kylat.php yang valid
       const exitCode = await runCheckCommand(tmpDir);
       assert.equal(exitCode, 0, 'kylat check pada komponen valid harus menghasilkan exit 0');
     });
@@ -75,7 +75,7 @@ describe('@kylat/cli - Command Suite', () => {
     it('mendeteksi galat anatomi pada komponen yang rusak dengan kylat check', async () => {
       const brokenDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kylat-broken-'));
       try {
-        const brokenFile = path.join(brokenDir, 'BadName.kylat.php');
+        const brokenFile = path.join(brokenDir, 'bad-name.kylat.php');
         // KIL-215: nama kelas tidak sama dengan nama berkas
         fs.writeFileSync(
           brokenFile,

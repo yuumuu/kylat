@@ -101,7 +101,7 @@ describe('@kylat/compiler - KEP-35 reaktivitas prop komponen anak', () => {
   });
 
   it('1. kompilasi prop dinamis sebagai accessor getter dan prop statis sebagai nilai biasa', async () => {
-    const parentRes = await compile(parentSource, 'ParentComponent.kylat.php');
+    const parentRes = await compile(parentSource, 'parent-component.kylat.php');
     assert.equal(parentRes.success, true, JSON.stringify(parentRes.diagnostics));
 
     // Prop dinamis :value="$count" wajib dikompilasi sebagai accessor getter: "value": () => count()
@@ -118,8 +118,8 @@ describe('@kylat/compiler - KEP-35 reaktivitas prop komponen anak', () => {
   });
 
   it('2. reaktivitas runtime: ketika induk berubah, anak harus ikut berubah', async () => {
-    const parentRes = await compile(parentSource, 'ParentComponent.kylat.php');
-    const childRes = await compile(childSource, 'Display.kylat.php');
+    const parentRes = await compile(parentSource, 'parent-component.kylat.php');
+    const childRes = await compile(childSource, 'display.kylat.php');
     assert.equal(parentRes.success, true, JSON.stringify(parentRes.diagnostics));
     assert.equal(childRes.success, true, JSON.stringify(childRes.diagnostics));
 
@@ -156,7 +156,7 @@ final class ActionDisplay extends Component
 ?>
 <div></div>`;
 
-    const res = await compile(invalidChildSource, 'ActionDisplay.kylat.php');
+    const res = await compile(invalidChildSource, 'action-display.kylat.php');
     assert.equal(res.success, false);
     const kil110 = res.diagnostics.find((d) => d.code === 'KIL-110');
     assert.ok(kil110, 'Prop dengan tipe Closure/callable wajib ditolak oleh KIL-110');

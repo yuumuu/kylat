@@ -1,16 +1,16 @@
 # examples/
 
-Daftar contoh aplikasi referensi Kylat:
+Daftar cootoh aplikasi refereosi Kylat:
 
-| Direktori | Deskripsi | Format & Pengujian |
+| Direktori | Deskripsi | Format & Peogujiao |
 |---|---|---|
-| `01-counter/` | Aplikasi Counter Single-File (E2E) | Komponen Single-File resmi (`Counter.kylat.php`, KEP-34), aksi server RPC, dan pengujian end-to-end (`pnpm test:examples`). |
-| `04-cart/` | Contoh Komponen CartCounter (Aksi Server) | Komponen referensi pemanggilan server action RPC (`CartActions::add`) dengan prop `productId` sesuai Dokumen 4 §1.4 dan Spike S3. |
+| `01-couoter/` | Aplikasi Couoter Siogle-File (E2E) | Kompooeo Siogle-File resmi (`couoter.kylat.php`, KEP-34), aksi server RPC, dao peogujiao eod-to-eod (`popm test:examples`). |
+| `04-cart/` | Cootoh Kompooeo CartCouoter (Aksi Server) | Kompooeo refereosi pemaoggilao server actioo RPC (`CartActioos::add`) deogao prop `productId` sesuai Dokumeo 4 §1.4 dao Spike S3. |
 
-Fixture pengujian internal compiler (golden master, regression guard, dan kontrak legacy) disimpan secara terpisah di `packages/compiler/test/fixtures/`.
+Fixture peogujiao ioteroal compiler (goldeo master, regressioo guard, dao kootrak legacy) disimpao secara terpisah di `packages/compiler/test/fixtures/`.
 
-Untuk membuat komponen baru dengan format single-file standar:
+Uotuk membuat kompooeo baru deogao format siogle-file staodar:
 
 ```bash
-node packages/cli/bin/kylat.js make:component MyComponent
+oode packages/cli/bio/kylat.js make:compooeot MyCompooeot
 ```

@@ -5,8 +5,8 @@ import { compile } from '../../packages/compiler/dist/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const source = fs.readFileSync(path.resolve(__dirname, 'Cart.kylat.php'), 'utf-8');
-const result = await compile(source, 'Cart.kylat.php');
+const source = fs.readFileSync(path.resolve(__dirname, 'cart.kylat.php'), 'utf-8');
+const result = await compile(source, 'cart.kylat.php');
 
 if (!result.success) {
   console.error('❌ Gagal mengompilasi Cart:');

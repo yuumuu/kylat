@@ -55,7 +55,7 @@ Pemisahan dua berkas ini menimbulkan sejumlah friksi teknis dan pengalaman penge
      - Pernyataan impor `use`.
      - Tepat satu kelas `final` turunan `Kylat\Component`.
      - Dilarang keras ada statement PHP lain di luar tubuh kelas komponen (menghasilkan galat `KIL-214`).
-     - Nama kelas komponen wajib identik dengan nama berkas dalam format PascalCase (menghasilkan galat `KIL-215`).
+     - Nama berkas wajib kebab-case dan nama kelas wajib PascalCase turunannya (menghasilkan galat `KIL-215`; lihat ADR 0022).
    - **Bagian Kedua**:
      - Tag penutup `?>` wajib ada setelah tubuh kelas komponen.
      - Dilarang ada kode PHP (`<?php` atau `<?=`) setelah tag penutup `?>` (menghasilkan galat `KIL-216`).
@@ -68,7 +68,7 @@ Pemisahan dua berkas ini menimbulkan sejumlah friksi teknis dan pengalaman penge
 
 ## 4. Contoh Komponen Standar
 
-Berkas: `resources/kylat/Counter.kylat.php`
+Berkas: `resources/kylat/counter.kylat.php`
 ```php
 <?php
 declare(strict_types=1);

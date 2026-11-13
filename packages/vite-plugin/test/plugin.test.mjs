@@ -9,7 +9,7 @@ import { kylat } from '../dist/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const counterSource = fs.readFileSync(
-  path.resolve(__dirname, '../../../examples/01-counter/Counter.kylat.php'),
+  path.resolve(__dirname, '../../../examples/01-counter/counter.kylat.php'),
   'utf-8'
 );
 
@@ -26,12 +26,12 @@ describe('@kylat/vite-plugin', () => {
       },
     };
 
-    const result = await plugin.transform.call(context, counterSource, '/tmp/Counter.kylat.php');
+    const result = await plugin.transform.call(context, counterSource, '/tmp/counter.kylat.php');
     assert.ok(result);
     assert.match(result.code, /export function createCounter/);
     assert.match(result.code, /CounterActions::saveCount/);
     assert.equal(result.map.version, 3);
-    assert.deepEqual(result.map.sources, ['/tmp/Counter.kylat.php']);
+    assert.deepEqual(result.map.sources, ['/tmp/counter.kylat.php']);
   });
 
   it('mengabaikan berkas non-Kylat', async () => {
@@ -45,9 +45,9 @@ describe('@kylat/vite-plugin', () => {
     const sent = [];
     const server = { ws: { send: (message) => sent.push(message) } };
 
-    const monitored = { id: '/tmp/Counter.kylat.php' };
+    const monitored = { id: '/tmp/counter.kylat.php' };
     const modules = plugin.handleHotUpdate({
-      file: '/tmp/Counter.kylat.php',
+      file: '/tmp/counter.kylat.php',
       modules: [monitored],
       server,
     });
@@ -65,10 +65,10 @@ describe('@kylat/vite-plugin', () => {
 
   it('build Vite menghasilkan bundle dengan komponen terkompilasi', async () => {
     const dir = tempDir();
-    fs.writeFileSync(path.join(dir, 'Counter.kylat.php'), counterSource, 'utf-8');
+    fs.writeFileSync(path.join(dir, 'counter.kylat.php'), counterSource, 'utf-8');
     fs.writeFileSync(
       path.join(dir, 'main.js'),
-      "import { createCounter } from './Counter.kylat.php';\nexport const mount = () => createCounter({ initialCount: 1 });\n",
+      "import { createCounter } from './counter.kylat.php';\nexport const mount = () => createCounter({ initialCount: 1 });\n",
       'utf-8'
     );
 

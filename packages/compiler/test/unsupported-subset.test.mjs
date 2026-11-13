@@ -23,7 +23,7 @@ ${body}
 }`;
 
 async function diagnosticsFor(body) {
-  const result = await compile(component(body), 'Demo.kylat.php', { template: '<div></div>' });
+  const result = await compile(component(body), 'demo.kylat.php', { template: '<div></div>' });
   return result.diagnostics;
 }
 
@@ -47,7 +47,7 @@ describe('@kylat/compiler - penolakan konstruksi di luar subset v0', () => {
       component(`    public static function noop(): void
     {
     }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));

@@ -14,7 +14,7 @@ describe('@kylat/compiler - analisis tipe v0', () => {
   it('menolak parameter tanpa tipe dengan KIL-131', async () => {
     const result = await compile(
       component('    #[Client] public function run($value): void {}'),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, false);
@@ -24,7 +24,7 @@ describe('@kylat/compiler - analisis tipe v0', () => {
   it('menolak return tanpa tipe dengan KIL-131', async () => {
     const result = await compile(
       component('    #[Client] public function run() { return 1; }'),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, false);
@@ -34,7 +34,7 @@ describe('@kylat/compiler - analisis tipe v0', () => {
   it('menolak return yang tidak kompatibel dengan tipe method', async () => {
     const result = await compile(
       component("    #[Client] public function label(): int { return 'x'; }"),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, false);
@@ -49,7 +49,7 @@ describe('@kylat/compiler - analisis tipe v0', () => {
     const result = await compile(
       component(`    public int $count = 1;
     #[Client] public function label(): string { return 'n=' . $this->count; }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, false);
@@ -60,7 +60,7 @@ describe('@kylat/compiler - analisis tipe v0', () => {
     const result = await compile(
       component(`    public int $count = 1;
     #[Client] public function label(): string { return 'n=' . (string) $this->count; }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
@@ -72,7 +72,7 @@ describe('@kylat/compiler - analisis tipe v0', () => {
     public array $items = [1, 2];
     /** @var array<string, int> */
     public array $scores = ['a' => 1];`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
@@ -91,7 +91,7 @@ describe('@kylat/compiler - analisis tipe v0', () => {
     const result = await compile(
       component(`    public ?string $name = null;
     #[Client] public function label(): string { return $this->name ?? 'tanpa nama'; }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
@@ -105,7 +105,7 @@ describe('@kylat/compiler - analisis tipe v0', () => {
       foreach ($items as $item) { $sum += $item; }
       return $sum;
     }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
@@ -114,7 +114,7 @@ describe('@kylat/compiler - analisis tipe v0', () => {
   it('menolak properti array tanpa docblock generik dengan KIL-130', async () => {
     const result = await compile(
       component('    public array $items = [];'),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, false);
@@ -128,7 +128,7 @@ describe('@kylat/compiler - analisis tipe v0', () => {
     #[Client] public function clean(): void {
       $this->items = array_filter($this->items, fn($n) => $n > 1);
     }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, false);
@@ -142,7 +142,7 @@ describe('@kylat/compiler - analisis tipe v0', () => {
     #[Client] public function clean(): void {
       $this->items = array_values(array_filter($this->items, fn($n) => $n > 1));
     }`),
-      'Demo.kylat.php',
+      'demo.kylat.php',
       { template: '<div></div>' }
     );
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));

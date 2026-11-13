@@ -178,7 +178,7 @@ Aturan: setiap package punya README. Impor lintas package hanya lewat API publik
 
 ```
   my-app/
-    resources/kylat/Counter.kylat.php
+    resources/kylat/counter.kylat.php
     app/Kylat/Actions/AddToCart.php
 ```
 
@@ -186,7 +186,7 @@ Topologi terpisah (direkomendasikan):
 - `my-app-frontend/`: repo FE (Node saja, tanpa PHP), memuat komponen `*.kylat.php` di `src/components/`, konfigurasi `kylat.config.json`, dan kontrak yang dihasilkan di `contract/`.
 - `my-app-backend/`: repo BE (Laravel/PHP), memuat aksi di `app/Kylat/Actions/` (satu aksi satu kelas, mis. `AddToCart.php`), policies di `app/Kylat/Policies/`, dan config di `config/kylat.php`.
 
-Topologi monolit: komponen ditaruh di `resources/kylat/` (mis. `resources/kylat/Counter.kylat.php`), aksi backend di `app/Kylat/Actions/AddToCart.php`, dengan plugin Vite terintegrasi.
+Topologi monolit: komponen ditaruh di `resources/kylat/` (mis. `resources/kylat/counter.kylat.php`), aksi backend di `app/Kylat/Actions/AddToCart.php`, dengan plugin Vite terintegrasi.
 
 Struktur anatomi berkas `*.kylat.php` (ADR 0004):
 - Tag pembuka PHP: `<?php`

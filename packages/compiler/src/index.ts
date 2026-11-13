@@ -13,6 +13,7 @@ import {
   type ParsedNode,
 } from './template-parser.js';
 import { compileExpression, ExpressionError, type ExpressionContext } from './expression.js';
+import { camelToKebab, kebabToPascal } from './case-converter.js';
 import { SourceMapBuilder } from './source-map.js';
 import type { ComponentIR } from './ir.js';
 
@@ -23,6 +24,7 @@ export * from './analyzer.js';
 export * from './codegen.js';
 export * from './template-parser.js';
 export * from './expression.js';
+export * from './case-converter.js';
 export * from './types.js';
 export * from './client-compiler.js';
 export * from './source-map.js';
@@ -174,17 +176,33 @@ function validateSingleFileStructure(
   }
 
   const base = filename.replace(/^.*[\\/]/, '').replace(/\.kylat\.php$/i, '');
-  if (base && base !== ir.name) {
+  const kebabCase = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+
+  if (base && !kebabCase.test(base)) {
     diagnostics.push(
       createDiagnostic(
         'KIL-215',
         filename,
         1,
         1,
-        `Nama kelas '${ir.name}' wajib sama persis dengan nama berkas '${base}'.`,
-        `Ganti nama kelas menjadi '${base}' atau ganti nama berkas menjadi '${ir.name}.kylat.php'.`
+        `Nama berkas '${base}' wajib kebab-case (contoh: cart-product.kylat.php).`,
+        `Ganti nama berkas menjadi '${camelToKebab(base)}.kylat.php'.`
       )
     );
+  } else if (base) {
+    const expectedClass = kebabToPascal(base);
+    if (ir.name !== expectedClass) {
+      diagnostics.push(
+        createDiagnostic(
+          'KIL-215',
+          filename,
+          1,
+          1,
+          `Nama kelas '${ir.name}' wajib '${expectedClass}' agar cocok dengan berkas '${base}.kylat.php'.`,
+          `Ganti nama kelas menjadi '${expectedClass}' atau ganti nama berkas menjadi '${camelToKebab(ir.name)}.kylat.php'.`
+        )
+      );
+    }
   }
 
   // KIL-214: hanya declare, namespace, use, komentar, dan satu kelas di top-level.

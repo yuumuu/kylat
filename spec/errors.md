@@ -598,8 +598,8 @@ public function handleSearch(): void
 #### KIL-201
 - **Nama**: Struktur berkas komponen tunggal dan final
 - **Klasifikasi**: Struktur Berkas
-- **Pemicu**: Berkas memuat lebih dari satu deklarasi kelas komponen, nama berkas tidak sama persis dengan nama kelas komponen, atau kelas komponen tidak dideklarasikan sebagai `final`.
-- **Pesan**: `Satu berkas hanya boleh mendefinisikan satu kelas komponen 'final' dengan nama berkas persis sama`
+- **Pemicu**: Berkas memuat lebih dari satu deklarasi kelas komponen, atau kelas komponen tidak dideklarasikan sebagai `final`.
+- **Pesan**: `Satu berkas hanya boleh mendefinisikan satu kelas komponen 'final'`
 - **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md)
 
 ##### Contoh Salah
@@ -805,32 +805,17 @@ final class Counter extends Component
 ---
 
 #### KIL-215
-- **Nama**: Nama class komponen tidak cocok dengan nama berkas
+- **Nama**: Nama berkas atau class komponen tidak sesuai standar kebab-case
 - **Klasifikasi**: Struktur Berkas Single-File
-- **Pemicu**: Nama kelas komponen di dalam berkas `*.kylat.php` tidak identik dengan nama berkas dalam format PascalCase (misal: kelas `CounterComponent` di dalam berkas `Counter.kylat.php`, atau perbedaan huruf besar/kecil `counter`).
-- **Pesan**: `Nama class '{class}' harus sama dengan nama berkas '{file}' dalam PascalCase`
-- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md), [`docs/decisions/0004-single-file-component.md`](../docs/decisions/0004-single-file-component.md)
+- **Pemicu**: Nama berkas `*.kylat.php` bukan kebab-case (misal `Counter.kylat.php`), atau nama kelas bukan PascalCase turunan langsung dari nama berkas (misal `CounterComponent` di `counter.kylat.php`, atau `CartProduct` di `cart.kylat.php`).
+- **Pesan**:
+  - `Nama berkas '{base}' wajib kebab-case (contoh: cart-product.kylat.php).`
+  - `Nama kelas '{class}' wajib '{expected}' agar cocok dengan berkas '{base}.kylat.php'.`
+- **Rujukan**: [`spec/compiler-rules.md`](compiler-rules.md), [`docs/decisions/0022-standar-nama-berkas-komponen.md`](../docs/decisions/0022-standar-nama-berkas-komponen.md)
 
 ##### Contoh Salah
 ```php
-// Di dalam berkas Counter.kylat.php
-<?php
-declare(strict_types=1);
-namespace App\Kylat;
-
-use Kylat\Component;
-
-final class CounterComponent extends Component // Nama class tidak cocok dengan nama berkas 'Counter'
-{
-    public int $count = 0;
-}
-?>
-<div>{{ $count }}</div>
-```
-
-##### Contoh Benar
-```php
-// Di dalam berkas Counter.kylat.php
+// Di dalam berkas Counter.kylat.php (nama berkas bukan kebab-case)
 <?php
 declare(strict_types=1);
 namespace App\Kylat;
@@ -843,6 +828,23 @@ final class Counter extends Component
 }
 ?>
 <div>{{ $count }}</div>
+```
+
+##### Contoh Benar
+```php
+// Di dalam berkas cart-product.kylat.php
+<?php
+declare(strict_types=1);
+namespace App\Kylat;
+
+use Kylat\Component;
+
+final class CartProduct extends Component
+{
+    public int $qty = 0;
+}
+?>
+<div>{{ $qty }}</div>
 ```
 
 ---
