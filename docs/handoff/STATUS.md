@@ -112,15 +112,17 @@ Pengecualian Fase 2:
 
 ## Fase 3 — Protokol dan Adapter
 
-**Status: DIBUKA (ADR 0015); kontrak dan route GET read/schema selesai; rate limit/conformance belum.**
+**Status: DIBUKA (ADR 0015); GET read/schema, rate limit, dan conformance dasar selesai; optimistic/outbox/type generator belum.**
 
-Sudah ada: tipe `ReadResponse`/`SchemaResponse`/`SchemaAction`/`SchemaParam`, konstanta Problem Details, definisi `spec/protocol.schema.json`, route `GET /_kylat/read/{action}` dan `GET /_kylat/schema` di adapter Laravel, pemeriksaan `X-Kylat-Build` → 409 `urn:kylat:stale_build`, cache policy public/private, default-deny authorization, dan tes endpoint baca (3 suite PHP adapter lulus).
+Sudah ada: tipe `ReadResponse`/`SchemaResponse`/`SchemaAction`/`SchemaParam`, konstanta Problem Details, definisi `spec/protocol.schema.json`, route `GET /_kylat/read/{action}` dan `GET /_kylat/schema` di adapter Laravel, pemeriksaan `X-Kylat-Build` → 409 `urn:kylat:stale_build`, cache policy public/private, default-deny authorization, rate limit mutasi (60/menit akun, 20/menit IP anonim; fallback in-memory hanya test), dan conformance test bentuk wire.
 
-Belum ada: rate limit adapter, conformance suite, optimistic/rollback, idempotensi database/outbox, generator tipe, dan e2e CSP.
+Sudah ada di CI: seluruh tes adapter PHP (`AdapterTest`, `CacheDriverIdempotencyTest`, `ReadEndpointTest`, `RateLimitTest`, `ConformanceTest`) dijalankan pada matrix Node/PHP.
+
+Belum ada: rate limit terdistribusi produksi, conformance lintas-adapter penuh, optimistic/rollback, idempotensi database/outbox, generator tipe, dan e2e CSP.
 
 Baseline yang sudah ada: `POST /_kylat/call` batch, idempotency key, retry/timeout, CSRF, default-deny `authorize()`, Problem Details, batas body/batch/depth, dan cache idempotensi 24 jam.
 
-Tugas berikutnya: rate limit + conformance suite protokol.
+Tugas berikutnya: optimistic update/rollback dan idempotensi database/outbox.
 
 ## Backlog Fase Berikutnya
 

@@ -12,6 +12,8 @@ require_once __DIR__ . '/../src/Attributes/Child.php';
 require_once __DIR__ . '/../src/Component.php';
 require_once __DIR__ . '/../src/Actions/ActionRegistry.php';
 require_once __DIR__ . '/../src/Support/IdempotencyStore.php';
+require_once __DIR__ . '/../src/Support/KylatRateLimiter.php';
+require_once __DIR__ . '/../src/Support/RateLimitExceeded.php';
 require_once __DIR__ . '/../src/Http/Controllers/KylatBatchCallController.php';
 require_once __DIR__ . '/../src/Blade/KylatDirective.php';
 require_once __DIR__ . '/../../../examples/01-counter/CounterActions.php';

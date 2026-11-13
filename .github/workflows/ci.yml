@@ -116,6 +116,14 @@ jobs:
       - name: Run Node.js Tests (Compiler & Runtime)
         run: pnpm test
 
+      - name: Run PHP Adapter Tests
+        run: |
+          php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/AdapterTest.php
+          php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/CacheDriverIdempotencyTest.php
+          php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/ReadEndpointTest.php
+          php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/RateLimitTest.php
+          php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/ConformanceTest.php
+
       - name: Run Example App Tests
         run: pnpm test:examples
 

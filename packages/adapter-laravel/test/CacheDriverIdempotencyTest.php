@@ -52,6 +52,8 @@ namespace Illuminate\Support\Facades {
 
 namespace Kylat\Laravel\Tests {
     require_once __DIR__ . '/../src/Support/IdempotencyStore.php';
+    require_once __DIR__ . '/../src/Support/KylatRateLimiter.php';
+    require_once __DIR__ . '/../src/Support/RateLimitExceeded.php';
     require_once __DIR__ . '/../src/Http/Controllers/KylatBatchCallController.php';
     require_once __DIR__ . '/../src/Actions/ActionRegistry.php';
     require_once __DIR__ . '/../../../examples/01-counter/CounterActions.php';
