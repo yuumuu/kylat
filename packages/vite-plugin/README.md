@@ -14,7 +14,7 @@ export default defineConfig({
 
 ```js
 // main.js
-import { createCounter } from './Counter.kylat.php';
+import { createCounter } from './counter.kylat.php';
 
 document.getElementById('app').replaceChildren(createCounter({ initialCount: 0 }));
 ```

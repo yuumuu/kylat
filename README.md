@@ -11,7 +11,7 @@ pnpm install
 pnpm build
 
 # Buat komponen single-file
-node packages/cli/bin/kylat.js make:component Counter
+node packages/cli/bin/kylat.js make:component cart-product
 
 # Periksa dan kompilasi
 node packages/cli/bin/kylat.js check resources/views/components
@@ -59,7 +59,7 @@ packages/compiler/    parser PHP (tree-sitter WASM), analyzer, IR, codegen
 packages/runtime/     signals, DOM binding, list, RPC batch, hidrasi island
 packages/protocol/    tipe wire dan batas protokol
 packages/adapter-laravel/  controller RPC, registry aksi, idempotency, Blade
-packages/cli/         make:component, check, build, doctor
+packages/cli/         new, make:component, types, check, build, doctor
 examples/             contoh yang dijalankan di test
 docs/                 tutorial, referensi, ADR, status
 ```
@@ -67,6 +67,7 @@ docs/                 tutorial, referensi, ADR, status
 ## Yang sudah didukung compiler
 
 - Komponen single-file `*.kylat.php` (KEP-34), plus format dua-berkas legacy.
+- Nama berkas komponen wajib kebab-case (`cart-product.kylat.php`) dan class wajib PascalCase (`CartProduct`) sesuai ADR 0022.
 - State signals, props, method client (`#[Client]`), aksi server (`#[Server]`).
 - Template: teks, `{{ ekspresi }}`, `@if/@elseif/@else`, `@foreach/@empty`, `key`, `on:`, `bind:value`, `bind:checked`, `:attr`, interpolasi atribut, `<x-nama>` dengan `#[Child]`.
 - Validasi fail-closed untuk direktif tak dikenal, raw HTML, `@foreach` tanpa key, bind ke prop, URL berbahaya, dan aturan struktur single-file.
@@ -75,9 +76,11 @@ docs/                 tutorial, referensi, ADR, status
 
 | Perintah | Fungsi |
 |---|---|
-| `kylat make:component <Nama>` | Membuat `*.kylat.php` |
+| `kylat new <nama>` | Membuat proyek Vite minimal |
+| `kylat make:component <nama>` | Membuat `<nama>.kylat.php` (kebab-case) |
+| `kylat types <schema>` | Menghasilkan tipe TypeScript dari schema aksi |
 | `kylat check [path]` | Lint komponen, termasuk template single-file |
-| `kylat build [path] [--out-dir dir]` | Preflight KIL-310, kompilasi ke modul JS + `manifest.json` + `client.js` |
+| `kylat build [path] [--out-dir dir] [--production]` | Preflight KIL-310, kompilasi ke modul JS + `manifest.json` + `client.js` + source map |
 | `kylat doctor` | Cek Node, PHP, dan Composer |
 
 ## Invarian

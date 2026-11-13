@@ -59,7 +59,7 @@ const INDEX_HTML = `<!DOCTYPE html>
 </html>
 `;
 
-const MAIN_JS = `import { createCounter } from './Counter.kylat.php';
+const MAIN_JS = `import { createCounter } from './counter.kylat.php';
 
 const app = document.getElementById('app');
 app.replaceChildren(createCounter({ initialCount: 0 }));
@@ -153,7 +153,7 @@ export function runNewProjectCommand(name: string | undefined, options?: NewProj
   fs.writeFileSync(path.join(targetDir, 'vite.config.ts'), VITE_CONFIG, 'utf-8');
   fs.writeFileSync(path.join(targetDir, 'index.html'), INDEX_HTML, 'utf-8');
   fs.writeFileSync(path.join(targetDir, 'src', 'main.js'), MAIN_JS, 'utf-8');
-  fs.writeFileSync(path.join(targetDir, 'src', 'Counter.kylat.php'), COUNTER_SFC, 'utf-8');
+  fs.writeFileSync(path.join(targetDir, 'src', 'counter.kylat.php'), COUNTER_SFC, 'utf-8');
   fs.writeFileSync(path.join(targetDir, 'README.md'), README(name), 'utf-8');
   fs.writeFileSync(path.join(targetDir, '.gitignore'), GITIGNORE, 'utf-8');
 

@@ -60,12 +60,12 @@ final class Demo extends Component {
 }
 ?>
 <div><button on:click="run(3)">go</button><span>{{ $count }}</span></div>`;
-    const result = await compile(source, 'Demo.kylat.php');
+    const result = await compile(source, 'demo.kylat.php');
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
     assert.ok(result.map, 'CompileResult harus memuat source map');
     const map = JSON.parse(result.map);
     assert.equal(map.version, 3);
-    assert.deepEqual(map.sources, ['Demo.kylat.php']);
+    assert.deepEqual(map.sources, ['demo.kylat.php']);
     assert.equal(map.sourcesContent[0], source);
 
     const mappings = decodeMappings(map.mappings);
@@ -99,7 +99,7 @@ final class Demo extends Component {
 }
 ?>
 <div>{{ $doubled }}</div>`;
-    const result = await compile(source, 'Demo.kylat.php');
+    const result = await compile(source, 'demo.kylat.php');
     assert.equal(result.success, true, JSON.stringify(result.diagnostics));
     const map = JSON.parse(result.map);
     const mappings = decodeMappings(map.mappings);

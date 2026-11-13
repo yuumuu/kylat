@@ -2,7 +2,7 @@
 
 Aplikasi contoh resmi untuk mendemonstrasikan alur kerja penuh (*end-to-end*) toolchain Kylat menggunakan format **Single-File Component (`*.kylat.php`)** (ADR 0004 / KEP-34):
 
-1. **Komponen Single-File (`Counter.kylat.php`)**: Menggabungkan class PHP dan templat Blade/HTML reaktif dalam satu berkas tunggal.
+1. **Komponen Single-File (`counter.kylat.php`)**: Menggabungkan class PHP dan templat Blade/HTML reaktif dalam satu berkas tunggal.
 2. **Kompilasi Otomatis**: Dikompilasi menjadi JavaScript reaktivitas sinyal murni (`@kylat/runtime`) tanpa Virtual DOM.
 3. **Pulau Interaktif (*Interactive Island*)**: Berjalan di browser dengan hidrasi instan.
 4. **Panggilan Mutasi RPC Backend (`POST /_kylat/call`)**: Dilindungi kontrak idempotensi `Idempotency-Key` (sesuai `spec/threat-model.md §3.1`).
@@ -14,7 +14,7 @@ Aplikasi contoh resmi untuk mendemonstrasikan alur kerja penuh (*end-to-end*) to
 
 ```text
 examples/01-counter/
-├── Counter.kylat.php       # Komponen single-file resmi Kylat (KEP-34)
+├── counter.kylat.php       # Komponen single-file resmi Kylat (KEP-34)
 ├── CounterActions.php      # Kontrak interface aksi server (Spike S3)
 ├── dist/
 │   └── Counter.js          # Output JavaScript terkompilasi
@@ -30,7 +30,7 @@ examples/01-counter/
 ## Langkah Menjalankan
 
 ### 1. Kompilasi Komponen
-Jalankan kompilator untuk menghasilkan JavaScript dari berkas `Counter.kylat.php`:
+Jalankan kompilator untuk menghasilkan JavaScript dari berkas `counter.kylat.php`:
 ```bash
 node build.mjs
 # atau melalui pnpm:

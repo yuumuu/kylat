@@ -163,7 +163,7 @@ describe('@kylat/compiler - differential test PHP vs JavaScript', () => {
     ${testCase.state ?? ''}
     #[Client]
     public function run(): void { $this->result = ${testCase.expr}; }`);
-      const result = await compile(source, 'Demo.kylat.php', {
+      const result = await compile(source, 'demo.kylat.php', {
         template: '<div><button on:click="run">run</button><span>{{ $result }}</span></div>',
       });
       assert.equal(result.success, true, JSON.stringify(result.diagnostics));
