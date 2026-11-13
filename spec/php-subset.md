@@ -12,7 +12,7 @@ Diturunkan dari Dokumen 2 §2–§5 (revisi P0, 25 Oktober 2026), dengan tiga pe
 
 ## 2. Yang didukung di `#[Client]` (v0)
 
-- **Tipe:** `int`, `float`, `string`, `bool`, `null`, `list<T>`, `array<string, T>`, enum sederhana, readonly value object.
+- **Tipe:** `int`, `float`, `string`, `bool`, `null`, `list<T>`, `array<string, T>`. Enum sederhana dan readonly value object **ditunda ke v0.1** (ADR 0016).
 - **Operator:** aritmetika, logika, perbandingan strict (`===`, `!==`, `<`, `>`, `<=`, `>=`), penggabungan string (`.`), null coalescing, ternary.
 
   > `.` adalah penggabungan string, bukan penjumlahan. Di JavaScript operatornya menjadi `+`, tetapi `+` antara string dan angka di JS melakukan koersi yang tidak ada di PHP — karena itu `+` **tidak** boleh dipakai untuk menggabungkan string, dan `1 + "2"` di PHP (`3`) tetap dihitung sebagai aritmetika. Kedua bahasa hanya sepakat bila kedua operand bertipe sama. Compiler wajib menolak `.` bila salah satu operand bukan `string` (KIL-131). Operator ini dibutuhkan oleh atribut dinamis `:href="'/produk/' . $id"` di `template.md` §4.
@@ -88,7 +88,7 @@ Aturan di atas memilih hasil PHP sebagai sumber kebenaran: key dipertahankan, da
 |---|---|---|
 | Semantik `usort` | **DITUNDA ke v0.1** | Mutasi by reference dan nilai balik `bool` tidak punya padanan langsung di JS; ditolak KIL-110 (ADR 0011) |
 | Kode untuk enam konstruksi terlarang | `[TERBUKA]` | Bagian 3 masih memakai tanda "—", padahal setiap error build wajib punya kode stabil |
-| Bentuk kelas yang diizinkan (konstruktor, promotion, visibility, `readonly`, enum case vs static) | `[TERBUKA]` | `enum sederhana` dan `readonly value object` didukung tanpa aturan bentuknya (audit D6) |
+| Bentuk kelas yang diizinkan (konstruktor, promotion, visibility, `readonly`, enum case vs static) | **DITUNDA ke v0.1** (ADR 0016) | Enum dan readonly value object belum didukung di v0 |
 | Kesetaraan `str_contains`/`explode` untuk UTF-8 | Diasumsikan setara | Harus dibuktikan lewat differential test, bukan argumen |
 
 ## 7. Rujukan
