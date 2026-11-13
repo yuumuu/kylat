@@ -6,7 +6,7 @@ Dokumen ini mendokumentasikan desain teknis, status kesesuaian saat ini, dan ren
 
 > **PUTUSAN 9 November 2026:** jalur produksi wajib memakai **transaksi database + unique index + outbox**. Implementasi Cache saat ini adalah interim Fase 0/2 dan tidak boleh dianggap memenuhi §3.1. Migrasi penuh masuk **Fase 3**, bukan Fase 0. Redis CAS/Lua saja tidak dipakai karena efek samping database dan catatan idempotensi dapat terpisah. Detail keputusan dicatat sebagai ADR 0007/0019.
 
-> **Status 13 November 2026:** migrasi `kylat_idempotency_keys`/`kylat_outbox` dan `DatabaseIdempotencyStore` (PDO, transaksi, outbox) sudah ditambahkan serta diuji dengan SQLite. Integrasi controller ke driver database dan uji konkurensi MySQL/PostgreSQL **belum** dilakukan; driver Cache tetap default sampai integrasi selesai.
+> **Status 13 November 2026:** migrasi `kylat_idempotency_keys`/`kylat_outbox`, `DatabaseIdempotencyStore` (PDO, transaksi, outbox), dan integrasi controller lewat `kylat.idempotency_driver` sudah tersedia. Driver database diuji dengan SQLite serta uji konkurensi dua proses pada MySQL 8.4 dan PostgreSQL 18.4 (lulus), dan CI memakai service container MySQL 8.0/PostgreSQL 15. Default tetap `cache`; produksi wajib `database`. Outbox relay worker belum ada, sehingga jaminan replay tertutup tetapi pengiriman efek samping eksternal belum diotomatiskan.
 
 ---
 

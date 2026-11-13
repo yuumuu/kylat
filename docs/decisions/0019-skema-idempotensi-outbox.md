@@ -62,8 +62,10 @@ Kekangan: unique `event_id`, index `(status, available_at)`.
 ## 4. Integrasi
 
 - Migrasi disediakan di `packages/adapter-laravel/database/migrations/`.
-- Driver `DatabaseIdempotencyStore` memakai PDO yang sama dengan handler; integrasi controller dilakukan pada PR berikutnya setelah driver diuji.
+- Driver `DatabaseIdempotencyStore` memakai PDO yang sama dengan handler.
+- Controller memilih driver lewat `kylat.idempotency_driver` (`KYLAT_IDEMPOTENCY_DRIVER`), default `cache`; produksi wajib `database`.
 - Driver Cache tetap tersedia untuk development/ephemeral, bukan produksi.
+- Outbox relay worker belum diimplementasikan; event hanya ditulis ke tabel.
 
 ## 5. Uji wajib
 
@@ -73,3 +75,22 @@ Kekangan: unique `event_id`, index `(status, available_at)`.
 - Dua pemanggil berbeda dengan key sama tidak berbagi hasil.
 - Uji konkurensi MySQL/PostgreSQL dijalankan sebelum klaim portabilitas.
 - SQLite hanya untuk unit test logika, bukan bukti row-level lock.
+
+## 6. Bukti uji konkurensi
+
+`test/ConcurrencyIdempotencyTest.php` menjalankan dua proses PHP terpisah (`proc_open`, tanpa pcntl) dengan skenario:
+
+1. Dua worker paralel, identity/key/hash sama → satu `completed`, satu `replay`, handler dieksekusi tepat sekali.
+2. Replay setelah `completed` → tidak mengeksekusi handler.
+3. Hash berbeda → `conflict`.
+4. Identity berbeda dengan key sama → independen, keduanya `completed`.
+5. Handler exception → baris idempotensi rollback; retry berhasil.
+
+Hasil 13 November 2026:
+
+- MySQL **8.4.2** (lokal): lulus semua skenario.
+- PostgreSQL **18.4** (lokal): lulus semua skenario.
+- Uji ini juga menemukan bug nyata: `quoteIdentifier($key)` pada `inspectExisting()` membuat query `WHERE "idem-key" = ?`; SQLite menerimanya sebagai string literal sehingga lolos, MySQL menolaknya dengan error 1054. Sudah diperbaiki menjadi `quoteIdentifier('key')`.
+- CI menggunakan service container MySQL 8.0 dan PostgreSQL 15 pada workflow `ci.yml`.
+
+Catatan: pada konkurensi DB nyata, worker kedua biasanya menerima `replay` (bukan `in_progress`) karena `INSERT` unik menunggu transaksi pertama commit. `in_progress` tetap valid untuk lease yang dibuat jalur non-transaksional.

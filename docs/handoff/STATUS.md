@@ -114,17 +114,17 @@ Pengecualian Fase 2:
 
 ## Fase 3 — Protokol dan Adapter
 
-**Status: DIBUKA (ADR 0015); GET read/schema, rate limit, dan conformance dasar selesai; optimistic/outbox/type generator belum.**
+**Status: DIBUKA (ADR 0015); GET read/schema, rate limit, idempotensi database + uji konkurensi selesai; outbox relay/optimistic/type generator belum.**
 
-Sudah ada: tipe `ReadResponse`/`SchemaResponse`/`SchemaAction`/`SchemaParam`, konstanta Problem Details, definisi `spec/protocol.schema.json`, route `GET /_kylat/read/{action}` dan `GET /_kylat/schema` di adapter Laravel, pemeriksaan `X-Kylat-Build` → 409 `urn:kylat:stale_build`, cache policy public/private, default-deny authorization, rate limit mutasi (60/menit akun, 20/menit IP anonim; Redis di produksi), schema auth-only, conformance test bentuk wire, migrasi `kylat_idempotency_keys`/`kylat_outbox`, dan `DatabaseIdempotencyStore` (PDO, transaksi, outbox) yang diuji dengan SQLite.
+Sudah ada: tipe `ReadResponse`/`SchemaResponse`/`SchemaAction`/`SchemaParam`, konstanta Problem Details, definisi `spec/protocol.schema.json`, route `GET /_kylat/read/{action}` dan `GET /_kylat/schema` di adapter Laravel, pemeriksaan `X-Kylat-Build` → 409 `urn:kylat:stale_build`, cache policy public/private, default-deny authorization, rate limit mutasi (60/menit akun, 20/menit IP anonim; Redis di produksi), schema auth-only, conformance test bentuk wire, migrasi `kylat_idempotency_keys`/`kylat_outbox`, `DatabaseIdempotencyStore` (PDO, transaksi, outbox) diuji SQLite + MySQL 8.4/PostgreSQL 18.4, dan integrasi controller lewat `KYLAT_IDEMPOTENCY_DRIVER` (default `cache`).
 
-Sudah ada di CI: seluruh tes adapter PHP (`AdapterTest`, `CacheDriverIdempotencyTest`, `ReadEndpointTest`, `RateLimitTest`, `ConformanceTest`, `DatabaseIdempotencyTest`) dijalankan pada matrix Node/PHP.
+Sudah ada di CI: seluruh tes adapter PHP (`AdapterTest`, `CacheDriverIdempotencyTest`, `ReadEndpointTest`, `RateLimitTest`, `ConformanceTest`, `DatabaseIdempotencyTest`) pada matrix Node/PHP, plus uji konkurensi MySQL 8.0/PostgreSQL 15 lewat service container.
 
-Belum ada: integrasi controller ke driver database, uji konkurensi MySQL/PostgreSQL nyata, conformance lintas-adapter penuh, optimistic/rollback, generator tipe, dan e2e CSP.
+Belum ada: outbox relay worker, conformance lintas-adapter penuh, optimistic/rollback, generator tipe, dan e2e CSP.
 
 Baseline yang sudah ada: `POST /_kylat/call` batch, idempotency key, retry/timeout, CSRF, default-deny `authorize()`, Problem Details, batas body/batch/depth, dan cache idempotensi 24 jam.
 
-Tugas berikutnya: integrasi `DatabaseIdempotencyStore` ke controller dan uji konkurensi MySQL/PostgreSQL.
+Tugas berikutnya: outbox relay worker, lalu optimistic update/rollback dan generator tipe.
 
 ## Backlog Fase Berikutnya
 
@@ -138,8 +138,8 @@ Tugas berikutnya: integrasi `DatabaseIdempotencyStore` ke controller dan uji kon
 1. **GET read/schema**: `GET /_kylat/read` dan `GET /_kylat/schema`.
 2. **Optimistic update/rollback** dan generator tipe.
 3. **Conformance suite** protokol.
-4. **Idempotensi Database Outbox (ADR 0007)**: menggantikan cache interim.
-5. **Uji konkurensi database riil** MySQL/PostgreSQL/Redis.
+4. **Idempotensi Database Outbox (ADR 0007/0019)**: skema + driver + integrasi controller selesai (default `cache`); relay worker belum.
+5. **Uji konkurensi database riil**: MySQL/PostgreSQL selesai; Redis rate-limit multi-worker belum.
 6. **Reset state Octane/FrankenPHP** pada `IdempotencyStore`.
 7. **Stale build, rate limit, dan pointer validasi**.
 

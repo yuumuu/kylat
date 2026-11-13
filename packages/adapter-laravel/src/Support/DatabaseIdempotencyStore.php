@@ -132,7 +132,7 @@ final class DatabaseIdempotencyStore
     private static function inspectExisting(string $identity, string $key, string $payloadHash): array
     {
         $pdo = self::pdo();
-        $keyColumn = self::quoteIdentifier($key);
+        $keyColumn = self::quoteIdentifier('key');
         $select = $pdo->prepare(
             "SELECT payload_hash, status, response, locked_until FROM kylat_idempotency_keys
              WHERE user_id = ? AND {$keyColumn} = ?"

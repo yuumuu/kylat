@@ -18,6 +18,34 @@ jobs:
         node-version: [20.x, 22.x]
         php-version: ['8.2', '8.3']
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: kylat_test
+          MYSQL_USER: kylat
+          MYSQL_PASSWORD: kylat
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: kylat_test
+          POSTGRES_USER: kylat
+          POSTGRES_PASSWORD: kylat
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U kylat"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -26,7 +54,7 @@ jobs:
         uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
         with:
           php-version: ${{ matrix.php-version }}
-          extensions: mbstring, json, tokenizer
+          extensions: mbstring, json, tokenizer, pdo_mysql, pdo_pgsql
           ini-values: zend.assertions=1, assert.exception=1
           coverage: none
 
@@ -124,6 +152,17 @@ jobs:
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/RateLimitTest.php
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/ConformanceTest.php
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/DatabaseIdempotencyTest.php
+
+      - name: Run Database Concurrency Tests (MySQL/PostgreSQL)
+        env:
+          KYLAT_TEST_MYSQL_DSN: 'mysql:host=127.0.0.1;port=3306;dbname=kylat_test;charset=utf8mb4'
+          KYLAT_TEST_MYSQL_USER: kylat
+          KYLAT_TEST_MYSQL_PASSWORD: kylat
+          KYLAT_TEST_PG_DSN: 'pgsql:host=127.0.0.1;port=5432;dbname=kylat_test'
+          KYLAT_TEST_PG_USER: kylat
+          KYLAT_TEST_PG_PASSWORD: kylat
+        run: |
+          php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/ConcurrencyIdempotencyTest.php
 
       - name: Run Example App Tests
         run: pnpm test:examples
