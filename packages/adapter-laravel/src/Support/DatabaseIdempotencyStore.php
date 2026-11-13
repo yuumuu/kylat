@@ -134,7 +134,7 @@ final class DatabaseIdempotencyStore
         $pdo = self::pdo();
         $keyColumn = self::quoteIdentifier('key');
         $select = $pdo->prepare(
-            "SELECT payload_hash, status, response, locked_until FROM kylat_idempotency_keys
+            "SELECT payload_hash, status, response FROM kylat_idempotency_keys
              WHERE user_id = ? AND {$keyColumn} = ?"
         );
         $select->execute([$identity, $key]);
