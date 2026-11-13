@@ -44,6 +44,19 @@ importers:
         specifier: ^1.65.0
         version: 1.65.0
 
+  examples/05-cart-csp:
+    dependencies:
+      '@kylat/compiler':
+        specifier: workspace:*
+        version: link:../../packages/compiler
+      '@kylat/runtime':
+        specifier: workspace:*
+        version: link:../../packages/runtime
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.65.0
+        version: 1.65.0
+
   packages/cli:
     dependencies:
       '@kylat/compiler':

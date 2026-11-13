@@ -15,7 +15,8 @@
     "lint:errors": "node scripts/verify-error-codes.mjs",
     "lint": "pnpm lint:errors",
     "pretest": "pnpm build",
-    "test:examples": "pnpm build && pnpm --filter @kylat/example-counter-app test"
+    "test:examples": "pnpm build && pnpm --filter @kylat/example-counter-app test",
+    "test:e2e": "pnpm --filter @kylat/example-cart-csp test"
   },
   "workspaces": [
     "packages/*",

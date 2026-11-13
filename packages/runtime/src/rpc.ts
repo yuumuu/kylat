@@ -27,6 +27,14 @@ export interface CallOptions {
   maxRetries?: number; // Kuota retry untuk error transient HTTP (502, 503, 504) atau jaringan
   inProgressRetries?: number; // Kuota retry terpisah khusus untuk respons kylat:in_progress
   retryDelayFn?: (attempt: number, type: 'transient_5xx' | 'in_progress') => number;
+  /**
+   * Update optimistis: apply dijalankan sinkron sebelum request dikirim,
+   * rollback dijalankan sekali bila call berakhir gagal.
+   */
+  optimistic?: {
+    apply: () => void;
+    rollback: () => void;
+  };
 }
 
 export class KylatRpcError extends Error {
@@ -124,7 +132,7 @@ export class RpcBatcher {
       const id = `c_${Date.now()}_${this.callCounter}`;
 
       const hasIdempotency = Boolean(options?.idempotencyKey);
-      this.queue.push({
+      const queued: QueuedCall = {
         call: { id, action, args },
         resolve: resolve as (value: unknown) => void,
         reject,
@@ -136,7 +144,36 @@ export class RpcBatcher {
         transientAttempt: 0,
         inProgressAttempt: 0,
         retryDelayFn: options?.retryDelayFn,
-      });
+      };
+
+      const optimistic = options?.optimistic;
+      let optimisticSettled = false;
+
+      if (optimistic) {
+        const originalResolve = queued.resolve;
+        const originalReject = queued.reject;
+
+        queued.resolve = (value: unknown) => {
+          optimisticSettled = true;
+          originalResolve(value);
+        };
+        queued.reject = (reason: unknown) => {
+          if (!optimisticSettled) {
+            optimisticSettled = true;
+            optimistic.rollback();
+          }
+          originalReject(reason);
+        };
+
+        try {
+          optimistic.apply();
+        } catch (error) {
+          queued.reject(error);
+          return;
+        }
+      }
+
+      this.queue.push(queued);
 
       if (!this.isFlushScheduled) {
         this.isFlushScheduled = true;

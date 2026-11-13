@@ -46,6 +46,15 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -54,7 +63,7 @@ jobs:
         uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
         with:
           php-version: ${{ matrix.php-version }}
-          extensions: mbstring, json, tokenizer, pdo_mysql, pdo_pgsql
+          extensions: mbstring, json, tokenizer, pdo_mysql, pdo_pgsql, redis
           ini-values: zend.assertions=1, assert.exception=1
           coverage: none
 
@@ -152,6 +161,8 @@ jobs:
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/RateLimitTest.php
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/ConformanceTest.php
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/DatabaseIdempotencyTest.php
+          php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/OutboxCommandTest.php
+          php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/RedisRateLimitTest.php
 
       - name: Run Database Concurrency & Outbox Tests (MySQL/PostgreSQL)
         env:
@@ -165,6 +176,13 @@ jobs:
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/ConcurrencyIdempotencyTest.php
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/OutboxRelayTest.php
 
+      - name: Run Redis Rate Limit Multi-Worker Test
+        env:
+          KYLAT_TEST_REDIS_HOST: 127.0.0.1
+          KYLAT_TEST_REDIS_PORT: '6379'
+        run: |
+          php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/RedisRateLimitTest.php
+
       - name: Run Example App Tests
         run: pnpm test:examples
 
@@ -172,3 +190,33 @@ jobs:
         run: |
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/AdapterTest.php
           php -d zend.assertions=1 -d assert.exception=1 packages/adapter-laravel/test/CacheDriverIdempotencyTest.php
+
+  e2e-csp:
+    name: E2E Cart (CSP ketat, WebKit)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d # v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+
+      - name: Install dependencies (Strict Lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Packages
+        run: pnpm build
+
+      - name: Install WebKit
+        run: pnpm --filter @kylat/example-cart-csp exec playwright install --with-deps webkit
+
+      - name: Run Cart CSP E2E
+        run: pnpm test:e2e

@@ -51,6 +51,20 @@ final class KylatRateLimiter
             return;
         }
 
+        if (self::config('kylat.rate_limit_store', 'redis') === 'redis') {
+            $redis = RedisConnection::resolve();
+            if ($redis !== null) {
+                RedisRateLimiter::assertAllowed($redis, $key, $limit, $mutations, self::WINDOW_SECONDS);
+                return;
+            }
+
+            if (self::isProduction()) {
+                throw new RuntimeException(
+                    'KylatRateLimiter: Redis wajib tersedia di produksi; fallback in-memory dilarang.'
+                );
+            }
+        }
+
         if (self::isProduction()) {
             throw new RuntimeException(
                 'KylatRateLimiter: RateLimiter Laravel/Redis wajib tersedia di produksi; fallback in-memory dilarang.'
@@ -84,7 +98,12 @@ final class KylatRateLimiter
 
     private static function configuredLimit(string $key, int $default): int
     {
-        $value = self::config($key, $default);
+        $value = self::config($key, null);
+        if (!is_numeric($value)) {
+            $env = getenv(strtoupper(str_replace('.', '_', $key)));
+            $value = is_string($env) && $env !== '' ? $env : null;
+        }
+
         return is_numeric($value) ? max(1, (int) $value) : $default;
     }
 
