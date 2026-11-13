@@ -18,6 +18,7 @@ Diperbarui: 12 November 2026. Sumber kebenaran: `spec/` di repo. File ini ringka
   - ADR 0014: **DITERIMA** — STATUS adalah otoritas operasional; Fase 0/1 “ditutup dengan pengecualian tercatat”.
   - ADR 0015: **DIBUKA** — Fase 3 protokol/adapter; tugas pertama GET read/schema dan tipe protokol.
   - ADR 0016: **DITERIMA** — Fase 2 ditutup; enum/readonly ditunda ke v0.1.
+  - ADR 0017: **DITERIMA** — kontrak GET read/schema, Problem Details stale build/rate limit, dan schema aksi.
 
 ---
 
@@ -111,11 +112,15 @@ Pengecualian Fase 2:
 
 ## Fase 3 — Protokol dan Adapter
 
-**Status: DIBUKA (ADR 0015), implementasi belum dimulai.**
+**Status: DIBUKA (ADR 0015); kontrak GET read/schema selesai (ADR 0017), adapter belum diimplementasikan.**
+
+Sudah ada: tipe `ReadResponse`/`SchemaResponse`/`SchemaAction`/`SchemaParam`, konstanta Problem Details `urn:kylat:stale_build` dan `urn:kylat:rate_limited`, definisi `spec/protocol.schema.json`, dan tes kontrak protokol.
+
+Belum ada: route `GET /_kylat/read/{aksi}`, `GET /_kylat/schema`, pemeriksaan `X-Kylat-Build`, rate limit adapter, cache policy adapter, conformance suite, optimistic/rollback, idempotensi database/outbox, dan generator tipe.
 
 Baseline yang sudah ada: `POST /_kylat/call` batch, idempotency key, retry/timeout, CSRF, default-deny `authorize()`, Problem Details, batas body/batch/depth, dan cache idempotensi 24 jam.
 
-Tugas pertama: kontrak `GET /_kylat/read/{aksi}`, `GET /_kylat/schema`, `X-Kylat-Build`/`kylat:stale_build`, `kylat:rate_limited`, dan tipe protokol. Setelah itu conformance suite, optimistic/rollback, idempotensi database/outbox, generator tipe, dan e2e CSP.
+Tugas berikutnya: implementasi route GET read/schema di adapter Laravel dan pemeriksaan build/rate limit.
 
 ## Backlog Fase Berikutnya
 
