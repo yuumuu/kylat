@@ -20,6 +20,7 @@ Diperbarui: 12 November 2026. Sumber kebenaran: `spec/` di repo. File ini ringka
   - ADR 0016: **DITERIMA** — Fase 2 ditutup; enum/readonly ditunda ke v0.1.
   - ADR 0017: **DITERIMA** — kontrak GET read/schema, Problem Details stale build/rate limit, dan schema aksi.
   - ADR 0018: **DITERIMA** — rate limit Redis produksi, schema auth-only, cache publik 60 detik, database MySQL utama/PostgreSQL uji.
+  - ADR 0019: **DITERIMA** — skema `kylat_idempotency_keys`/`kylat_outbox`, transaksi per panggilan, rollback penuh.
 
 ---
 
@@ -115,15 +116,15 @@ Pengecualian Fase 2:
 
 **Status: DIBUKA (ADR 0015); GET read/schema, rate limit, dan conformance dasar selesai; optimistic/outbox/type generator belum.**
 
-Sudah ada: tipe `ReadResponse`/`SchemaResponse`/`SchemaAction`/`SchemaParam`, konstanta Problem Details, definisi `spec/protocol.schema.json`, route `GET /_kylat/read/{action}` dan `GET /_kylat/schema` di adapter Laravel, pemeriksaan `X-Kylat-Build` → 409 `urn:kylat:stale_build`, cache policy public/private, default-deny authorization, rate limit mutasi (60/menit akun, 20/menit IP anonim; Redis di produksi), schema auth-only, dan conformance test bentuk wire.
+Sudah ada: tipe `ReadResponse`/`SchemaResponse`/`SchemaAction`/`SchemaParam`, konstanta Problem Details, definisi `spec/protocol.schema.json`, route `GET /_kylat/read/{action}` dan `GET /_kylat/schema` di adapter Laravel, pemeriksaan `X-Kylat-Build` → 409 `urn:kylat:stale_build`, cache policy public/private, default-deny authorization, rate limit mutasi (60/menit akun, 20/menit IP anonim; Redis di produksi), schema auth-only, conformance test bentuk wire, migrasi `kylat_idempotency_keys`/`kylat_outbox`, dan `DatabaseIdempotencyStore` (PDO, transaksi, outbox) yang diuji dengan SQLite.
 
-Sudah ada di CI: seluruh tes adapter PHP (`AdapterTest`, `CacheDriverIdempotencyTest`, `ReadEndpointTest`, `RateLimitTest`, `ConformanceTest`) dijalankan pada matrix Node/PHP.
+Sudah ada di CI: seluruh tes adapter PHP (`AdapterTest`, `CacheDriverIdempotencyTest`, `ReadEndpointTest`, `RateLimitTest`, `ConformanceTest`, `DatabaseIdempotencyTest`) dijalankan pada matrix Node/PHP.
 
-Belum ada: rate limit Redis yang teruji multi-worker, conformance lintas-adapter penuh, optimistic/rollback, idempotensi database/outbox (MySQL utama, PostgreSQL uji), generator tipe, dan e2e CSP.
+Belum ada: integrasi controller ke driver database, uji konkurensi MySQL/PostgreSQL nyata, conformance lintas-adapter penuh, optimistic/rollback, generator tipe, dan e2e CSP.
 
 Baseline yang sudah ada: `POST /_kylat/call` batch, idempotency key, retry/timeout, CSRF, default-deny `authorize()`, Problem Details, batas body/batch/depth, dan cache idempotensi 24 jam.
 
-Tugas berikutnya: ADR 0007 + implementasi tabel idempotensi/outbox MySQL/PostgreSQL, lalu optimistic update/rollback.
+Tugas berikutnya: integrasi `DatabaseIdempotencyStore` ke controller dan uji konkurensi MySQL/PostgreSQL.
 
 ## Backlog Fase Berikutnya
 
