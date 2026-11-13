@@ -112,6 +112,31 @@ final class DifferentName extends Component {}
       const entry = manifest.components.find((e) => e.name === 'QuickCounter');
       assert.ok(entry, 'manifest.components harus memuat entri QuickCounter');
       assert.equal(entry.output, 'QuickCounter.js');
+      assert.equal(entry.sourceMap, 'QuickCounter.js.map', 'manifest harus menunjuk source map');
+
+      const emitted = fs.readFileSync(path.join(outDir, 'QuickCounter.js'), 'utf-8');
+      assert.match(emitted, /\/\/# sourceMappingURL=QuickCounter\.js\.map/, 'modul harus menyertakan sourceMappingURL');
+      assert.ok(fs.existsSync(path.join(outDir, 'QuickCounter.js.map')), 'file source map harus dibuat');
+    });
+
+    it('build produksi menghapus source map', async () => {
+      const outDir = path.join(tmpDir, 'dist-prod');
+      const exitCode = await runBuildCommand(tmpDir, { outDir, production: true });
+      assert.equal(exitCode, 0, 'kylat build --production harus exit 0');
+
+      assert.ok(fs.existsSync(path.join(outDir, 'QuickCounter.js')), 'modul tetap dibuat');
+      assert.equal(
+        fs.existsSync(path.join(outDir, 'QuickCounter.js.map')),
+        false,
+        'source map tidak boleh dibuat pada build produksi'
+      );
+
+      const emitted = fs.readFileSync(path.join(outDir, 'QuickCounter.js'), 'utf-8');
+      assert.doesNotMatch(emitted, /sourceMappingURL/, 'modul produksi tidak boleh menyertakan sourceMappingURL');
+
+      const manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'manifest.json'), 'utf-8'));
+      const entry = manifest.components.find((e) => e.name === 'QuickCounter');
+      assert.equal(entry.sourceMap, null, 'manifest produksi harus sourceMap null');
     });
   });
 });

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 import { createDemoServer } from './server.mjs';
 
 let server;
@@ -67,4 +68,16 @@ test('cart berjalan di bawah CSP ketat: optimistic lokal, RPC, tanpa inline scri
   ).toBe(true);
 
   expect(pageErrors).toEqual([]);
+});
+
+test('cart tidak memiliki pelanggaran aksesibilitas serius/kritis (WCAG 2 A/AA)', async ({ page }) => {
+  await page.goto(baseUrl);
+  await expect(page.locator('.cart .qty')).toHaveText('0');
+
+  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  const serious = results.violations.filter((violation) =>
+    ['serious', 'critical'].includes(String(violation.impact))
+  );
+
+  expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
 });

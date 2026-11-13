@@ -10,12 +10,16 @@ import { analyzeActionContract, compile, initPhpParser } from '@kylat/compiler';
 
 export interface BuildOptions {
   outDir?: string;
+  /** Default true; `--production` mematikan source map. */
+  sourceMap?: boolean;
+  production?: boolean;
 }
 
 interface ManifestEntry {
   name: string;
   file: string;
   output: string;
+  sourceMap: string | null;
 }
 
 export async function runBuildCommand(
@@ -23,6 +27,7 @@ export async function runBuildCommand(
   options?: BuildOptions
 ): Promise<number> {
   const outDir = options?.outDir ?? 'public/dist/kylat';
+  const emitSourceMap = options?.sourceMap ?? !options?.production;
   const resolvedInput = path.resolve(process.cwd(), inputPath);
   const resolvedOutDir = path.resolve(process.cwd(), outDir);
 
@@ -130,11 +135,20 @@ export async function runBuildCommand(
     emittedNames.set(outFilename, relativeFile);
 
     const destPath = path.join(resolvedOutDir, outFilename);
-    fs.writeFileSync(destPath, result.code, 'utf-8');
+    const mapFilename = `${outFilename}.map`;
+    const codeWithMap = emitSourceMap && result.map
+      ? `${result.code}\n//# sourceMappingURL=${mapFilename}\n`
+      : result.code;
+
+    fs.writeFileSync(destPath, codeWithMap, 'utf-8');
+    if (emitSourceMap && result.map) {
+      fs.writeFileSync(path.join(resolvedOutDir, mapFilename), result.map, 'utf-8');
+    }
     manifest.push({
       name: result.ir.name,
       file: relativeFile.replace(/\\/g, '/'),
       output: outFilename,
+      sourceMap: emitSourceMap && result.map ? mapFilename : null,
     });
     compiledCount++;
     console.log(`  \x1b[32m✓\x1b[0m ${result.ir.name} -> ${path.relative(process.cwd(), destPath)}`);

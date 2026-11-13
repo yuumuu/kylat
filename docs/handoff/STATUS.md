@@ -126,6 +126,16 @@ Baseline yang sudah ada: `POST /_kylat/call` batch, idempotency key, retry/timeo
 
 Tugas berikutnya: Fase 4 (rendering dan DX).
 
+## Fase 4 — Rendering dan DX
+
+**Status: DIBUKA (ADR 0021); source map dev + strip produksi dan baseline axe selesai; Vite/HMR/SSR belum.**
+
+Sudah ada: `kylat build` menghasilkan `.js.map` + `sourceMappingURL` dan `manifest.sourceMap`; `--production`/`--no-sourcemap` menghapus keduanya. Contoh keranjang CSP menjalankan axe-core WCAG 2 A/AA tanpa pelanggaran serius/kritis.
+
+Belum ada: plugin Vite + HMR, generator proyek `kylat new`, prerender/SSR opsional + hydration mismatch, audit screen reader, dan pengujian perangkat fisik.
+
+Tugas berikutnya: plugin Vite + HMR, lalu generator proyek.
+
 ## Backlog Fase Berikutnya
 
 ### Fase 2: Compiler
